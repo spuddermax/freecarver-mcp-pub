@@ -5,13 +5,14 @@ const API_BASE_URL = 'http://localhost:41234';
 
 // Products API
 export const getProducts = async () => {
-  const response = await fetch(`${API_BASE_URL}/product`);
+  const response = await fetch(`${API_BASE_URL}/product/`);
   if (!response.ok) throw new Error('Failed to fetch products');
   return response.json();
 };
 
 export const createProduct = async (product: Omit<Product, 'id' | 'created_at' | 'updated_at'>) => {
-  const response = await fetch(`${API_BASE_URL}/product`, {
+  console.log( 'PRODUCT: ', product);
+  const response = await fetch(`${API_BASE_URL}/product/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(product),
@@ -22,7 +23,7 @@ export const createProduct = async (product: Omit<Product, 'id' | 'created_at' |
 
 export const updateProduct = async (id: number, product: Partial<Product>) => {
   const response = await fetch(`${API_BASE_URL}/product/${id}`, {
-    method: 'PUT',
+    method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(product),
   });
@@ -31,7 +32,7 @@ export const updateProduct = async (id: number, product: Partial<Product>) => {
 };
 
 export const deleteProduct = async (id: number) => {
-  const response = await fetch(`${API_BASE_URL}/products/${id}`, {
+  const response = await fetch(`${API_BASE_URL}/product/${id}`, {
     method: 'DELETE',
   });
   if (!response.ok) throw new Error('Failed to delete product');
@@ -39,7 +40,7 @@ export const deleteProduct = async (id: number) => {
 
 // Orders API
 export const getOrders = async () => {
-  const response = await fetch(`${API_BASE_URL}/order`);
+  const response = await fetch(`${API_BASE_URL}/order/`);
   if (!response.ok) throw new Error('Failed to fetch orders');
   return response.json();
 };

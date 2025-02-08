@@ -9,6 +9,7 @@ export default function Products() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [page, setPage] = useState<number>(1);
 
   useEffect(() => {
     loadProducts();
@@ -18,7 +19,8 @@ export default function Products() {
     try {
       setIsLoading(true);
       const data = await getProducts();
-      setProducts(data);
+      console.log( 'PRODUCTS: ', data);
+      setProducts(data.products);
     } catch (error) {
       toast.error('Failed to load products');
       console.error(error);
@@ -33,10 +35,15 @@ export default function Products() {
     const formData = new FormData(form);
     
     const productData = {
+      id: editingProduct?.id ?? 0,
+      sku: formData.get('sku') as string,
       name: formData.get('name') as string,
       description: formData.get('description') as string,
       price: parseFloat(formData.get('price') as string),
-      stock: parseInt(formData.get('stock') as string, 10),
+      inventory: parseInt(formData.get('stock') as string, 10),
+      pre_order_available: formData.get('pre_order_available') === 'on',
+      limited_edition_count: formData.get('limited_edition_count') ? parseInt(formData.get('limited_edition_count') as string, 10) : null,
+      discontinued: false,
     };
     
     try {
@@ -110,6 +117,7 @@ export default function Products() {
                 <table className="min-w-full divide-y divide-gray-300">
                   <thead className="bg-gray-50">
                     <tr>
+                      <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">SKU</th>
                       <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Name</th>
                       <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Price</th>
                       <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Stock</th>
@@ -122,13 +130,17 @@ export default function Products() {
                     {products.map((product) => (
                       <tr key={product.id}>
                         <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">
+                          {product.sku}
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">
                           {product.name}
                         </td>
                         <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                          ${product.price.toFixed(2)}
+                          ${product.price.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
                         </td>
                         <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                          {product.stock}
+                          {/* TODO: Add thousands separator to inventory */}
+                          {product.inventory.toLocaleString()}
                         </td>
                         <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
                           <button
@@ -154,6 +166,17 @@ export default function Products() {
                   </tbody>
                 </table>
               )}
+               {/* Add page browse links to cycle through pages of products if there are more than 10 products */}
+               {products.length > 10 && (
+                <div className="mt-4">
+                  <button onClick={() => setPage(page - 1)} disabled={page === 1} className="text-indigo-600 hover:text-indigo-900">
+                    Previous Page
+                  </button>
+                  <button onClick={() => setPage(page + 1)} className="text-indigo-600 hover:text-indigo-900">
+                    Next Page
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -168,13 +191,24 @@ export default function Products() {
             <form onSubmit={handleSubmit}>
               <div className="space-y-4">
                 <div>
+                  {editingProduct ? <input type="hidden" name="id" value={editingProduct.id} /> : ''}
+                  <label className="block text-sm font-medium text-gray-700">SKU</label>
+                  <input
+                    type="text"
+                    name="sku"
+                    defaultValue={editingProduct?.sku}
+                    required
+                    className="mt-1 block w-full rounded-md border-gray-500 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  />
+                </div>
+                <div>
                   <label className="block text-sm font-medium text-gray-700">Name</label>
                   <input
                     type="text"
                     name="name"
                     defaultValue={editingProduct?.name}
                     required
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    className="mt-1 block w-full rounded-md border-gray-500 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                   />
                 </div>
                 <div>
@@ -183,7 +217,7 @@ export default function Products() {
                     name="description"
                     defaultValue={editingProduct?.description}
                     rows={3}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    className="mt-1 block w-full rounded-md border-gray-500 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                   />
                 </div>
                 <div>
@@ -194,7 +228,7 @@ export default function Products() {
                     defaultValue={editingProduct?.price}
                     step="0.01"
                     required
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    className="mt-1 block w-full rounded-md border-gray-500 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                   />
                 </div>
                 <div>
@@ -202,9 +236,27 @@ export default function Products() {
                   <input
                     type="number"
                     name="stock"
-                    defaultValue={editingProduct?.stock}
+                    defaultValue={editingProduct?.inventory}
                     required
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    className="mt-1 block w-full rounded-md border-gray-500 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Pre-Order Available</label>
+                  <input
+                    type="checkbox"
+                    name="pre_order_available"
+                    defaultChecked={editingProduct?.pre_order_available}
+                    className="mt-1 block w-full rounded-md border-gray-500 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Limited Edition Count</label>
+                  <input
+                    type="number"
+                    name="limited_edition_count"
+                    defaultValue={editingProduct?.limited_edition_count ?? ''}
+                    className="mt-1 block w-full rounded-md border-gray-500 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                   />
                 </div>
               </div>
@@ -223,7 +275,7 @@ export default function Products() {
                     setEditingProduct(null);
                   }}
                   disabled={isLoading}
-                  className="mt-3 inline-flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:mt-0 sm:text-sm disabled:opacity-50"
+                  className="mt-3 inline-flex w-full justify-center rounded-md border border-gray-500 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:mt-0 sm:text-sm disabled:opacity-50"
                 >
                   Cancel
                 </button>
