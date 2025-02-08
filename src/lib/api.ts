@@ -1,3 +1,5 @@
+import { Product, Order } from '../types';
+
 // API base URL - replace with your actual API endpoint
 const API_BASE_URL = 'http://localhost:41234';
 

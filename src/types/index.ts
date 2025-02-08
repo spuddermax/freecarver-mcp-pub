@@ -1,20 +1,24 @@
 export interface Product {
   id: number;
+  sku: string;
   name: string;
   description: string;
   price: number;
-  stock: number;
+  inventory: number;
+  pre_order_available: boolean;
+  limited_edition_count?: number | null;
+  discontinued: boolean;
   created_at: string;
   updated_at: string;
 }
 
 export interface Order {
   id: number;
-  customer_name: string;
-  customer_email: string;
-  status: 'pending' | 'processing' | 'completed' | 'cancelled';
-  total: number;
-  created_at: string;
+  customer_id: number;
+  order_type: string;
+  status: string;
+  order_date: string;
+  updated_at: string;
   items?: OrderItem[];
 }
 
@@ -24,5 +28,7 @@ export interface OrderItem {
   product_id: number;
   quantity: number;
   price: number;
+  created_at: string;
+  updated_at: string;
   product?: Product;
 }
