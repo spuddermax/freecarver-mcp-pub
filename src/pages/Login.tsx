@@ -3,7 +3,7 @@ import { Lock, Mail, Database, Database as DatabaseOff, DatabaseBackup, Sun, Moo
 import { supabase } from '../lib/supabase';
 import { useTheme } from '../lib/theme';
 import { useGrid } from '../lib/grid';
-import { TronGrid } from './TronGrid/index';
+import { TronGrid } from '../components/TronGrid/index';
 
 interface LoginProps {
   onLogin: () => void;

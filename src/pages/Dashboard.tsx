@@ -9,7 +9,7 @@ import {
   TrendingUp,
   DollarSign
 } from 'lucide-react';
-import Layout from './Layout';
+import Layout from '../components/Layout';
 
 const recentOrders = [
   { id: '#12345', customer: 'John Doe', product: 'Nike Air Max', status: 'Delivered', amount: '$129.99' },

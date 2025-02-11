@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import Layout from './Layout';
-import { Toast } from './Toast';
-import { ProfileEmail } from './ProfileEmail';
-import { ProfilePersonalDetails } from './ProfilePersonalDetails';
-import { ProfilePicture } from './ProfilePicture';
-import { ProfilePassword } from './ProfilePassword';
-import { ProfilePreferences } from './ProfilePreferences';
+import Layout from '../components/Layout';
+import { Toast } from '../components/Toast';
+import { ProfileEmail } from '../components/ProfileEmail';
+import { ProfilePersonalDetails } from '../components/ProfilePersonalDetails';
+import { ProfilePicture } from '../components/ProfilePicture';
+import { ProfilePassword } from '../components/ProfilePassword';
+import { ProfilePreferences } from '../components/ProfilePreferences';
 import { useGrid } from '../lib/grid';
-import { TronGrid } from './TronGrid';
+import { TronGrid } from '../components/TronGrid';
 
 export default function Profile() {
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);

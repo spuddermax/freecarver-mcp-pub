@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { User, Mail, Shield, Trash2, Search, UserPlus, Loader2, Edit } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { User, Mail, Trash2, Search, UserPlus, Loader2, Edit } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import Layout from './Layout';
-import { Toast } from './Toast';
-import { UserEdit } from './UserEdit';
+import Layout from '../components/Layout';
+import { Toast } from '../components/Toast';
+import UserEdit from '../components/UserEdit';
 
 interface UserData {
   id: string;
@@ -44,7 +44,7 @@ export default function Users() {
 
       if (error) throw error;
 
-      const formattedUsers = users.map(user => ({
+      const formattedUsers = users.map((user: any) => ({
         id: user.id,
         email: user.email,
         role: user.role || 'viewer',
