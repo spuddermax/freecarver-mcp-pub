@@ -3,13 +3,13 @@ import { Mail, Save } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useEffect } from 'react';
 
-interface ProfileEmailProps {
+interface UserEmailProps {
   email: string;
   onEmailChange: (email: string) => void;
-  onMessage: (message: { type: 'success' | 'error'; text: string } | null) => void;
+  onMessage: (message: { type: 'success' | 'error' | 'info'; text: string } | null) => void;
 }
 
-export function ProfileEmail({ email, onEmailChange, onMessage }: ProfileEmailProps) {
+export function UserEmail({ email, onEmailChange, onMessage }: UserEmailProps) {
   const [loading, setLoading] = useState(false);
   const [originalEmail, setOriginalEmail] = useState(email);
   const [isValid, setIsValid] = useState(true);

@@ -2,18 +2,20 @@ import React, { useState } from 'react';
 import { Shield, Bell, Clock, Save } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
-interface ProfilePreferencesProps {
-  preferences: {
-    twoFactorEnabled: boolean;
-    notificationsEnabled: boolean;
-    notificationPreference: string;
-    timezone: string;
-  };
-  onMessage: (message: { type: 'success' | 'error'; text: string } | null) => void;
-  onPreferencesChange: (changes: Partial<typeof ProfilePreferencesProps['preferences']>) => void;
+export interface Preferences {
+  twoFactorEnabled: boolean;
+  notificationsEnabled: boolean;
+  notificationPreference: string;
+  timezone: string;
 }
 
-export function ProfilePreferences({ preferences, onPreferencesChange, onMessage }: ProfilePreferencesProps) {
+export interface UserPreferencesProps {
+  preferences: Preferences;
+  onMessage: (message: { type: 'success' | 'error'; text: string } | null) => void;
+  onPreferencesChange: (changes: Partial<Preferences>) => void;
+}
+
+export function UserPreferences({ preferences, onPreferencesChange, onMessage }: UserPreferencesProps) {
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {

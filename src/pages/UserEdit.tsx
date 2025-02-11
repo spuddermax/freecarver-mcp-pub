@@ -1,16 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import Layout from './Layout';
-import { Toast } from './Toast';
-import { ProfileEmail } from './ProfileEmail';
-import { ProfilePersonalDetails } from './ProfilePersonalDetails';
-import { ProfilePicture } from './ProfilePicture';
-import { ProfilePassword } from './ProfilePassword';
-import { ProfilePreferences } from './ProfilePreferences';
+import Layout from '../components/Layout';
+import { Toast } from '../components/Toast';
+import { UserEmail } from '../components/UserEmail';
+import { UserPersonalDetails } from '../components/UserPersonalDetails';
+import { UserPicture } from '../components/UserPicture';
+import { UserPassword } from '../components/UserPassword';
+import { UserPreferences } from '../components/UserPreferences';
 import { useGrid } from '../lib/grid';
-import { TronGrid } from './TronGrid/index';
+import { TronGrid } from '../components/TronGrid/index';
 
-interface UserData {
+export interface UserData {
   id: string;
   email: string;
   role: string;
@@ -18,17 +18,18 @@ interface UserData {
   lastName: string;
   avatarUrl: string;
   createdAt: string;
+  name?: string;
 }
 
 interface UserEditProps {
-  user: UserData;
+  user: UserData | null;
   onClose: () => void;
   onSave: () => void;
 }
 
 export default function UserEdit({ user, onClose, onSave }: UserEditProps) {
-  const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
-  const [profile, setProfile] = useState({
+  const [message, setMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
+  const [User, setUser] = useState({
     email: '',
     firstName: '',
     lastName: '',
@@ -41,15 +42,15 @@ export default function UserEdit({ user, onClose, onSave }: UserEditProps) {
   });
 
   useEffect(() => {
-    loadProfile();
+    loadUser();
   }, []);
 
-  async function loadProfile() {
+  async function loadUser() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         const metadata = user.user_metadata || {};
-        setProfile({
+        setUser({
           email: user.email || '',
           firstName: metadata.first_name || '',
           lastName: metadata.last_name || '',
@@ -62,18 +63,20 @@ export default function UserEdit({ user, onClose, onSave }: UserEditProps) {
         });
       }
     } catch (error) {
-      console.error('Error loading profile:', error);
+      console.error('Error loading User:', error);
     }
   }
+
+  const fullName = user ? user.name ?? `${user.firstName} ${user.lastName}` : '';
 
   return (
     <Layout>
       {message && (
         <Toast
-          message={message.text}
-          type={message.type}
-          onClose={() => setMessage(null)}
-        />
+        message={message.text}
+        type={message.type}
+        onClose={() => setMessage(null)}
+      />
       )}
       <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
@@ -83,41 +86,41 @@ export default function UserEdit({ user, onClose, onSave }: UserEditProps) {
             </div>
 
             <div className="p-6 space-y-8">
-              <ProfileEmail
-                email={profile.email}
-                onEmailChange={(email) => setProfile(prev => ({ ...prev, email }))}
+              <UserEmail
+                email={User.email}
+                onEmailChange={(email) => setUser(prev => ({ ...prev, email }))}
                 onMessage={setMessage}
               />
 
-              <ProfilePersonalDetails
-                profile={{
-                  firstName: profile.firstName,
-                  lastName: profile.lastName,
-                  phoneNumber: profile.phoneNumber
+              <UserPersonalDetails
+                User={{
+                  firstName: User.firstName,
+                  lastName: User.lastName,
+                  phoneNumber: User.phoneNumber
                 }}
                 onMessage={setMessage}
-                onProfileChange={(changes) => setProfile(prev => ({ ...prev, ...changes }))}
+                onUserChange={(changes) => setUser(prev => ({ ...prev, ...changes }))}
               />
 
-              <ProfilePicture
-                avatarUrl={profile.avatarUrl}
-                onAvatarChange={(url) => setProfile(prev => ({ ...prev, avatarUrl: url }))}
+              <UserPicture
+                avatarUrl={User.avatarUrl}
+                onAvatarChange={(url) => setUser(prev => ({ ...prev, avatarUrl: url }))}
               />
 
-              <ProfilePassword
-                email={profile.email}
+              <UserPassword
+                email={User.email}
                 onMessage={setMessage}
               />
 
-              <ProfilePreferences
+              <UserPreferences
                 preferences={{
-                  twoFactorEnabled: profile.twoFactorEnabled,
-                  notificationsEnabled: profile.notificationsEnabled,
-                  notificationPreference: profile.notificationPreference,
-                  timezone: profile.timezone
+                  twoFactorEnabled: User.twoFactorEnabled,
+                  notificationsEnabled: User.notificationsEnabled,
+                  notificationPreference: User.notificationPreference,
+                  timezone: User.timezone
                 }}
                 onMessage={setMessage}
-                onPreferencesChange={(changes) => setProfile(prev => ({ ...prev, ...changes }))}
+                onPreferencesChange={(changes) => setUser(prev => ({ ...prev, ...changes }))}
               />
             </div>
           </div>

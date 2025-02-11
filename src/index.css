@@ -2,6 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Background should default to dark mode on both html & body */
+body {
+  @apply bg-gray-900 text-white;
+}
+
 /* Custom toggle switch styles */
 .toggle-checkbox:checked {
   @apply right-0 border-blue-600;

@@ -1,15 +1,15 @@
 import React from 'react';
 import { AvatarUpload } from './AvatarUpload';
 
-interface ProfilePictureProps {
+interface UserPictureProps {
   avatarUrl: string;
   onAvatarChange: (url: string) => void;
 }
 
-export function ProfilePicture({ avatarUrl, onAvatarChange }: ProfilePictureProps) {
+export function UserPicture({ avatarUrl, onAvatarChange }: UserPictureProps) {
   return (
     <fieldset className="border rounded-lg p-4 border-gray-200 dark:border-gray-700">
-      <legend className="text-lg font-medium text-gray-700 dark:text-gray-300 px-2">Profile Picture</legend>
+      <legend className="text-lg font-medium text-gray-700 dark:text-gray-300 px-2">User Picture</legend>
       <div className="space-y-2">
         <AvatarUpload
           url={avatarUrl}

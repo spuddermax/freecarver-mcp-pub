@@ -1,15 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { User, Phone, Save } from 'lucide-react';
+import { User as UserIcon, Phone, Save } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
-interface ProfilePersonalDetailsProps {
-  profile: {
-    firstName: string;
-    lastName: string;
-    phoneNumber: string;
-  },
+// Extract the user type into its own interface.
+export interface UserData {
+  firstName: string;
+  lastName: string;
+  phoneNumber: string;
+}
+
+export interface UserPersonalDetailsProps {
+  User: UserData;
   onMessage: (message: { type: 'success' | 'error'; text: string } | null) => void;
-  onProfileChange: (changes: Partial<typeof ProfilePersonalDetailsProps['profile']>) => void;
+  onUserChange: (changes: Partial<UserData>) => void;
 }
 
 // Phone number formatting helper functions
@@ -32,39 +35,39 @@ const isValidUSPhoneNumber = (phone: string) => {
   return /^\(\d{3}\) \d{3}-\d{4}$/.test(phone);
 };
 
-export function ProfilePersonalDetails({ profile, onProfileChange, onMessage }: ProfilePersonalDetailsProps) {
+export function UserPersonalDetails({ User, onUserChange, onMessage }: UserPersonalDetailsProps) {
   const [loading, setLoading] = useState(false);
-  const [originalProfile, setOriginalProfile] = useState(profile);
+  const [originalUser, setOriginalUser] = useState(User);
   const [hasInitialized, setHasInitialized] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
-  const isPhoneValid = !profile.phoneNumber || isValidUSPhoneNumber(profile.phoneNumber);
+  const isPhoneValid = !User.phoneNumber || isValidUSPhoneNumber(User.phoneNumber);
 
-  // Set original profile values when component mounts
+  // Set original User values when component mounts
   useEffect(() => {
     if (!hasInitialized) {
-      setOriginalProfile({ ...profile });
+      setOriginalUser({ ...User });
       setHasInitialized(true);
       setIsDirty(false);
     }
-  }, [profile, hasInitialized]);
+  }, [User, hasInitialized]);
 
   const hasChanges = 
-    profile.firstName !== originalProfile.firstName ||
-    profile.lastName !== originalProfile.lastName ||
-    profile.phoneNumber !== originalProfile.phoneNumber;
+    User.firstName !== originalUser.firstName ||
+    User.lastName !== originalUser.lastName ||
+    User.phoneNumber !== originalUser.phoneNumber;
 
   const handlePhoneNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const formattedNumber = formatPhoneNumber(e.target.value);
     // Only update if the number is not too long
     if (formattedNumber.replace(/\D/g, '').length <= 10) {
       setIsDirty(true);
-      onProfileChange({ phoneNumber: formattedNumber });
+      onUserChange({ phoneNumber: formattedNumber });
     }
   };
 
   const getPhoneNumberColor = () => {
-    if (!profile.phoneNumber) return 'text-gray-400';
-    return isValidUSPhoneNumber(profile.phoneNumber) ? 'text-green-500' : 'text-red-500';
+    if (!User.phoneNumber) return 'text-gray-400';
+    return isValidUSPhoneNumber(User.phoneNumber) ? 'text-green-500' : 'text-red-500';
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -73,7 +76,7 @@ export function ProfilePersonalDetails({ profile, onProfileChange, onMessage }: 
     onMessage(null);
 
     // Validate phone number if provided
-    if (profile.phoneNumber && !isValidUSPhoneNumber(profile.phoneNumber)) {
+    if (User.phoneNumber && !isValidUSPhoneNumber(User.phoneNumber)) {
       onMessage({ type: 'error', text: 'Please enter a valid US phone number in the format (XXX) XXX-XXXX' });
       setLoading(false);
       return;
@@ -82,14 +85,14 @@ export function ProfilePersonalDetails({ profile, onProfileChange, onMessage }: 
     try {
       const { error } = await supabase.auth.updateUser({
         data: {
-          first_name: profile.firstName,
-          last_name: profile.lastName,
-          phone_number: profile.phoneNumber
+          first_name: User.firstName,
+          last_name: User.lastName,
+          phone_number: User.phoneNumber
         }
       });
 
       if (error) throw error;
-      setOriginalProfile({ ...profile });
+      setOriginalUser({ ...User });
       setIsDirty(false);
       onMessage({ type: 'success', text: 'Personal details updated successfully!' });
     } catch (error) {
@@ -112,15 +115,15 @@ export function ProfilePersonalDetails({ profile, onProfileChange, onMessage }: 
             </label>
             <div className="mt-1 relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <User className="h-5 w-5 text-gray-400" />
+                <UserIcon className="h-5 w-5 text-gray-400" />
               </div>
               <input
                 type="text"
                 id="firstName"
-                value={profile.firstName}
+                value={User.firstName}
                 onChange={(e) => {
                   setIsDirty(true);
-                  onProfileChange({ firstName: e.target.value });
+                  onUserChange({ firstName: e.target.value });
                 }}
                 className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
               />
@@ -133,15 +136,15 @@ export function ProfilePersonalDetails({ profile, onProfileChange, onMessage }: 
             </label>
             <div className="mt-1 relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <User className="h-5 w-5 text-gray-400" />
+                <UserIcon className="h-5 w-5 text-gray-400" />
               </div>
               <input
                 type="text"
                 id="lastName"
-                value={profile.lastName}
+                value={User.lastName}
                 onChange={(e) => {
                   setIsDirty(true);
-                  onProfileChange({ lastName: e.target.value });
+                  onUserChange({ lastName: e.target.value });
                 }}
                 className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
               />
@@ -160,7 +163,7 @@ export function ProfilePersonalDetails({ profile, onProfileChange, onMessage }: 
             <input
               type="tel"
               id="phoneNumber"
-              value={profile.phoneNumber}
+              value={User.phoneNumber}
               onChange={handlePhoneNumberChange}
               placeholder="(555) 555-5555"
               className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"

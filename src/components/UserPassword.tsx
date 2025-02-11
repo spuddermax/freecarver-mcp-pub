@@ -6,12 +6,12 @@ import {
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
-interface ProfilePasswordProps {
+interface UserPasswordProps {
   email: string;
   onMessage: (message: { type: 'success' | 'error'; text: string } | null) => void;
 }
 
-export function ProfilePassword({ email, onMessage }: ProfilePasswordProps) {
+export function UserPassword({ email, onMessage }: UserPasswordProps) {
   const [isVerifyingPassword, setIsVerifyingPassword] = useState(false);
   const [currentPasswordValid, setCurrentPasswordValid] = useState<boolean | null>(null);
   const [passwordLoading, setPasswordLoading] = useState(false);
@@ -216,7 +216,7 @@ export function ProfilePassword({ email, onMessage }: ProfilePasswordProps) {
                 setCurrentPasswordValid(null);
                 onMessage(null);
               }}
-              onBlur={validateCurrentPassword}
+              onBlur={() => validateCurrentPassword()}
               onKeyDown={handleCurrentPasswordKeyDown}
               className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
               required

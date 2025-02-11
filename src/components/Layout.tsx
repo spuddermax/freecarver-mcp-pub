@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Bell, User, LogOut, LayoutDashboard, Sun, Moon, Settings, Grid, Pause, Play, Users } from 'lucide-react';
+import { Bell, User, LogOut, LayoutDashboard, Sun, Moon, Grid, Pause, Play, Users } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { MCPIcon } from './MCPIcon';
 import { useTheme } from '../lib/theme';
 import { useGrid } from '../lib/grid';
 import { TronGrid } from './TronGrid/index';
+import NavMenu from './NavMenu';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -192,82 +193,29 @@ export default function Layout({ children }: LayoutProps) {
                   </button>
 
                   {showProfileMenu && (
-                    <div ref={menuRef} className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5">
-                      <div className="py-1" role="menu">
-                        <button
-                          onClick={handleDashboardClick}
-                          className="w-full flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
-                          role="menuitem"
-                        >
-                          <LayoutDashboard className="h-4 w-4 mr-2" />
-                          Dashboard
-                        </button>
-                        <button
-                          onClick={handleProfileClick}
-                          className="w-full flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
-                          role="menuitem"
-                        >
-                          <User className="h-4 w-4 mr-2" />
-                          Profile
-                        </button>
-                        <button
-                          onClick={() => {
-                            setShowProfileMenu(false);
-                            navigate('/users');
-                          }}
-                          className="w-full flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
-                          role="menuitem"
-                        >
-                          <Users className="h-4 w-4 mr-2" />
-                          Manage Users
-                        </button>
-                        <button
-                          onClick={handleThemeToggle}
-                          className="w-full flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
-                          role="menuitem"
-                        >
-                          {isDark ? (
-                            <Sun className="h-4 w-4 mr-2" />
-                          ) : (
-                            <Moon className="h-4 w-4 mr-2" />
-                          )}
-                          {isDark ? 'Light Mode' : 'Dark Mode'}
-                        </button>
-                        <button
-                          onClick={() => {
-                            if (!showGrid) {
-                              setShowGrid(true);
-                              setAnimateGrid(true);
-                            } else {
-                              setAnimateGrid(!animateGrid);
-                            }
-                            setShowProfileMenu(false);
-                          }}
-                          className="w-full flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
-                          role="menuitem"
-                        >
-                          <div className="flex items-center">
-                            <Grid className="h-4 w-4 mr-2" />
-                            {!showGrid ? 'Show Grid' : (animateGrid ? 'Pause Grid' : 'Resume Grid')}
-                          </div>
-                          <div className="ml-2">
-                            {animateGrid ? (
-                              <Pause className="h-3 w-3" />
-                            ) : (
-                              <Play className="h-3 w-3" />
-                            )}
-                          </div>
-                        </button>
-                        <button
-                          onClick={handleLogout}
-                          className="w-full flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
-                          role="menuitem"
-                        >
-                          <LogOut className="h-4 w-4 mr-2" />
-                          Sign Out
-                        </button>
-                      </div>
-                    </div>
+                    <NavMenu
+                      onDashboardClick={handleDashboardClick}
+                      onProfileClick={handleProfileClick}
+                      onUsersClick={() => {
+                        setShowProfileMenu(false);
+                        navigate('/users');
+                      }}
+                      onThemeToggle={handleThemeToggle}
+                      onGridToggle={() => {
+                        if (!showGrid) {
+                          setShowGrid(true);
+                          setAnimateGrid(true);
+                        } else {
+                          setAnimateGrid(!animateGrid);
+                        }
+                        setShowProfileMenu(false);
+                      }}
+                      onLogout={handleLogout}
+                      isDark={isDark}
+                      showGrid={showGrid}
+                      animateGrid={animateGrid}
+                      ref={menuRef}
+                    />
                   )}
                 </div>
               </div>

@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 
-interface ToastProps {
+export interface ToastProps {
   message: string;
-  type: 'success' | 'error';
+  type: "success" | "error" | "info";
   onClose: () => void;
 }
 
@@ -27,15 +27,21 @@ export function Toast({ message, type, onClose }: ToastProps) {
 
   const bgColor = type === 'success' 
     ? 'bg-green-50 dark:bg-green-900/90' 
-    : 'bg-red-50 dark:bg-red-900/90';
+    : type === 'error' 
+    ? 'bg-red-50 dark:bg-red-900/90'
+    : 'bg-blue-50 dark:bg-blue-900/90';
   
   const textColor = type === 'success'
     ? 'text-green-800 dark:text-green-200'
-    : 'text-red-800 dark:text-red-200';
+    : type === 'error'
+    ? 'text-red-800 dark:text-red-200'
+    : 'text-blue-800 dark:text-blue-200';
 
   const iconColor = type === 'success'
     ? 'text-green-500 dark:text-green-400'
-    : 'text-red-500 dark:text-red-400';
+    : type === 'error'
+    ? 'text-red-500 dark:text-red-400'
+    : 'text-blue-500 dark:text-blue-400';
 
   return (
     <div className={`fixed bottom-4 right-4 max-w-sm w-full ${bgColor} rounded-lg shadow-lg z-[1000] ${isExiting ? 'toast-exit' : 'toast-enter'}`}>
@@ -58,3 +64,5 @@ export function Toast({ message, type, onClose }: ToastProps) {
     </div>
   );
 }
+
+export default Toast;
