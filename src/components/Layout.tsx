@@ -16,12 +16,12 @@ export default function Layout({ children }: LayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const [notifications] = useState(3);
-  const [userProfile, setUserProfile] = useState({
+  const [userMySettings, setUserMySettings] = useState({
     email: '',
     firstName: '',
     avatarUrl: '',
   });
-  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [showNavMenu, setShowNavMenu] = useState(false);
   const { theme, setTheme } = useTheme();
   const isDark = theme === 'dark';
   const { showGrid, setShowGrid, animateGrid, setAnimateGrid } = useGrid();
@@ -29,11 +29,11 @@ export default function Layout({ children }: LayoutProps) {
   const buttonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
-    async function getUserProfile() {
+    async function getUserMySettings() {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         const metadata = user.user_metadata || {};
-        setUserProfile({
+        setUserMySettings({
           email: user.email || 'User',
           firstName: metadata.first_name || '',
           avatarUrl: metadata.avatar_url || '',
@@ -42,7 +42,7 @@ export default function Layout({ children }: LayoutProps) {
     }
 
     // Initial profile load
-    getUserProfile();
+    getUserMySettings();
 
     // Subscribe to auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -51,7 +51,7 @@ export default function Layout({ children }: LayoutProps) {
       } else if (session?.user) {
         // Reload user profile on any auth state change
         const metadata = session.user.user_metadata || {};
-        setUserProfile({
+        setUserMySettings({
           email: session.user.email || 'User',
           firstName: metadata.first_name || '',
           avatarUrl: metadata.avatar_url || '',
@@ -72,7 +72,7 @@ export default function Layout({ children }: LayoutProps) {
         !menuRef.current.contains(event.target as Node) &&
         !buttonRef.current.contains(event.target as Node)
       ) {
-        setShowProfileMenu(false);
+        setShowNavMenu(false);
       }
     }
 
@@ -87,19 +87,20 @@ export default function Layout({ children }: LayoutProps) {
     window.location.reload();
   };
 
-  const handleProfileClick = () => {
-    setShowProfileMenu(false);
-    navigate('/profile');
+  const handleMySettingsClick = () => {
+    console.log('My Settings Clicked');
+    setShowNavMenu(false);
+    navigate('/userEdit');
   };
 
   const handleDashboardClick = () => {
-    setShowProfileMenu(false);
+    setShowNavMenu(false);
     navigate('/dashboard');
   };
 
   const handleThemeToggle = () => {
     setTheme(isDark ? 'light' : 'dark');
-    setShowProfileMenu(false);
+    setShowNavMenu(false);
   };
 
   const getPageInfo = () => {
@@ -110,9 +111,9 @@ export default function Layout({ children }: LayoutProps) {
           icon: LayoutDashboard,
           iconColor: 'text-blue-500 dark:text-blue-400'
         };
-      case '/profile':
+      case '/userEdit':
         return { 
-          title: 'Profile', 
+          title: 'User Editor', 
           icon: User,
           iconColor: 'text-purple-500 dark:text-purple-400'
         };
@@ -173,13 +174,13 @@ export default function Layout({ children }: LayoutProps) {
                 <div className="relative">
                   <button
                     ref={buttonRef}
-                    onClick={() => setShowProfileMenu(!showProfileMenu)}
+                    onClick={() => setShowNavMenu(!showNavMenu)}
                     className="flex items-center space-x-3 focus:outline-none"
                   >
-                    {userProfile.avatarUrl ? (
+                    {userMySettings.avatarUrl ? (
                       <img
-                        src={userProfile.avatarUrl}
-                        alt="Profile"
+                        src={userMySettings.avatarUrl}
+                        alt="MySettings"
                         className="h-8 w-8 rounded-full object-cover border-2 border-blue-100 dark:border-blue-900"
                       />
                     ) : (
@@ -188,16 +189,16 @@ export default function Layout({ children }: LayoutProps) {
                       </div>
                     )}
                     <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
-                      {userProfile.firstName}
+                      {userMySettings.firstName}
                     </span>
                   </button>
 
-                  {showProfileMenu && (
+                  {showNavMenu && (
                     <NavMenu
                       onDashboardClick={handleDashboardClick}
-                      onProfileClick={handleProfileClick}
+                      onMySettingsClick={handleMySettingsClick}
                       onUsersClick={() => {
-                        setShowProfileMenu(false);
+                        setShowNavMenu(false);
                         navigate('/users');
                       }}
                       onThemeToggle={handleThemeToggle}
@@ -208,7 +209,7 @@ export default function Layout({ children }: LayoutProps) {
                         } else {
                           setAnimateGrid(!animateGrid);
                         }
-                        setShowProfileMenu(false);
+                        setShowNavMenu(false);
                       }}
                       onLogout={handleLogout}
                       isDark={isDark}

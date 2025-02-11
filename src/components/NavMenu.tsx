@@ -3,7 +3,7 @@ import { LayoutDashboard, User as UserIcon, Users as UsersIcon, Sun, Moon, Grid,
 
 interface NavMenuProps {
   onDashboardClick: () => void;
-  onProfileClick: () => void;
+  onMySettingsClick: () => void;
   onUsersClick: () => void;
   onThemeToggle: () => void;
   onGridToggle: () => void;
@@ -15,7 +15,7 @@ interface NavMenuProps {
 
 const NavMenu = forwardRef<HTMLDivElement, NavMenuProps>(({
   onDashboardClick,
-  onProfileClick,
+  onMySettingsClick,
   onUsersClick,
   onThemeToggle,
   onGridToggle,
@@ -36,7 +36,7 @@ const NavMenu = forwardRef<HTMLDivElement, NavMenuProps>(({
           Dashboard
         </button>
         <button
-          onClick={onProfileClick}
+          onClick={onMySettingsClick}
           className="w-full flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
           role="menuitem"
         >

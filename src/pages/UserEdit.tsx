@@ -7,8 +7,6 @@ import { UserPersonalDetails } from '../components/UserPersonalDetails';
 import { UserPicture } from '../components/UserPicture';
 import { UserPassword } from '../components/UserPassword';
 import { UserPreferences } from '../components/UserPreferences';
-import { useGrid } from '../lib/grid';
-import { TronGrid } from '../components/TronGrid/index';
 
 export interface UserData {
   id: string;
@@ -67,8 +65,6 @@ export default function UserEdit({ user, onClose, onSave }: UserEditProps) {
     }
   }
 
-  const fullName = user ? user.name ?? `${user.firstName} ${user.lastName}` : '';
-
   return (
     <Layout>
       {message && (
@@ -81,9 +77,6 @@ export default function UserEdit({ user, onClose, onSave }: UserEditProps) {
       <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
           <div className="bg-white dark:bg-gray-800 shadow rounded-lg">
-            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-              <h3 className="text-lg font-medium text-gray-800 dark:text-white">User Settings Editor</h3>
-            </div>
 
             <div className="p-6 space-y-8">
               <UserEmail
