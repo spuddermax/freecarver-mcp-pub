@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { useGrid } from '../../lib/grid';
 import { useTheme } from '../../lib/theme';
 import { Point, GRID_CONSTANTS } from './types';

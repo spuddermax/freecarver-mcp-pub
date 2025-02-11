@@ -47,22 +47,6 @@ export function UserPassword({ email, onMessage }: UserPasswordProps) {
     setPasswordErrors(newErrors);
   };
 
-  const resetPasswordFields = () => {
-    setCurrentPasswordValid(null);
-    setIsDirty({
-      currentPassword: false,
-      newPassword: false,
-      verifyPassword: false
-    });
-    setPasswordData({
-      currentPassword: '',
-      newPassword: '',
-      verifyPassword: '',
-    });
-    setPasswordErrors([]);
-    onMessage(null);
-  };
-
   const handleCurrentPasswordKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       e.preventDefault();

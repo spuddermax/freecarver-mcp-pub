@@ -25,7 +25,7 @@ interface UserEditProps {
   onSave: () => void;
 }
 
-export default function UserEdit({ user, onClose, onSave }: UserEditProps) {
+export default function UserEdit({ onClose, onSave }: UserEditProps) {
   const [message, setMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
   const [User, setUser] = useState({
     email: '',

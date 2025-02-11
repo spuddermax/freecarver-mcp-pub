@@ -1,4 +1,4 @@
-import React from 'react';
+import 'react';
 import { AvatarUpload } from './AvatarUpload';
 
 interface UserPictureProps {

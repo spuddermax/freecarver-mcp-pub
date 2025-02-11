@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Bell, User, LogOut, LayoutDashboard, Sun, Moon, Grid, Pause, Play, Users } from 'lucide-react';
+import { Bell, User, LayoutDashboard } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { MCPIcon } from './MCPIcon';
 import { useTheme } from '../lib/theme';
