@@ -47,7 +47,7 @@ export function TronGrid() {
     window.addEventListener('resize', resizeCanvas);
 
     // Initialize points
-    const availableColors: Point['color'][] = GRID_CONSTANTS.COLORS_USED;
+    const availableColors: Point['color'][] = [...GRID_CONSTANTS.COLORS_USED];
     const playerColors = Array.from({ length: GRID_CONSTANTS.NUM_DOTS }, (_, i) => 
       availableColors[i % availableColors.length]
     );

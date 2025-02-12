@@ -85,8 +85,8 @@ function App() {
             <>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/users" element={<Users />} />
-              <Route path="/useredit/:uuid" element={<UserEdit onClose={() => {}} onSave={(user: any) => {}} />} />
-              <Route path="/useredit" element={<UserEdit onClose={() => {}} onSave={(user: any) => {}} />} />
+              <Route path="/useredit/:uuid" element={<UserEdit />} />
+              <Route path="/useredit" element={<UserEdit />} />
             </>
           ) : (
             <>

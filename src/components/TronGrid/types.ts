@@ -1,3 +1,29 @@
+export const GRID_CONSTANTS = {
+  EXPLOSION_DURATION: 7500, // Duration of explosion animation in ms
+  EXPLOSION_PARTICLES: 48, // Number of particles in explosion
+  RESPAWN_DELAY: 10000,    // Time before respawning after explosion in ms
+  TRAIL_LENGTH: 1600,      // Maximum number of points in trail
+  TURN_DELAY: 250,       // Minimum time between turns in ms
+  NUM_DOTS: 6,            // Total number of dots on the grid
+  DRAW_HEAD: false,         // Draw the head of the dot
+  DOT: {
+    LENGTH: 12,           // Length of the teardrop dot
+    WIDTH: 2             // Width of the teardrop dot
+  },
+  TRAIL: {
+    LENGTH: 1200,
+    WIDTH: 1
+  },
+  SPEED: {
+    MIN: 2,            // Minimum speed for dots
+    MAX: 2             // Maximum speed for dots
+  },
+  DIRECTIONS: [0, 90, 180, 270], // Directions dots can move in
+  SHOW_PLAYER_NAME: false,
+  COLLISIONS: true,
+  COLORS_USED: ['blue', 'green', 'red', 'yellow', 'purple', 'orange', 'blueGreen'] as const // Color names defined in the colors object
+};
+
 export interface Point {
   x: number;
   y: number;
@@ -8,7 +34,7 @@ export interface Point {
   active: boolean;
   respawnTime: number | null;
   crashTime: number | null;
-  color: 'blue' | 'purple' | 'red' | 'green' | 'yellow' | 'orange';
+  color: 'blue' | 'green' | 'red' | 'yellow' | 'purple' | 'orange' | 'blueGreen';
   playerIndex: number;
   lastTurnTime: number;
 }
@@ -95,30 +121,4 @@ export const colors = {
     explosion: 'rgba(0, 0, 0)',
     glow: 'rgba(0, 0, 0, 0.8)'
   }
-};
-
-export const GRID_CONSTANTS = {
-  EXPLOSION_DURATION: 7500, // Duration of explosion animation in ms
-  EXPLOSION_PARTICLES: 48, // Number of particles in explosion
-  RESPAWN_DELAY: 10000,    // Time before respawning after explosion in ms
-  TRAIL_LENGTH: 1600,      // Maximum number of points in trail
-  TURN_DELAY: 250,       // Minimum time between turns in ms
-  NUM_DOTS: 6,            // Total number of dots on the grid
-  DRAW_HEAD: false,         // Draw the head of the dot
-  DOT: {
-    LENGTH: 12,           // Length of the teardrop dot
-    WIDTH: 2             // Width of the teardrop dot
-  },
-  TRAIL: {
-    LENGTH: 1200,
-    WIDTH: 1
-  },
-  SPEED: {
-    MIN: 2,            // Minimum speed for dots
-    MAX: 2             // Maximum speed for dots
-  },
-  DIRECTIONS: [0, 90, 180, 270], // Directions dots can move in
-  SHOW_PLAYER_NAME: false,
-  COLLISIONS: false,
-  COLORS_USED: ['blue', 'green', 'red', 'yellow', 'purple', 'orange', 'blueGreen'] // Color names defined in the colors object
 };

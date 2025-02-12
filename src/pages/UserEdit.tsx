@@ -9,6 +9,11 @@ import { UserPassword } from '../components/UserPassword';
 import { UserPreferences } from '../components/UserPreferences';
 import { useParams } from 'react-router-dom';
 
+interface UserEditProps {
+  onClose: () => void;
+  onSave: (user: any) => void;
+}
+
 export interface UserData {
   id: string;
   email: string;
@@ -20,7 +25,7 @@ export interface UserData {
   name?: string;
 }
 
-export default function UserEdit({}: UserEditProps ) {
+export default function UserEdit() {
   const { uuid } = useParams<{ uuid: string }>();
 
   useEffect(() => {
@@ -50,6 +55,10 @@ export default function UserEdit({}: UserEditProps ) {
   }, [uuid]);
 
   async function loadUser() {
+    if (!uuid) {
+      console.error('No UUID provided');
+      return;
+    }
     try {
       const { data: { user } } = await supabase.auth.admin.getUserById(uuid);
       if (user) {
@@ -68,7 +77,7 @@ export default function UserEdit({}: UserEditProps ) {
         });
       }
     } catch (error) {
-      console.error('Error loading User:', error);
+      console.error('Error loading user:', error);
     }
   }
 

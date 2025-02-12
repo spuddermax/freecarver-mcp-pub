@@ -145,7 +145,7 @@ export default function Layout({ children }: LayoutProps) {
                 <div className="flex items-center space-x-3">
                   <MCPIcon className="h-8 w-8 text-blue-600 dark:text-blue-400" />
                   <h1 className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                    Master Control Program
+                    Master Control Program!
                   </h1>
                 </div>
               ) : (
