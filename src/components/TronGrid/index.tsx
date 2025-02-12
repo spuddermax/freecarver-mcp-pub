@@ -47,14 +47,14 @@ export function TronGrid() {
     window.addEventListener('resize', resizeCanvas);
 
     // Initialize points
-    const availableColors: Point['color'][] = ['blue', 'purple', 'red', 'green'];
+    const availableColors: Point['color'][] = GRID_CONSTANTS.COLORS_USED;
     const playerColors = Array.from({ length: GRID_CONSTANTS.NUM_DOTS }, (_, i) => 
       availableColors[i % availableColors.length]
     );
     pointsRef.current = Array.from({ length: GRID_CONSTANTS.NUM_DOTS }, (_, index) => ({
       x: Math.random() * canvas.width,
       y: Math.random() * canvas.height,
-      direction: [0, 90, 180, 270][Math.floor(Math.random() * 4)] as Point['direction'],
+      direction: GRID_CONSTANTS.DIRECTIONS[Math.floor(Math.random() * GRID_CONSTANTS.DIRECTIONS.length)] as Point['direction'],
       speed: GRID_CONSTANTS.SPEED.MIN + Math.random() * (GRID_CONSTANTS.SPEED.MAX - GRID_CONSTANTS.SPEED.MIN),
       progress: 0,
       trail: [],
@@ -155,7 +155,7 @@ function updatePoint(point: Point, currentTime: number, width: number, height: n
       point.trail = [];
       point.x = Math.random() * width;
       point.y = Math.random() * height;
-      point.direction = [0, 90, 180, 270][Math.floor(Math.random() * 4)] as Point['direction'];
+      point.direction = GRID_CONSTANTS.DIRECTIONS[Math.floor(Math.random() * 4)] as Point['direction'];
     }
     return;
   }
@@ -167,11 +167,13 @@ function updatePoint(point: Point, currentTime: number, width: number, height: n
   point.y += Math.sin(directionRad) * point.speed;
   point.progress += 0.02;
 
-  const collision = checkCollision(point, points);
-  if (collision) {
-    point.active = false;
-    point.crashTime = currentTime;
-    point.respawnTime = currentTime + GRID_CONSTANTS.RESPAWN_DELAY;
+  if (GRID_CONSTANTS.COLLISIONS) {
+    const collision = checkCollision(point, points);
+    if (collision) {
+      point.active = false;
+      point.crashTime = currentTime;
+      point.respawnTime = currentTime + GRID_CONSTANTS.RESPAWN_DELAY;
+    }
   }
 
   // Handle screen wrapping
@@ -194,7 +196,7 @@ function updatePoint(point: Point, currentTime: number, width: number, height: n
 
   if (point.active) {
     point.trail.unshift({ x: point.x, y: point.y });
-    if (point.trail.length > GRID_CONSTANTS.TRAIL_LENGTH) {
+    if (point.trail.length > GRID_CONSTANTS.TRAIL.LENGTH) {
       point.trail.pop();
     }
   }
@@ -215,7 +217,7 @@ function updatePoint(point: Point, currentTime: number, width: number, height: n
     const newDirection = ((currentDirection + turn + 360) % 360) as Point['direction'];
     
     // Verify the new direction is one of our valid orthogonal directions
-    if ([0, 90, 180, 270].includes(newDirection)) {
+    if (GRID_CONSTANTS.DIRECTIONS.includes(newDirection)) {
       point.direction = newDirection;
       point.lastTurnTime = currentTime;
     }

@@ -1,4 +1,4 @@
-import { Point, GRID_CONSTANTS, colors } from './types';
+import { Point, GRID_CONSTANTS } from './types';
 
 export function checkCollision(point: Point, otherPoints: Point[]) {
   if (!point.active) return false;

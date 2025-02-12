@@ -33,18 +33,17 @@ export function drawExplosion(ctx: CanvasRenderingContext2D, x: number, y: numbe
   ctx.stroke();
 
   // Draw particles
-  const particles = 12;
-  for (let i = 0; i < particles; i++) {
-    const angle = (i / particles) * Math.PI * 2;
-    const particleRadius = radius * 0.7;
-    const px = x + Math.cos(angle) * particleRadius * (1 - progress * 0.5);
-    const py = y + Math.sin(angle) * particleRadius * (1 - progress * 0.5);
+  for (let i = 0; i < GRID_CONSTANTS.EXPLOSION_PARTICLES; i++) {
+    const angle = (i / GRID_CONSTANTS.EXPLOSION_PARTICLES) * Math.PI * 2;
+    const particleRadius = radius * 0.9;
+    const px = x + Math.cos(angle) * particleRadius * (1 - progress * 0.25);
+    const py = y + Math.sin(angle) * particleRadius * (1 - progress * 0.25);
     
     ctx.beginPath();
     ctx.moveTo(x, y);
     ctx.lineTo(px, py);
     ctx.strokeStyle = `${colors[point.color].explosion}${opacity})`;
-    ctx.lineWidth = 2;
+    ctx.lineWidth = GRID_CONSTANTS.TRAIL.WIDTH;
     ctx.stroke();
   }
 }
@@ -88,11 +87,11 @@ export function drawPoint(ctx: CanvasRenderingContext2D, point: Point, currentTi
     gradient.addColorStop(1, colors[point.color].trail.end);
     
     ctx.strokeStyle = gradient;
-    ctx.lineWidth = 2;
+    ctx.lineWidth = GRID_CONSTANTS.TRAIL.WIDTH;
     ctx.stroke();
   }
 
-  if (point.active) {
+  if (point.active && GRID_CONSTANTS.DRAW_HEAD) {
     // Draw teardrop head
     const headLength = GRID_CONSTANTS.DOT.LENGTH;
     const headWidth = GRID_CONSTANTS.DOT.WIDTH;
@@ -127,11 +126,13 @@ export function drawPoint(ctx: CanvasRenderingContext2D, point: Point, currentTi
     
     ctx.restore();
     
-    // Draw player label
-    ctx.font = '12px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillStyle = `${colors[point.color].glow}${pulseOpacity})`;
-    ctx.fillText(`Player ${point.playerIndex + 1}`, point.x, point.y - 15);
+    // Draw player label if enabled
+    if (GRID_CONSTANTS.SHOW_PLAYER_NAME) {
+      ctx.font = '12px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = `${colors[point.color].glow}${pulseOpacity})`;
+      ctx.fillText(`Player ${point.playerIndex + 1}`, point.x, point.y - 15);
+    }
   }
   
   // Draw explosion if point is inactive and has a crash time
