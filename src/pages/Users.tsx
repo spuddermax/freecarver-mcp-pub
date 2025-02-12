@@ -256,19 +256,6 @@ export default function Users() {
           </div>
         </div>
       </div>
-      {selectedUser && (
-        <UserEdit
-          user={selectedUser}
-          onClose={() => setSelectedUser(null)}
-          onSave={() => {
-            loadUsers();
-            setMessage({
-              type: 'success',
-              text: 'User updated successfully'
-            });
-          }}
-        />
-      )}
     </Layout>
   );
 }

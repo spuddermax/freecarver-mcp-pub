@@ -85,17 +85,8 @@ function App() {
             <>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/users" element={<Users />} />
-              <Route path="/useredit" element={<UserEdit user={null} onClose={() => console.log('Close UserEdit')} onSave={() => console.log('Save UserEdit')} />} />
-              <Route
-                path="/useredit/:id"
-                element={
-                  <UserEdit
-                    user={null}
-                    onClose={() => console.log('Close UserEdit')}
-                    onSave={() => console.log('Save UserEdit')}
-                  />
-                }
-              />
+              <Route path="/useredit/:uuid" element={<UserEdit onClose={() => {}} onSave={(user: any) => {}} />} />
+              <Route path="/useredit" element={<UserEdit onClose={() => {}} onSave={(user: any) => {}} />} />
             </>
           ) : (
             <>

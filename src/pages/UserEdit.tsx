@@ -7,6 +7,7 @@ import { UserPersonalDetails } from '../components/UserPersonalDetails';
 import { UserPicture } from '../components/UserPicture';
 import { UserPassword } from '../components/UserPassword';
 import { UserPreferences } from '../components/UserPreferences';
+import { useParams } from 'react-router-dom';
 
 export interface UserData {
   id: string;
@@ -19,15 +20,18 @@ export interface UserData {
   name?: string;
 }
 
-interface UserEditProps {
-  user: UserData | null;
-  onClose: () => void;
-  onSave: () => void;
-}
+export default function UserEdit({}: UserEditProps ) {
+  const { uuid } = useParams<{ uuid: string }>();
 
-export default function UserEdit({ onClose, onSave }: UserEditProps) {
+  useEffect(() => {
+    if (uuid) {
+      console.log(uuid);
+    }
+  }, [uuid]);
+
   const [message, setMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
   const [User, setUser] = useState({
+    id: '',
     email: '',
     firstName: '',
     lastName: '',
@@ -40,15 +44,18 @@ export default function UserEdit({ onClose, onSave }: UserEditProps) {
   });
 
   useEffect(() => {
-    loadUser();
-  }, []);
+    if (uuid) {
+      loadUser();
+    }
+  }, [uuid]);
 
   async function loadUser() {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await supabase.auth.admin.getUserById(uuid);
       if (user) {
         const metadata = user.user_metadata || {};
         setUser({
+          id: user.id,
           email: user.email || '',
           firstName: metadata.first_name || '',
           lastName: metadata.last_name || '',
@@ -79,6 +86,8 @@ export default function UserEdit({ onClose, onSave }: UserEditProps) {
           <div className="bg-white dark:bg-gray-800 shadow rounded-lg">
 
             <div className="p-6 space-y-8">
+              <p className="text-sm text-gray-500">Logged in ID: {User.id}</p>
+              <p className="text-sm text-gray-500">Requested ID: {uuid}</p>
               <UserEmail
                 email={User.email}
                 onEmailChange={(email) => setUser(prev => ({ ...prev, email }))}
@@ -119,8 +128,6 @@ export default function UserEdit({ onClose, onSave }: UserEditProps) {
           </div>
         </div>
       </div>
-      <button onClick={onClose}>Close</button>
-      <button onClick={onSave}>Save</button>
     </Layout>
   );
 }
