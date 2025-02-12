@@ -60,7 +60,7 @@ export default function UserEdit() {
       return;
     }
     try {
-      const { data: { user } } = await supabase.auth.admin.getUserById(uuid);
+      const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         const metadata = user.user_metadata || {};
         setUser({
