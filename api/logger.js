@@ -1,28 +1,56 @@
-// /api/logger.js
-
 import { createLogger, format, transports } from "winston";
-const { combine, timestamp, json, prettyPrint } = format;
+import dotenv from "dotenv";
 
-// Create the logger with a file transport
-const logger = createLogger({
-	level: "error", // log errors and above
-	format: combine(timestamp(), json(), prettyPrint()),
-	transports: [
-		// Ensure that the file path /var/log/freecarver-api/ exists and has the right permissions
-		new transports.File({
-			filename: "/var/log/freecarver-api/error.log",
-			level: "error",
-		}),
-	],
+dotenv.config();
+
+const { combine, timestamp, printf, colorize, json, prettyPrint } = format;
+
+// Custom log format for console output
+const customFormat = printf(({ level, message, timestamp, stack }) => {
+	return `${timestamp} ${level}: ${stack || message}`;
 });
 
-// Optionally add console logging in non-production environments
+// Define file paths with fallback defaults
+const errorLogFile =
+	process.env.ERROR_LOG_FILE || "/var/log/freecarver-api/error.log";
+const infoLogFile =
+	process.env.INFO_LOG_FILE || "/var/log/freecarver-api/info.log";
+
+// Create an array of transports based on environment
+const loggerTransports = [
+	// Always log errors to file
+	new transports.File({
+		filename: errorLogFile,
+		level: "error",
+		format: combine(timestamp(), json()),
+	}),
+	// Always log info and above to a separate file
+	new transports.File({
+		filename: infoLogFile,
+		level: "info",
+		format: combine(timestamp(), json()),
+	}),
+];
+
+// In non-production environments, add a console transport with colorized output
 if (process.env.NODE_ENV !== "production") {
-	logger.add(
+	loggerTransports.push(
 		new transports.Console({
-			format: format.simple(),
+			level: "debug",
+			format: combine(
+				colorize(),
+				timestamp(),
+				prettyPrint(),
+				customFormat
+			),
 		})
 	);
 }
+
+const logger = createLogger({
+	level: process.env.NODE_ENV !== "production" ? "debug" : "info",
+	transports: loggerTransports,
+	exitOnError: false, // Do not exit on handled exceptions
+});
 
 export default logger;
