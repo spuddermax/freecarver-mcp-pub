@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Lock, Mail, Database, Database as DatabaseOff, DatabaseBackup, Sun, Moon, Grid, Pause, Play } from 'lucide-react';
-import { supabase } from '../lib/supabase';
 import { useTheme } from '../lib/theme';
 import { useGrid } from '../lib/grid';
 import { TronGrid } from '../components/TronGrid/index';
@@ -14,25 +13,34 @@ export default function Login({ onLogin }: LoginProps) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  // You might want to implement a new connectivity check for your API,
+  // or remove connectionStatus entirely if not needed.
   const [connectionStatus, setConnectionStatus] = useState<'checking' | 'connected' | 'error'>('checking');
   const { theme, setTheme } = useTheme();
   const { showGrid, setShowGrid, animateGrid, setAnimateGrid } = useGrid();
   const isDark = theme === 'dark';
 
+  // Option 1: Check API connectivity on mount (simple ping)
   useEffect(() => {
-    supabase.auth.getSession().then(() => {
-      setConnectionStatus('connected');
-    }).catch(err => {
-      console.error('Supabase connection error:', err);
-      setConnectionStatus('error');
-    });
+    fetch('/api') // assuming your API root returns something
+      .then(res => {
+        if (res.ok) {
+          setConnectionStatus('connected');
+        } else {
+          setConnectionStatus('error');
+        }
+      })
+      .catch(err => {
+        console.error('API connection error:', err);
+        setConnectionStatus('error');
+      });
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
-    
+
     if (!email || !password) {
       setError('Please fill in all fields');
       setLoading(false);
@@ -40,21 +48,34 @@ export default function Login({ onLogin }: LoginProps) {
     }
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
+      const response = await fetch('/api/admin/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email, password })
       });
 
-      if (error) throw error;
+      if (!response.ok) {
+        // If status code is not OK, throw an error to be caught below
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Login failed');
+      }
 
-      if (data.user) {
+      const data = await response.json();
+
+      // Assume the response contains a JWT token. Store it (e.g., in localStorage).
+      if (data.token) {
+        localStorage.setItem('jwtToken', data.token);
         setEmail('');
         setPassword('');
         onLogin();
+      } else {
+        throw new Error('Invalid response from server');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error signing in:', err);
-      setError('Invalid email or password');
+      setError(err.message || 'Invalid email or password');
     } finally {
       setLoading(false);
     }
@@ -72,9 +93,9 @@ export default function Login({ onLogin }: LoginProps) {
   };
 
   const connectionTooltip = {
-    checking: 'Checking database connection...',
-    connected: 'Connected to database',
-    error: 'Database connection error'
+    checking: 'Checking API connection...',
+    connected: 'Connected to API',
+    error: 'API connection error'
   };
 
   return (

@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { Upload, X, Loader2 } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { uploadAvatar } from '../lib/api';
 
 interface AvatarUploadProps {
   url: string;
@@ -12,38 +12,16 @@ export function AvatarUpload({ url, onUpload, size = 150 }: AvatarUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const uploadAvatar = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUpload = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     try {
       setUploading(true);
       setError(null);
-      let oldAvatarPath = null;
 
       if (!event.target.files || event.target.files.length === 0) {
         throw new Error('You must select an image to upload.');
       }
 
       const file = event.target.files[0];
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        throw new Error('No user found');
-      }
-
-      // Extract path from current avatar URL if it exists
-      if (url) {
-        try {
-          const urlObj = new URL(url);
-          const pathMatch = urlObj.pathname.match(/\/storage\/v1\/object\/public\/avatars\/(.*)/);
-          if (pathMatch && pathMatch[1]) {
-            oldAvatarPath = decodeURIComponent(pathMatch[1]);
-          }
-        } catch (error) {
-          console.error('Error parsing old avatar URL:', error);
-        }
-      }
-      
-      const fileExt = file.name.split('.').pop();
-      const filePath = `${user.id}/${Math.random()}.${fileExt}`;
 
       // Check file size (max 2MB)
       if (file.size > 2 * 1024 * 1024) {
@@ -55,47 +33,16 @@ export function AvatarUpload({ url, onUpload, size = 150 }: AvatarUploadProps) {
         throw new Error('File type must be JPEG, PNG, or WebP');
       }
 
-      const { error: uploadError, data } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, file);
-
-      if (uploadError) {
-        throw uploadError;
-      }
-
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(filePath);
-
-      // Delete old avatar if it exists
-      if (oldAvatarPath) {
-        const { error: deleteError } = await supabase.storage
-          .from('avatars')
-          .remove([oldAvatarPath]);
-
-        if (deleteError) {
-          console.error('Error deleting old avatar:', deleteError);
-          // Don't throw error here, as the upload was successful
-        }
-      }
-      
-      // Update user metadata with new avatar URL
-      const { error: updateError } = await supabase.auth.updateUser({
-        data: { avatar_url: publicUrl }
-      });
-      
-      if (updateError) {
-        throw updateError;
-      }
-      
-      onUpload(publicUrl);
-    } catch (error) {
-      setError(error instanceof Error ? error.message : 'Error uploading avatar');
+      // Call the new API to upload the avatar
+      const result = await uploadAvatar(file, url);
+      onUpload(result.publicUrl);
+    } catch (err: any) {
+      console.error('Error uploading avatar:', err);
+      setError(err instanceof Error ? err.message : 'Error uploading avatar');
     } finally {
       setUploading(false);
     }
-  }, [onUpload]);
+  }, [onUpload, url]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -133,7 +80,7 @@ export function AvatarUpload({ url, onUpload, size = 150 }: AvatarUploadProps) {
           type="file"
           id="avatar-upload"
           accept="image/*"
-          onChange={uploadAvatar}
+          onChange={handleUpload}
           disabled={uploading}
           className="hidden"
         />

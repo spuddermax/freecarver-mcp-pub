@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { User as UserIcon,
+import { 
+  User as UserIcon,
   Mail as MailIcon,
   Trash2 as Trash2Icon,
   Search as SearchIcon,
@@ -7,10 +8,9 @@ import { User as UserIcon,
   Loader2 as Loader2Icon,
   Edit as EditIcon
 } from 'lucide-react';
-import { supabase } from '../lib/supabase';
 import Layout from '../components/Layout';
 import { Toast } from '../components/Toast';
-import UserEdit from './UserEdit';
+import { fetchUsers } from '../lib/api'; // new API function
 
 interface UserData {
   id: string;
@@ -46,19 +46,17 @@ export default function Users() {
 
   async function loadUsers() {
     try {
-      const { data: users, error } = await supabase
-        .rpc('get_visible_users');
-
-      if (error) throw error;
-
-      const formattedUsers = users.map((user: any) => ({
+      // Use the new API endpoint to fetch users
+      const usersData = await fetchUsers();
+      // Format the returned users; adjust property names if needed
+      const formattedUsers = usersData.map((user: any) => ({
         id: user.id,
         email: user.email,
         role: user.role || 'viewer',
-        firstName: user.first_name || '',
-        lastName: user.last_name || '',
-        avatarUrl: user.avatar_url || '',
-        createdAt: new Date(user.created_at).toLocaleDateString()
+        firstName: user.firstName || user.first_name || '',
+        lastName: user.lastName || user.last_name || '',
+        avatarUrl: user.avatarUrl || user.avatar_url || '',
+        createdAt: new Date(user.createdAt || user.created_at).toLocaleDateString(),
       }));
 
       setUsers(formattedUsers);
