@@ -61,7 +61,6 @@ export default function Login({ onLogin }: LoginProps) {
 
 		try {
 			const data = await adminLogin(email, password);
-			console.log(data);
 
 			if (data.token) {
 				localStorage.setItem("jwtToken", data.token);

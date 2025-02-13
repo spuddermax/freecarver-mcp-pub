@@ -34,7 +34,6 @@ export default function Layout({ children }: LayoutProps) {
 			const token = localStorage.getItem("jwtToken");
 			if (token) {
 				const decoded = decodeJWT(token);
-				console.log(decoded);
 				if (decoded && decoded.id) {
 					try {
 						// Fetch user data from the API using the admin's id from the token

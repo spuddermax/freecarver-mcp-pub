@@ -1,5 +1,9 @@
-// Helper function to decode a JWT token
-// (In production, consider using a dedicated library like jwt-decode)
+/**
+ * Helper function to decode a JWT token
+ * (In production, consider using a dedicated library like jwt-decode)
+ * @param token - The JWT token to decode
+ * @returns The decoded token payload or null if an error occurs
+ */
 export function decodeJWT(token: string) {
 	try {
 		const base64Url = token.split(".")[1];
@@ -20,9 +24,12 @@ export function decodeJWT(token: string) {
 }
 
 /**
- * Helper function to decide which routes should be protected from unauthenticated users.
+ * Helper function to decide which routes should be not be protected from unauthenticated users.
+ * ALL routes are protected from unauthenticated users except for those listed here.
+ * @param pathname - The pathname of the current route
+ * @returns True if the route is unprotected, false otherwise
  */
-export const isProtectedRoute = (pathname: string) => {
-	const protectedRoutes = ["/", "/dashboard", "/users"];
-	return protectedRoutes.includes(pathname);
+export const isUnProtectedRoute = (pathname: string) => {
+	const unprotectedRoutes = ["/", "/login"];
+	return unprotectedRoutes.includes(pathname);
 };

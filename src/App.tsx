@@ -12,7 +12,7 @@ import UserEdit from "./pages/UserEdit";
 import Users from "./pages/Users";
 import { GridContext, useGridProvider } from "./lib/grid";
 import NotFound from "./pages/NotFound";
-import { isProtectedRoute } from "./lib/helpers";
+import { decodeJWT, isUnProtectedRoute } from "./lib/helpers";
 function App() {
 	const [session, setSession] = useState<any>(null);
 	const [isLoading, setIsLoading] = useState(true);
@@ -20,16 +20,24 @@ function App() {
 	const navigate = useNavigate();
 	const location = useLocation();
 
-	// Check for a JWT token in localStorage; if found, consider the user as logged in.
+	// Check for a JWT token in localStorage; if found, and not expired consider the user as logged in.
 	const checkSession = useCallback(() => {
 		const token = localStorage.getItem("jwtToken");
-		if (token) {
-			setSession({ token });
+		const decoded = token ? decodeJWT(token) : null;
+		let isExpired = false;
+
+		if (token && decoded) {
+			setSession({ token, decoded });
+			if (decoded.exp < Date.now() / 1000) {
+				isExpired = true;
+				localStorage.removeItem("jwtToken");
+			}
 		} else {
 			setSession(null);
 		}
-		if (!token && isProtectedRoute(location.pathname)) {
+		if ((!token || isExpired) && !isUnProtectedRoute(location.pathname)) {
 			navigate("/login");
+			return;
 		}
 		setIsLoading(false);
 	}, [navigate, location.pathname]);

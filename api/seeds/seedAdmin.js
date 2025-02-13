@@ -38,7 +38,7 @@ async function createSuperAdmin() {
 		if (roleResult.rows.length === 0) {
 			const insertRole = await pool.query(
 				"INSERT INTO admin_roles(role_name, created_at, updated_at) VALUES($1, NOW(), NOW()) RETURNING id",
-				["super_admin"]
+				["super_admin", "admin"]
 			);
 			roleId = insertRole.rows[0].id;
 			console.log(`Created new role "super_admin" with id ${roleId}`);

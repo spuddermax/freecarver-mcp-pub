@@ -1,7 +1,10 @@
 // API utility functions
 // API url is set in the .env file
 
-// Verify database connection
+/**
+ * Verify the database connection
+ * @returns True if the database connection is successful, false otherwise
+ */
 export async function verifyDatabaseConnection() {
 	const response = await fetch(
 		import.meta.env.VITE_API_URL + "/api/validate_database"
@@ -9,7 +12,12 @@ export async function verifyDatabaseConnection() {
 	return response.ok;
 }
 
-// Login
+/**
+ * Login the admin user
+ * @param email - The email of the admin user
+ * @param password - The password of the admin user
+ * @returns The response from the login endpoint
+ */
 export async function adminLogin(email: string, password: string) {
 	const response = await fetch(
 		import.meta.env.VITE_API_URL + "/api/admin/login",
@@ -30,6 +38,11 @@ export async function adminLogin(email: string, password: string) {
 	return response.json();
 }
 
+/**
+ * Fetch the user data
+ * @param uuid - The uuid of the user
+ * @returns The response from the user data endpoint
+ */
 export async function fetchUserData(uuid: string) {
 	const response = await fetch(
 		import.meta.env.VITE_API_URL + `/api/users/${uuid}`
@@ -40,6 +53,10 @@ export async function fetchUserData(uuid: string) {
 	return response.json();
 }
 
+/**
+ * Fetch the admin users
+ * @returns The response from the admin users endpoint
+ */
 export async function fetchAdminUsers() {
 	const response = await fetch(
 		import.meta.env.VITE_API_URL + "/api/admin/users",
@@ -55,6 +72,12 @@ export async function fetchAdminUsers() {
 	return response.json();
 }
 
+/**
+ * Upload the admin user's avatar
+ * @param file - The file to upload
+ * @param currentUrl - The current url of the avatar
+ * @returns The response from the avatar upload endpoint
+ */
 export async function uploadAvatar(
 	file: File,
 	currentUrl?: string
@@ -83,6 +106,10 @@ export async function uploadAvatar(
 	return response.json();
 }
 
+/**
+ * Update the user preferences
+ * @param preferences - The preferences to update
+ */
 export async function updateUserPreferences(preferences: {
 	twoFactorEnabled: boolean;
 	notificationsEnabled: boolean;
@@ -106,7 +133,12 @@ export async function updateUserPreferences(preferences: {
 	}
 }
 
-// /lib/api.ts
+/**
+ * Validate the password
+ * @param email - The email of the admin user
+ * @param password - The password of the admin user
+ * @returns True if the password is valid, false otherwise
+ */
 export async function validatePassword(
 	email: string,
 	password: string
@@ -131,7 +163,10 @@ export async function validatePassword(
 	return result.valid;
 }
 
-// /lib/api.ts
+/**
+ * Update the user password
+ * @param newPassword - The new password of the admin user
+ */
 export async function updateUserPassword(newPassword: string): Promise<void> {
 	const response = await fetch(
 		import.meta.env.VITE_API_URL + "/api/admin/update-password",
@@ -150,7 +185,10 @@ export async function updateUserPassword(newPassword: string): Promise<void> {
 	}
 }
 
-// /lib/api.ts
+/**
+ * Update the user personal details
+ * @param details - The details to update
+ */
 export async function updateUserPersonalDetails(details: {
 	firstName: string;
 	lastName: string;
@@ -173,6 +211,10 @@ export async function updateUserPersonalDetails(details: {
 	}
 }
 
+/**
+ * Update the user email
+ * @param email - The email of the admin user
+ */
 export async function updateUserEmail(email: string): Promise<void> {
 	const response = await fetch(
 		import.meta.env.VITE_API_URL + "/api/admin/user/email",
