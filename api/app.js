@@ -8,9 +8,9 @@ import logger from "./logger.js";
 // Import routes
 import adminAuthRoutes from "./routes/v1/adminAuth.js";
 import customerAuthRoutes from "./routes/v1/customerAuth.js";
-// import adminUsersRoutes from "./routes/v1/adminUsers.js";
-// import systemRoutes from "./routes/v1/system.js";
-// import productsRoutes from "./routes/v1/products.js";
+import adminUsersRoutes from "./routes/v1/adminUsers.js";
+import systemRoutes from "./routes/v1/system.js";
+import productsRoutes from "./routes/v1/products.js";
 // import productOptionsRoutes from "./routes/v1/productOptions.js";
 // import productOptionSKUsRoutes from "./routes/v1/productOptionSKUs.js";
 // import productCategoriesRoutes from "./routes/v1/productCategories.js";
@@ -37,9 +37,9 @@ app.use((req, res, next) => {
 // Mount the routes with versioning
 app.use("/v1/adminAuth", adminAuthRoutes);
 app.use("/v1/customerAuth", customerAuthRoutes);
-// app.use("/v1/adminUsers", adminUsersRoutes);
-// app.use("/v1/system", systemRoutes);
-// app.use("/v1/products", productsRoutes);
+app.use("/v1/adminUsers", adminUsersRoutes);
+app.use("/v1/system", systemRoutes);
+app.use("/v1/products", productsRoutes);
 // app.use("/v1/product-options", productOptionsRoutes);
 // app.use("/v1/product-option-skus", productOptionSKUsRoutes);
 // app.use("/v1/product-categories", productCategoriesRoutes);
