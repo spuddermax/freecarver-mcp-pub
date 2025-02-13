@@ -49,18 +49,16 @@ export default function UserEdit() {
   });
 
   useEffect(() => {
-    if (uuid) {
       loadUser();
-    }
   }, [uuid]);
 
   async function loadUser() {
     if (!uuid) {
-      console.error('No UUID provided');
-      return;
+      console.log('No UUID provided');
     }
     try {
       const { data: { user } } = await supabase.auth.getUser();
+      console.log(user);
       if (user) {
         const metadata = user.user_metadata || {};
         setUser({
