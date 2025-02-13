@@ -2,6 +2,7 @@
 
 import express from "express";
 import dotenv from "dotenv";
+import cors from "cors";
 import pkg from "pg";
 const { Pool } = pkg;
 import bcrypt from "bcrypt";
@@ -11,6 +12,14 @@ import { verifyJWT } from "./middleware/auth.js"; // Import JWT middleware
 
 const app = express();
 const port = process.env.PORT || 3000;
+
+// Enable CORS for your client origin
+app.use(
+	cors({
+		origin: process.env.CORS_ORIGIN, // Replace with your client URL
+		credentials: true, // if you use credentials (cookies)
+	})
+);
 
 // Create a PostgreSQL connection pool
 const pool = new Pool({
@@ -23,6 +32,17 @@ app.use(express.json());
 // Default endpoint
 app.get("/", (req, res) => {
 	res.status(200).json({ message: "FreeCarver API is running" });
+});
+
+// ------------------------
+// Validate Database Connection
+// ------------------------
+app.get("/api/validate_database", async (req, res, next) => {
+	const result = await pool.query("SELECT 1");
+	res.status(200).json({
+		message: "Database connection successful",
+		result: result.rowCount,
+	});
 });
 
 // ------------------------
@@ -61,7 +81,7 @@ app.post("/api/admin/login", async (req, res, next) => {
 			expiresIn: "1h",
 		});
 
-		res.status(200).json({ token });
+		res.status(200).json({ token, adminUser });
 	} catch (err) {
 		next(err);
 	}

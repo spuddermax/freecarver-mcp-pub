@@ -1,13 +1,27 @@
-// Example API utility; adjust endpoints & logic as needed
+// API utility functions
+// API url is set in the .env file
 
-export async function login(email: string, password: string) {
-	const response = await fetch("/api/admin/login", {
-		method: "POST",
-		headers: {
-			"Content-Type": "application/json",
-		},
-		body: JSON.stringify({ email, password }),
-	});
+// Verify database connection
+export async function verifyDatabaseConnection() {
+	const response = await fetch(
+		import.meta.env.VITE_API_URL + "/api/validate_database"
+	);
+	console.log(response);
+	return response.ok;
+}
+
+// Login
+export async function adminLogin(email: string, password: string) {
+	const response = await fetch(
+		import.meta.env.VITE_API_URL + "/api/admin/login",
+		{
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({ email, password }),
+		}
+	);
 
 	if (!response.ok) {
 		const errorData = await response.json();
@@ -18,7 +32,9 @@ export async function login(email: string, password: string) {
 }
 
 export async function fetchUserData(uuid: string) {
-	const response = await fetch(`/api/users/${uuid}`);
+	const response = await fetch(
+		import.meta.env.VITE_API_URL + `/api/users/${uuid}`
+	);
 	if (!response.ok) {
 		throw new Error("User data could not be fetched");
 	}
@@ -26,7 +42,7 @@ export async function fetchUserData(uuid: string) {
 }
 
 export async function fetchUsers() {
-	const response = await fetch("/api/users");
+	const response = await fetch(import.meta.env.VITE_API_URL + "/api/users");
 	if (!response.ok) {
 		throw new Error("Users could not be fetched");
 	}
@@ -42,14 +58,17 @@ export async function uploadAvatar(
 	if (currentUrl) {
 		formData.append("oldAvatarUrl", currentUrl);
 	}
-	const response = await fetch("/api/admin/avatar", {
-		method: "POST",
-		headers: {
-			// When using formData, let the browser set the Content-Type header.
-			Authorization: `Bearer ${localStorage.getItem("jwtToken")}`,
-		},
-		body: formData,
-	});
+	const response = await fetch(
+		import.meta.env.VITE_API_URL + "/api/admin/avatar",
+		{
+			method: "POST",
+			headers: {
+				// When using formData, let the browser set the Content-Type header.
+				Authorization: `Bearer ${localStorage.getItem("jwtToken")}`,
+			},
+			body: formData,
+		}
+	);
 
 	if (!response.ok) {
 		const errorData = await response.json();
@@ -64,14 +83,17 @@ export async function updateUserPreferences(preferences: {
 	notificationPreference: string;
 	timezone: string;
 }): Promise<void> {
-	const response = await fetch("/api/admin/user/preferences", {
-		method: "PUT", // or PATCH, depending on your API design
-		headers: {
-			"Content-Type": "application/json",
-			Authorization: `Bearer ${localStorage.getItem("jwtToken")}`,
-		},
-		body: JSON.stringify(preferences),
-	});
+	const response = await fetch(
+		import.meta.env.VITE_API_URL + "/api/admin/user/preferences",
+		{
+			method: "PUT", // or PATCH, depending on your API design
+			headers: {
+				"Content-Type": "application/json",
+				Authorization: `Bearer ${localStorage.getItem("jwtToken")}`,
+			},
+			body: JSON.stringify(preferences),
+		}
+	);
 	if (!response.ok) {
 		const errorData = await response.json();
 		throw new Error(errorData.error || "Failed to update preferences");
@@ -83,14 +105,17 @@ export async function validatePassword(
 	email: string,
 	password: string
 ): Promise<boolean> {
-	const response = await fetch("/api/admin/validate-password", {
-		method: "POST",
-		headers: {
-			"Content-Type": "application/json",
-			Authorization: `Bearer ${localStorage.getItem("jwtToken")}`,
-		},
-		body: JSON.stringify({ email, password }),
-	});
+	const response = await fetch(
+		import.meta.env.VITE_API_URL + "/api/admin/validate-password",
+		{
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				Authorization: `Bearer ${localStorage.getItem("jwtToken")}`,
+			},
+			body: JSON.stringify({ email, password }),
+		}
+	);
 	if (!response.ok) {
 		const errorData = await response.json();
 		throw new Error(errorData.error || "Password validation failed");
@@ -102,14 +127,17 @@ export async function validatePassword(
 
 // /lib/api.ts
 export async function updateUserPassword(newPassword: string): Promise<void> {
-	const response = await fetch("/api/admin/update-password", {
-		method: "PUT", // or PATCH, depending on your API design
-		headers: {
-			"Content-Type": "application/json",
-			Authorization: `Bearer ${localStorage.getItem("jwtToken")}`,
-		},
-		body: JSON.stringify({ newPassword }),
-	});
+	const response = await fetch(
+		import.meta.env.VITE_API_URL + "/api/admin/update-password",
+		{
+			method: "PUT", // or PATCH, depending on your API design
+			headers: {
+				"Content-Type": "application/json",
+				Authorization: `Bearer ${localStorage.getItem("jwtToken")}`,
+			},
+			body: JSON.stringify({ newPassword }),
+		}
+	);
 	if (!response.ok) {
 		const errorData = await response.json();
 		throw new Error(errorData.error || "Failed to update password");
@@ -122,14 +150,17 @@ export async function updateUserPersonalDetails(details: {
 	lastName: string;
 	phoneNumber: string;
 }): Promise<void> {
-	const response = await fetch("/api/admin/user/personal", {
-		method: "PUT",
-		headers: {
-			"Content-Type": "application/json",
-			Authorization: `Bearer ${localStorage.getItem("jwtToken")}`,
-		},
-		body: JSON.stringify(details),
-	});
+	const response = await fetch(
+		import.meta.env.VITE_API_URL + "/api/admin/user/personal",
+		{
+			method: "PUT",
+			headers: {
+				"Content-Type": "application/json",
+				Authorization: `Bearer ${localStorage.getItem("jwtToken")}`,
+			},
+			body: JSON.stringify(details),
+		}
+	);
 	if (!response.ok) {
 		const errorData = await response.json();
 		throw new Error(errorData.error || "Failed to update personal details");
@@ -137,14 +168,17 @@ export async function updateUserPersonalDetails(details: {
 }
 
 export async function updateUserEmail(email: string): Promise<void> {
-	const response = await fetch("/api/admin/user/email", {
-		method: "PUT", // or PATCH, based on your API design
-		headers: {
-			"Content-Type": "application/json",
-			Authorization: `Bearer ${localStorage.getItem("jwtToken")}`,
-		},
-		body: JSON.stringify({ email }),
-	});
+	const response = await fetch(
+		import.meta.env.VITE_API_URL + "/api/admin/user/email",
+		{
+			method: "PUT", // or PATCH, based on your API design
+			headers: {
+				"Content-Type": "application/json",
+				Authorization: `Bearer ${localStorage.getItem("jwtToken")}`,
+			},
+			body: JSON.stringify({ email }),
+		}
+	);
 	if (!response.ok) {
 		const errorData = await response.json();
 		throw new Error(errorData.error || "Failed to update email");
