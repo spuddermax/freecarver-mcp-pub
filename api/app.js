@@ -88,6 +88,14 @@ app.post("/api/admin/login", async (req, res, next) => {
 });
 
 // ------------------------
+// Fetch Admin Users
+// ------------------------
+app.get("/api/admin/users", verifyJWT, async (req, res, next) => {
+	const result = await pool.query("SELECT * FROM admin_users");
+	res.status(200).json(result.rows);
+});
+
+// ------------------------
 // Protected Admin Route Example
 // ------------------------
 app.get("/api/admin/protected", verifyJWT, (req, res) => {

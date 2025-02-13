@@ -41,10 +41,17 @@ export async function fetchUserData(uuid: string) {
 	return response.json();
 }
 
-export async function fetchUsers() {
-	const response = await fetch(import.meta.env.VITE_API_URL + "/api/users");
+export async function fetchAdminUsers() {
+	const response = await fetch(
+		import.meta.env.VITE_API_URL + "/api/admin/users",
+		{
+			headers: {
+				Authorization: `Bearer ${localStorage.getItem("jwtToken")}`,
+			},
+		}
+	);
 	if (!response.ok) {
-		throw new Error("Users could not be fetched");
+		throw new Error("Admin users could not be fetched");
 	}
 	return response.json();
 }
