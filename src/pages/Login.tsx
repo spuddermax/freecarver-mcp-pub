@@ -15,7 +15,7 @@ import { useTheme } from "../lib/theme";
 import { useGrid } from "../lib/grid";
 import { TronGrid } from "../components/TronGrid/index";
 import { getDatabaseStatus } from "../lib/api_client/system";
-
+import { adminLogin } from "../lib/api_client/adminAuth";
 interface LoginProps {
 	onLogin: () => void;
 }
