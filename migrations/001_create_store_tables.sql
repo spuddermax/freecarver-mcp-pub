@@ -77,6 +77,9 @@ CREATE TABLE IF NOT EXISTS
         first_name TEXT,
         last_name TEXT,
         phone_number TEXT,
+        password_hash TEXT NOT NULL,
+        avatar_url TEXT,
+        timezone TEXT,
         created_at TIMESTAMPTZ DEFAULT NOW (),
         updated_at TIMESTAMPTZ DEFAULT NOW ()
     );

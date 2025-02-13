@@ -33,11 +33,10 @@
 		"supertest": "^7.0.0"
 	},
 	"jest": {
+		"globalSetup": "<rootDir>/tests/globalSetup.mjs",
+		"globalTeardown": "<rootDir>/tests/globalTeardown.mjs",
 		"setupFiles": [
 			"dotenv/config"
-		],
-		"setupFilesAfterEnv": [
-			"<rootDir>/tests/setup.js"
 		],
 		"testEnvironment": "node"
 	}
