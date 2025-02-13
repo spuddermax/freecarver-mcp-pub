@@ -7,13 +7,13 @@ import { verifyJWT } from "../../middleware/auth.js";
 
 const router = express.Router();
 
-// Protect all routes in this file
-router.use(verifyJWT);
+// Protect only specific routes in this file
+//router.use(verifyJWT);
 
 /**
  * @route   GET /v1/system/preferences
  * @desc    Retrieve all system preferences
- * @access  Protected (Admin)
+ * @access  Public
  */
 router.get("/preferences", async (req, res) => {
 	try {
@@ -35,7 +35,7 @@ router.get("/preferences", async (req, res) => {
  * @desc    Update a system preference by key
  * @access  Protected (Admin)
  */
-router.put("/preferences/:key", async (req, res) => {
+router.put("/preferences/:key", verifyJWT, async (req, res) => {
 	const { key } = req.params;
 	const { value } = req.body;
 
@@ -74,7 +74,7 @@ router.put("/preferences/:key", async (req, res) => {
  * @desc    Retrieve all audit logs (optionally, add filtering via query parameters)
  * @access  Protected (Admin)
  */
-router.get("/audit-logs", async (req, res) => {
+router.get("/audit-logs", verifyJWT, async (req, res) => {
 	try {
 		const result = await pool.query(
 			"SELECT * FROM audit_logs ORDER BY created_at DESC"
@@ -83,6 +83,24 @@ router.get("/audit-logs", async (req, res) => {
 		res.status(200).json({ audit_logs: result.rows });
 	} catch (error) {
 		logger.error("Error retrieving audit logs", { error: error.message });
+		res.status(500).json({ error: "Internal server error" });
+	}
+});
+
+/**
+ * @route   GET /v1/system/database-status
+ * @desc    Retrieve the status of the database
+ * @access  Public
+ */
+router.get("/database-status", async (req, res) => {
+	try {
+		const result = await pool.query("SELECT NOW()");
+		logger.info("Database status retrieved successfully");
+		res.status(200).json({ status: result.rows[0].now });
+	} catch (error) {
+		logger.error("Error retrieving database status", {
+			error: error.message,
+		});
 		res.status(500).json({ error: "Internal server error" });
 	}
 });

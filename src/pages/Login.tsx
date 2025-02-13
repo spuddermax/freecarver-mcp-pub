@@ -14,7 +14,7 @@ import {
 import { useTheme } from "../lib/theme";
 import { useGrid } from "../lib/grid";
 import { TronGrid } from "../components/TronGrid/index";
-import { verifyDatabaseConnection, adminLogin } from "../lib/api";
+import { getDatabaseStatus } from "../lib/api_client/system";
 
 interface LoginProps {
 	onLogin: () => void;
@@ -34,7 +34,7 @@ export default function Login({ onLogin }: LoginProps) {
 
 	// Option 1: Check API connectivity on mount (simple ping)
 	useEffect(() => {
-		verifyDatabaseConnection()
+		getDatabaseStatus()
 			.then((res) => {
 				if (res) {
 					setConnectionStatus("connected");

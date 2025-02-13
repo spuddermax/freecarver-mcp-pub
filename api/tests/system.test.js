@@ -118,9 +118,7 @@ describe("System Routes", () => {
 
 	describe("GET /v1/system/audit-logs", () => {
 		it("should retrieve audit logs", async () => {
-			const res = await request(app)
-				.get("/v1/system/audit-logs")
-				.set("Authorization", `Bearer ${authToken}`);
+			const res = await request(app).get("/v1/system/audit-logs");
 			expect(res.statusCode).toEqual(200);
 			expect(Array.isArray(res.body.audit_logs)).toBe(true);
 			const log = res.body.audit_logs.find(
@@ -128,5 +126,13 @@ describe("System Routes", () => {
 			);
 			expect(log).toBeDefined();
 		});
+	});
+});
+
+describe("GET /v1/system/database-status", () => {
+	it("should retrieve the database status", async () => {
+		const res = await request(app).get("/v1/system/database-status");
+		expect(res.statusCode).toEqual(200);
+		expect(res.body.status).toBeDefined();
 	});
 });
