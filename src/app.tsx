@@ -6,12 +6,12 @@ import {
 	useNavigate,
 	useLocation,
 } from "react-router-dom";
-import Login from "./pages/Login";
-import Dashboard from "./pages/Dashboard";
-import UserEdit from "./pages/UserEdit";
-import Users from "./pages/Users";
+import Login from "./pages/login";
+import Dashboard from "./pages/dashboard";
+import UserEdit from "./pages/userEdit";
+import Users from "./pages/users";
 import { GridContext, useGridProvider } from "./lib/grid";
-import NotFound from "./pages/NotFound";
+import NotFound from "./pages/notFound";
 import { decodeJWT, isUnProtectedRoute } from "./lib/helpers";
 function App() {
 	const [session, setSession] = useState<any>(null);
