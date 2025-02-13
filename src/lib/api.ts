@@ -6,7 +6,6 @@ export async function verifyDatabaseConnection() {
 	const response = await fetch(
 		import.meta.env.VITE_API_URL + "/api/validate_database"
 	);
-	console.log(response);
 	return response.ok;
 }
 

@@ -72,7 +72,8 @@ app.post("/api/admin/login", async (req, res, next) => {
 		// Create token payload (you can include additional claims as needed)
 		const tokenPayload = {
 			id: adminUser.id,
-			email: adminUser.email,
+			firstName: adminUser.first_name,
+			avatarUrl: adminUser.avatar_url,
 			role: adminUser.role_id, // Optionally include more role details
 		};
 

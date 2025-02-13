@@ -12,6 +12,9 @@ async function createSuperAdmin() {
 	try {
 		const email = process.env.SUPER_ADMIN_EMAIL;
 		const password = process.env.SUPER_ADMIN_PASSWORD;
+		const firstName = process.env.SUPER_ADMIN_FIRST_NAME;
+		const lastName = process.env.SUPER_ADMIN_LAST_NAME;
+		const avatarUrl = process.env.SUPER_ADMIN_AVATAR_URL;
 
 		// Check if the admin already exists
 		const existing = await pool.query(
@@ -45,13 +48,16 @@ async function createSuperAdmin() {
 
 		// Insert the new super admin into the admin_users table
 		const insertQuery = `
-      INSERT INTO admin_users(email, password_hash, role_id, created_at, updated_at)
-      VALUES($1, $2, $3, NOW(), NOW()) RETURNING *
+      INSERT INTO admin_users(email, password_hash, role_id, first_name, last_name, avatar_url, created_at, updated_at)
+      VALUES($1, $2, $3, $4, $5, $6, NOW(), NOW()) RETURNING *
     `;
 		const newAdmin = await pool.query(insertQuery, [
 			email,
 			hashedPassword,
 			roleId,
+			firstName,
+			lastName,
+			avatarUrl,
 		]);
 
 		console.log("Super admin created:", newAdmin.rows[0]);

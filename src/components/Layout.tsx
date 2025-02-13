@@ -34,14 +34,14 @@ export default function Layout({ children }: LayoutProps) {
 			const token = localStorage.getItem("jwtToken");
 			if (token) {
 				const decoded = decodeJWT(token);
+				console.log(decoded);
 				if (decoded && decoded.id) {
 					try {
 						// Fetch user data from the API using the admin's id from the token
-						const data = await fetchUserData(decoded.id);
 						setUserMySettings({
-							email: data.email || "User",
-							firstName: data.firstName || "",
-							avatarUrl: data.avatarUrl || "",
+							email: decoded.email || "User",
+							firstName: decoded.firstName || "",
+							avatarUrl: decoded.avatarUrl || "",
 						});
 					} catch (err) {
 						console.error("Error fetching user data:", err);
