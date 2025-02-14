@@ -19,7 +19,6 @@ export async function fetchAdminUsers(): Promise<any> {
 		throw new Error(errorData.error || "Failed to fetch admin users");
 	}
 	const data = await response.json();
-	console.log(data.admins);
 	return data.admins;
 }
 
@@ -149,12 +148,13 @@ export async function deleteAdminUser(id: string): Promise<any> {
  * @returns A promise that resolves to the updated admin user.
  */
 export async function validateAdminPassword(
-	id: string,
+	targetUserId: string,
 	password: string
 ): Promise<any> {
 	const token = localStorage.getItem("jwtToken");
 	const response = await fetch(
-		import.meta.env.VITE_API_URL + `/v1/adminUsers/${id}/validatePassword`,
+		import.meta.env.VITE_API_URL +
+			`/v1/adminUsers/${targetUserId}/validatePassword`,
 		{
 			method: "POST",
 			headers: {

@@ -31,7 +31,7 @@ export interface UserData {
  * @returns The user details
  */
 export default function UserEdit() {
-	const { uuid } = useParams<{ uuid: string }>();
+	const { targetId } = useParams<{ targetId: string }>();
 	const navigate = useNavigate();
 
 	// State for messages (for success/error notifications)
@@ -56,15 +56,15 @@ export default function UserEdit() {
 		createdAt: "",
 	});
 
-	// Load user details from the API when the component mounts or when the uuid changes.
+	// Load user details from the API when the component mounts or when the targetId changes.
 	useEffect(() => {
 		async function loadUser() {
-			if (!uuid) {
+			if (!targetId) {
 				console.log("No UUID provided");
 				return;
 			}
 			try {
-				const result = await fetchAdminUser(uuid);
+				const result = await fetchAdminUser(targetId);
 				const data = result.admin;
 				// Adjust the property names if your API returns different keys.
 				setUserData({
@@ -94,7 +94,7 @@ export default function UserEdit() {
 			}
 		}
 		loadUser();
-	}, [uuid]);
+	}, [targetId]);
 
 	return (
 		<Layout
@@ -115,12 +115,6 @@ export default function UserEdit() {
 				<div className="px-4 py-6 sm:px-0">
 					<div className="bg-white dark:bg-gray-800 shadow rounded-lg">
 						<div className="p-6 space-y-8">
-							<p className="text-sm text-gray-500">
-								Logged in ID: {userData.id}
-							</p>
-							<p className="text-sm text-gray-500">
-								Requested ID: {uuid}
-							</p>
 							<UserEmail
 								email={userData.email}
 								onEmailChange={(email) =>
@@ -156,9 +150,9 @@ export default function UserEdit() {
 							/>
 
 							<UserPassword
-								id={userData.id}
-								email={userData.email}
+								targetUserId={userData.id}
 								onMessage={setMessage}
+								adminRole={userData.role}
 							/>
 
 							<UserPreferences

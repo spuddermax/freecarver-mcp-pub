@@ -33,7 +33,7 @@ router.post("/login", async (req, res) => {
 
 		// Query the admin_users table for the provided email
 		const result = await pool.query(
-			"SELECT * FROM admin_users WHERE email = $1",
+			"SELECT au.*, ar.role_name FROM admin_users au JOIN admin_roles ar ON au.role_id = ar.id WHERE au.email = $1",
 			[email]
 		);
 		if (result.rows.length === 0) {
@@ -57,9 +57,11 @@ router.post("/login", async (req, res) => {
 
 		// Create JWT payload and sign the token
 		const tokenPayload = {
-			id: admin.id,
-			email: admin.email,
-			role_id: admin.role_id,
+			adminId: admin.id,
+			adminFirstName: admin.first_name,
+			adminLastName: admin.last_name,
+			adminRoleName: admin.role_name,
+			adminAvatarUrl: admin.avatar_url,
 		};
 
 		const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, {

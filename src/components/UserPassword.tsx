@@ -4,16 +4,31 @@ import {
 	validateAdminPassword,
 	updateAdminUser,
 } from "../lib/api_client/adminUsers";
+import { decodeJWT } from "../lib/helpers";
 
 interface UserPasswordProps {
-	id: string; // Required admin user ID for the update API call
-	email: string;
+	targetUserId: string; // Required admin user ID for the update API call
 	onMessage: (
 		message: { type: "success" | "error"; text: string } | null
 	) => void;
+	/** The role of the currently logged in admin user */
+	adminRole: string;
 }
 
-export function UserPassword({ id, email, onMessage }: UserPasswordProps) {
+export function UserPassword({
+	targetUserId: userId,
+	onMessage,
+}: UserPasswordProps) {
+	// Determine if current password is not required
+	// (if the logged in user is a super admin editing someone else's account)
+
+	const { adminRoleName, adminId } = decodeJWT(
+		localStorage.getItem("jwtToken") || ""
+	);
+
+	const skipCurrentPassword =
+		adminRoleName === "super_admin" && userId !== adminId;
+
 	const [isVerifyingPassword, setIsVerifyingPassword] = useState(false);
 	const [currentPasswordValid, setCurrentPasswordValid] = useState<
 		boolean | null
@@ -35,7 +50,9 @@ export function UserPassword({ id, email, onMessage }: UserPasswordProps) {
 	const checkPasswordErrors = (newData: typeof passwordData) => {
 		let newErrors: string[] = [];
 
+		// Only check that newPassword differs from currentPassword if the field is not skipped
 		if (
+			!skipCurrentPassword &&
 			isDirty.newPassword &&
 			newData.newPassword === newData.currentPassword
 		) {
@@ -66,24 +83,27 @@ export function UserPassword({ id, email, onMessage }: UserPasswordProps) {
 	};
 
 	async function validateCurrentPassword(showErrors = false) {
-		if (!passwordData.currentPassword || !id) return;
+		if (skipCurrentPassword) {
+			return;
+		}
+		if (!passwordData.currentPassword || !userId) return;
 
 		setIsVerifyingPassword(true);
 		try {
 			// Validate current password using the provided API function
-			const isValid = await validateAdminPassword(
-				id,
+			const isValidResult = await validateAdminPassword(
+				userId,
 				passwordData.currentPassword
 			);
-			setCurrentPasswordValid(isValid);
+			setCurrentPasswordValid(isValidResult.result);
 
-			if (isValid && showErrors) {
+			if (isValidResult.result && showErrors) {
 				checkPasswordErrors(passwordData);
 			}
-			if (!isValid) {
+			if (!isValidResult.result) {
 				onMessage({
 					type: "error",
-					text: "Current password is incorrect",
+					text: isValidResult.message,
 				});
 			}
 		} catch (error: any) {
@@ -104,7 +124,8 @@ export function UserPassword({ id, email, onMessage }: UserPasswordProps) {
 		onMessage(null);
 		setPasswordErrors([]);
 
-		if (!currentPasswordValid) {
+		// Only enforce current password validation if we are not skipping this field
+		if (!skipCurrentPassword && !currentPasswordValid) {
 			onMessage({
 				type: "error",
 				text: "Please enter and verify your current password first",
@@ -128,7 +149,10 @@ export function UserPassword({ id, email, onMessage }: UserPasswordProps) {
 			return;
 		}
 
-		if (passwordData.newPassword === passwordData.currentPassword) {
+		if (
+			!skipCurrentPassword &&
+			passwordData.newPassword === passwordData.currentPassword
+		) {
 			setPasswordErrors((prev) => [
 				...new Set([
 					...prev,
@@ -141,9 +165,9 @@ export function UserPassword({ id, email, onMessage }: UserPasswordProps) {
 
 		try {
 			// Update the password via our new updateAdminUser API call.
-			// We pass the admin user's id and only the password field.
+			// We pass the user's id and only the password field.
 			await updateAdminUser({
-				id: id,
+				id: userId,
 				password: passwordData.newPassword,
 			});
 			onMessage({
@@ -177,6 +201,7 @@ export function UserPassword({ id, email, onMessage }: UserPasswordProps) {
 	}
 
 	const getPasswordIconColor = () => {
+		if (skipCurrentPassword) return "text-green-500";
 		if (!isDirty.currentPassword) return "text-gray-400";
 		if (currentPasswordValid === null) return "text-yellow-500";
 		return currentPasswordValid ? "text-green-500" : "text-red-500";
@@ -184,7 +209,10 @@ export function UserPassword({ id, email, onMessage }: UserPasswordProps) {
 
 	const getNewPasswordIconColor = () => {
 		if (!isDirty.newPassword) return "text-gray-400";
-		if (passwordData.newPassword === passwordData.currentPassword)
+		if (
+			!skipCurrentPassword &&
+			passwordData.newPassword === passwordData.currentPassword
+		)
 			return "text-red-500";
 		return passwordData.newPassword.length >= 8
 			? "text-green-500"
@@ -201,12 +229,21 @@ export function UserPassword({ id, email, onMessage }: UserPasswordProps) {
 	};
 
 	const isPasswordUpdateValid = () => {
-		return (
-			currentPasswordValid === true &&
-			passwordData.newPassword.length >= 8 &&
-			passwordData.verifyPassword === passwordData.newPassword &&
-			passwordData.newPassword !== passwordData.currentPassword
-		);
+		if (!skipCurrentPassword) {
+			const validationResult =
+				currentPasswordValid === true &&
+				passwordData.newPassword.length >= 8 &&
+				passwordData.verifyPassword === passwordData.newPassword &&
+				passwordData.newPassword !== passwordData.currentPassword;
+
+			return validationResult;
+		} else {
+			console.log(2);
+			return (
+				passwordData.newPassword.length >= 8 &&
+				passwordData.verifyPassword === passwordData.newPassword
+			);
+		}
 	};
 
 	return (
@@ -215,47 +252,49 @@ export function UserPassword({ id, email, onMessage }: UserPasswordProps) {
 				Password
 			</legend>
 			<div className="space-y-4">
-				<div>
-					<label
-						htmlFor="currentPassword"
-						className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-					>
-						Current Password
-					</label>
-					<div className="mt-1 relative">
-						<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-							{isVerifyingPassword ? (
-								<Loader2 className="h-5 w-5 text-gray-400 animate-spin" />
-							) : (
-								<Lock
-									className={`h-5 w-5 ${getPasswordIconColor()}`}
-								/>
-							)}
+				{!skipCurrentPassword && (
+					<div>
+						<label
+							htmlFor="currentPassword"
+							className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+						>
+							Current Password
+						</label>
+						<div className="mt-1 relative">
+							<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+								{isVerifyingPassword ? (
+									<Loader2 className="h-5 w-5 text-gray-400 animate-spin" />
+								) : (
+									<Lock
+										className={`h-5 w-5 ${getPasswordIconColor()}`}
+									/>
+								)}
+							</div>
+							<input
+								ref={currentPasswordRef}
+								type="password"
+								id="currentPassword"
+								value={passwordData.currentPassword}
+								onChange={(e) => {
+									setPasswordData({
+										...passwordData,
+										currentPassword: e.target.value,
+									});
+									setIsDirty((prev) => ({
+										...prev,
+										currentPassword: true,
+									}));
+									setCurrentPasswordValid(null);
+									onMessage(null);
+								}}
+								onBlur={() => validateCurrentPassword()}
+								onKeyDown={handleCurrentPasswordKeyDown}
+								className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+								required={!skipCurrentPassword}
+							/>
 						</div>
-						<input
-							ref={currentPasswordRef}
-							type="password"
-							id="currentPassword"
-							value={passwordData.currentPassword}
-							onChange={(e) => {
-								setPasswordData({
-									...passwordData,
-									currentPassword: e.target.value,
-								});
-								setIsDirty((prev) => ({
-									...prev,
-									currentPassword: true,
-								}));
-								setCurrentPasswordValid(null);
-								onMessage(null);
-							}}
-							onBlur={() => validateCurrentPassword()}
-							onKeyDown={handleCurrentPasswordKeyDown}
-							className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-							required
-						/>
 					</div>
-				</div>
+				)}
 				<div>
 					<label
 						htmlFor="newPassword"

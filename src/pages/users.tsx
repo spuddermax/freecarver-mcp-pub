@@ -34,7 +34,6 @@ export default function Users() {
 		type: "success" | "error";
 		text: string;
 	} | null>(null);
-	const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
 
 	useEffect(() => {
 		loadUsers();
@@ -164,9 +163,7 @@ export default function Users() {
 									</div>
 									<button
 										className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-										onClick={() => {
-											/* Add new user logic */
-										}}
+										onClick={() => {}}
 									>
 										<UserPlusIcon className="h-4 w-4 mr-2" />
 										Add User
@@ -221,11 +218,15 @@ export default function Users() {
 											<tr
 												key={user.id}
 												className="hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
-												onClick={() =>
+												onClick={() => {
+													console.log(
+														"clicked on user:",
+														user
+													);
 													navigate(
 														`/userEdit/${user.id}`
-													)
-												}
+													);
+												}}
 											>
 												<td className="px-6 py-4 whitespace-nowrap">
 													<div className="flex items-center">

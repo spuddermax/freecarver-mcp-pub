@@ -6,7 +6,6 @@ import { useTheme } from "../lib/theme";
 import { useGrid } from "../lib/grid";
 import { TronGrid } from "./TronGrid/index";
 import NavMenu from "./NavMenu";
-import { fetchUserData } from "../lib/api";
 import { decodeJWT } from "../lib/helpers";
 
 interface PageInfo {
@@ -25,8 +24,10 @@ export default function Layout({ children, pageInfo }: LayoutProps) {
 	const location = useLocation();
 	const [notifications] = useState(3);
 	const [userMySettings, setUserMySettings] = useState({
-		email: "",
-		firstName: "",
+		adminFirstName: "",
+		adminLastName: "",
+		adminRoleName: "",
+		adminId: "",
 		avatarUrl: "",
 	});
 	const [showNavMenu, setShowNavMenu] = useState(false);
@@ -41,12 +42,15 @@ export default function Layout({ children, pageInfo }: LayoutProps) {
 			const token = localStorage.getItem("jwtToken");
 			if (token) {
 				const decoded = decodeJWT(token);
-				if (decoded && decoded.id) {
+				//console.log(decoded);
+				if (decoded && decoded.adminId) {
 					try {
 						setUserMySettings({
-							email: decoded.email || "User",
-							firstName: decoded.firstName || "",
-							avatarUrl: decoded.avatarUrl || "",
+							adminId: decoded.adminId || "",
+							adminFirstName: decoded.adminFirstName || "",
+							adminLastName: decoded.adminLastName || "",
+							adminRoleName: decoded.adminRoleName || "",
+							avatarUrl: decoded.adminAvatarUrl || "",
 						});
 					} catch (err) {
 						console.error("Error fetching user data:", err);
@@ -85,7 +89,7 @@ export default function Layout({ children, pageInfo }: LayoutProps) {
 	const handleMySettingsClick = () => {
 		console.log("My Settings Clicked");
 		setShowNavMenu(false);
-		navigate("/userEdit");
+		navigate(`/userEdit/${userMySettings.adminId}`);
 	};
 
 	const handleDashboardClick = () => {
@@ -156,7 +160,7 @@ export default function Layout({ children, pageInfo }: LayoutProps) {
 											</div>
 										)}
 										<span className="text-sm font-medium text-gray-700 dark:text-gray-200">
-											{userMySettings.firstName}
+											{userMySettings.adminFirstName}
 										</span>
 									</button>
 
