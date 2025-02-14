@@ -2,13 +2,10 @@
 
 import express from "express";
 import { pool } from "../../db.js";
-import logger from "../../logger.js";
+import { logger } from "../../logger.js";
 import { verifyJWT } from "../../middleware/auth.js";
 
 const router = express.Router();
-
-// Protect only specific routes in this file
-//router.use(verifyJWT);
 
 /**
  * @route   GET /v1/system/preferences
@@ -21,12 +18,15 @@ router.get("/preferences", async (req, res) => {
 			"SELECT * FROM system_preferences ORDER BY key"
 		);
 		logger.info("Retrieved system preferences");
-		res.status(200).json({ preferences: result.rows });
+		res.success(
+			{ preferences: result.rows },
+			"System preferences retrieved successfully"
+		);
 	} catch (error) {
 		logger.error("Error retrieving system preferences", {
 			error: error.message,
 		});
-		res.status(500).json({ error: "Internal server error" });
+		res.error("Internal server error", 500);
 	}
 });
 
@@ -43,7 +43,7 @@ router.put("/preferences/:key", verifyJWT, async (req, res) => {
 		logger.error(
 			"Update system preference failed: 'value' field is required."
 		);
-		return res.status(400).json({ error: "'value' field is required." });
+		return res.error("'value' field is required.", 400);
 	}
 
 	try {
@@ -53,19 +53,20 @@ router.put("/preferences/:key", verifyJWT, async (req, res) => {
 		);
 		if (result.rows.length === 0) {
 			logger.error(`System preference with key "${key}" not found.`);
-			return res
-				.status(404)
-				.json({ error: "System preference not found." });
+			return res.error("System preference not found.", 404);
 		}
 		logger.info(
 			`System preference with key "${key}" updated successfully.`
 		);
-		res.status(200).json({ preference: result.rows[0] });
+		res.success(
+			{ preference: result.rows[0] },
+			"System preference updated successfully"
+		);
 	} catch (error) {
 		logger.error("Error updating system preference", {
 			error: error.message,
 		});
-		res.status(500).json({ error: "Internal server error" });
+		res.error("Internal server error", 500);
 	}
 });
 
@@ -80,10 +81,13 @@ router.get("/audit-logs", verifyJWT, async (req, res) => {
 			"SELECT * FROM audit_logs ORDER BY created_at DESC"
 		);
 		logger.info("Retrieved audit logs");
-		res.status(200).json({ audit_logs: result.rows });
+		res.success(
+			{ audit_logs: result.rows },
+			"Audit logs retrieved successfully"
+		);
 	} catch (error) {
 		logger.error("Error retrieving audit logs", { error: error.message });
-		res.status(500).json({ error: "Internal server error" });
+		res.error("Internal server error", 500);
 	}
 });
 
@@ -96,12 +100,15 @@ router.get("/database-status", async (req, res) => {
 	try {
 		const result = await pool.query("SELECT NOW()");
 		logger.info("Database status retrieved successfully");
-		res.status(200).json({ status: result.rows[0].now });
+		res.success(
+			{ status: result.rows[0].now },
+			"Database status retrieved successfully"
+		);
 	} catch (error) {
 		logger.error("Error retrieving database status", {
 			error: error.message,
 		});
-		res.status(500).json({ error: "Internal server error" });
+		res.error("Internal server error", 500);
 	}
 });
 

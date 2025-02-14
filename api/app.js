@@ -4,7 +4,7 @@ import express from "express";
 import rateLimit from "express-rate-limit";
 import dotenv from "dotenv";
 import cors from "cors";
-import logger from "./logger.js";
+import { logRequest } from "./logger.js"; // Corrected import
 
 // Import routes
 import adminAuthRoutes from "./routes/v1/adminAuth.js";
@@ -29,14 +29,17 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 
+// Apply request logging middleware globally
+app.use(logRequest);
+
 // Set up a rate limiter: maximum of 100 requests per 5 minutes per IP
 const apiLimiter = rateLimit({
-	windowMs: 5 * 60 * 1000, // 5 minutes
-	max: 100, // limit each IP to 100 requests per windowMs
-	standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-	legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+	windowMs: 5 * 60 * 1000,
+	max: 100,
+	standardHeaders: true,
+	legacyHeaders: false,
 	message: async (req, res) => {
-		logger.info(`Rate limit exceeded for IP: ${req.ip}`);
+		req.log("info", `Rate limit exceeded for IP: ${req.ip}`);
 		return "Too many requests from this IP, please try again later.";
 	},
 });
@@ -44,9 +47,9 @@ const apiLimiter = rateLimit({
 // Apply the rate limiter to API calls starting with '/v1'
 app.use("/v1", apiLimiter);
 
-// Log incoming requests
+// Log incoming requests with IP address
 app.use((req, res, next) => {
-	logger.info(`Incoming request: ${req.method} ${req.url} ${req.ip}`);
+	req.log("info", `Incoming request: ${req.method} ${req.url}`);
 	next();
 });
 
@@ -66,17 +69,13 @@ app.use("/v1/shipments", shipmentsRoutes);
 
 // Base health-check route
 app.get("/", (req, res) => {
-	res.json({
-		status: "ok",
-		message: "Free Carver API is running!",
-		version: "v1",
-	});
+	res.success(null, "Free Carver API is running!");
 });
 
 // Global error handling middleware
 app.use((err, req, res, next) => {
-	logger.error(`Server error: ${err.message}`, { error: err });
-	res.status(500).json({ error: "Internal server error" });
+	req.log("error", `Server error: ${err.message}`, { error: err });
+	res.error("Internal server error", 500);
 });
 
 export default app;

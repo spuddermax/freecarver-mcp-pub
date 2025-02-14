@@ -2,7 +2,7 @@
 
 import express from "express";
 import { pool } from "../../db.js";
-import logger from "../../logger.js";
+import { logger } from "../../logger.js";
 import { verifyJWT } from "../../middleware/auth.js";
 
 const router = express.Router();
@@ -20,12 +20,15 @@ router.get("/", async (req, res) => {
 			"SELECT * FROM product_option_skus ORDER BY id"
 		);
 		logger.info("Retrieved product option SKUs list.");
-		res.status(200).json({ skus: result.rows });
+		res.success(
+			{ skus: result.rows },
+			"Product option SKUs retrieved successfully"
+		);
 	} catch (error) {
 		logger.error("Error retrieving product option SKUs.", {
 			error: error.message,
 		});
-		res.status(500).json({ error: "Internal server error" });
+		res.error("Internal server error", 500);
 	}
 });
 
@@ -51,11 +54,10 @@ router.post("/", async (req, res) => {
 			logger.error(
 				"SKU creation failed: product_id, option_id, variant_id, and sku are required."
 			);
-			return res
-				.status(400)
-				.json({
-					error: "product_id, option_id, variant_id, and sku are required.",
-				});
+			return res.error(
+				"product_id, option_id, variant_id, and sku are required.",
+				400
+			);
 		}
 		const query = `
       INSERT INTO product_option_skus (product_id, option_id, variant_id, sku, price, sale_price, sale_start, sale_end)
@@ -76,12 +78,15 @@ router.post("/", async (req, res) => {
 		logger.info(
 			`Product option SKU created successfully for product_id ${product_id}, option_id ${option_id}, variant_id ${variant_id}.`
 		);
-		res.status(201).json({ sku: result.rows[0] });
+		res.success(
+			{ sku: result.rows[0] },
+			"Product option SKU created successfully"
+		);
 	} catch (error) {
 		logger.error("Error creating product option SKU.", {
 			error: error.message,
 		});
-		res.status(500).json({ error: "Internal server error" });
+		res.error("Internal server error", 500);
 	}
 });
 
@@ -98,18 +103,19 @@ router.get("/:id", async (req, res) => {
 		);
 		if (result.rows.length === 0) {
 			logger.error(`Product option SKU with ID ${id} not found.`);
-			return res
-				.status(404)
-				.json({ error: "Product option SKU not found." });
+			return res.error("Product option SKU not found.", 404);
 		}
 		logger.info(`Retrieved product option SKU with ID ${id}.`);
-		res.status(200).json({ sku: result.rows[0] });
+		res.success(
+			{ sku: result.rows[0] },
+			"Product option SKU retrieved successfully"
+		);
 	} catch (error) {
 		logger.error(
 			`Error retrieving product option SKU with ID ${req.params.id}.`,
 			{ error: error.message }
 		);
-		res.status(500).json({ error: "Internal server error" });
+		res.error("Internal server error", 500);
 	}
 });
 
@@ -135,11 +141,10 @@ router.put("/:id", async (req, res) => {
 			logger.error(
 				"SKU update failed: product_id, option_id, variant_id, and sku are required."
 			);
-			return res
-				.status(400)
-				.json({
-					error: "product_id, option_id, variant_id, and sku are required.",
-				});
+			return res.error(
+				"product_id, option_id, variant_id, and sku are required.",
+				400
+			);
 		}
 		const query = `
       UPDATE product_option_skus
@@ -171,18 +176,19 @@ router.put("/:id", async (req, res) => {
 			logger.error(
 				`Product option SKU with ID ${id} not found for update.`
 			);
-			return res
-				.status(404)
-				.json({ error: "Product option SKU not found." });
+			return res.error("Product option SKU not found.", 404);
 		}
 		logger.info(`Product option SKU with ID ${id} updated successfully.`);
-		res.status(200).json({ sku: result.rows[0] });
+		res.success(
+			{ sku: result.rows[0] },
+			"Product option SKU updated successfully"
+		);
 	} catch (error) {
 		logger.error(
 			`Error updating product option SKU with ID ${req.params.id}.`,
 			{ error: error.message }
 		);
-		res.status(500).json({ error: "Internal server error" });
+		res.error("Internal server error", 500);
 	}
 });
 
@@ -201,20 +207,16 @@ router.delete("/:id", async (req, res) => {
 			logger.error(
 				`Product option SKU with ID ${id} not found for deletion.`
 			);
-			return res
-				.status(404)
-				.json({ error: "Product option SKU not found." });
+			return res.error("Product option SKU not found.", 404);
 		}
 		logger.info(`Product option SKU with ID ${id} deleted successfully.`);
-		res.status(200).json({
-			message: "Product option SKU deleted successfully.",
-		});
+		res.success(null, "Product option SKU deleted successfully");
 	} catch (error) {
 		logger.error(
 			`Error deleting product option SKU with ID ${req.params.id}.`,
 			{ error: error.message }
 		);
-		res.status(500).json({ error: "Internal server error" });
+		res.error("Internal server error", 500);
 	}
 });
 

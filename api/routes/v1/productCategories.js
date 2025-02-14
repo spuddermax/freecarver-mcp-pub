@@ -2,17 +2,20 @@
 
 import express from "express";
 import { pool } from "../../db.js";
-import logger from "../../logger.js";
+import { logger } from "../../logger.js";
 import { verifyJWT } from "../../middleware/auth.js";
 
 const router = express.Router();
 
-// Protect all endpoints in this file
+// Apply JWT authentication to all endpoints in this file
 router.use(verifyJWT);
 
 /**
- * GET /v1/product-categories
- * Retrieve a list of all product categories.
+ * @route GET /v1/product-categories
+ * @description Retrieve a list of all product categories.
+ * @access Protected
+ * @returns {Response} 200 - JSON object containing an array of product categories.
+ * @returns {Response} 500 - Internal server error.
  */
 router.get("/", async (req, res) => {
 	try {
@@ -20,20 +23,29 @@ router.get("/", async (req, res) => {
 			"SELECT * FROM product_categories ORDER BY id"
 		);
 		logger.info("Retrieved product categories list.");
-		res.status(200).json({ categories: result.rows });
+		res.success(
+			{ categories: result.rows },
+			"Product categories retrieved successfully"
+		);
 	} catch (error) {
 		logger.error("Error retrieving product categories.", {
 			error: error.message,
 		});
-		res.status(500).json({ error: "Internal server error" });
+		res.error("Internal server error", 500);
 	}
 });
 
 /**
- * POST /v1/product-categories
- * Create a new product category.
- * Required: name
- * Optional: description, parent_category_id
+ * @route POST /v1/product-categories
+ * @description Create a new product category.
+ * @access Protected
+ * @param {Object} req.body - The product category details.
+ * @param {string} req.body.name - The name of the category (required).
+ * @param {string} [req.body.description] - The description of the category.
+ * @param {number} [req.body.parent_category_id] - The parent category ID, if applicable.
+ * @returns {Response} 201 - JSON object containing the newly created product category.
+ * @returns {Response} 400 - Bad request if 'name' is missing.
+ * @returns {Response} 500 - Internal server error.
  */
 router.post("/", async (req, res) => {
 	try {
@@ -42,7 +54,7 @@ router.post("/", async (req, res) => {
 			logger.error(
 				"Product category creation failed: 'name' is required."
 			);
-			return res.status(400).json({ error: "'name' is required." });
+			return res.error("'name' is required.", 400);
 		}
 		const query = `
       INSERT INTO product_categories (name, description, parent_category_id)
@@ -52,18 +64,26 @@ router.post("/", async (req, res) => {
 		const values = [name, description || null, parent_category_id || null];
 		const result = await pool.query(query, values);
 		logger.info(`Product category created successfully: ${name}`);
-		res.status(201).json({ category: result.rows[0] });
+		res.success(
+			{ category: result.rows[0] },
+			"Product category created successfully"
+		);
 	} catch (error) {
 		logger.error("Error creating product category.", {
 			error: error.message,
 		});
-		res.status(500).json({ error: "Internal server error" });
+		res.error("Internal server error", 500);
 	}
 });
 
 /**
- * GET /v1/product-categories/:id
- * Retrieve details for a specific product category.
+ * @route GET /v1/product-categories/:id
+ * @description Retrieve details for a specific product category.
+ * @access Protected
+ * @param {string} req.params.id - The ID of the product category.
+ * @returns {Response} 200 - JSON object containing the product category details.
+ * @returns {Response} 404 - Not found if the product category does not exist.
+ * @returns {Response} 500 - Internal server error.
  */
 router.get("/:id", async (req, res) => {
 	try {
@@ -74,25 +94,35 @@ router.get("/:id", async (req, res) => {
 		);
 		if (result.rows.length === 0) {
 			logger.error(`Product category with ID ${id} not found.`);
-			return res
-				.status(404)
-				.json({ error: "Product category not found." });
+			return res.error("Product category not found.", 404);
 		}
 		logger.info(`Retrieved product category with ID ${id}.`);
-		res.status(200).json({ category: result.rows[0] });
+		res.success(
+			{ category: result.rows[0] },
+			"Product category retrieved successfully"
+		);
 	} catch (error) {
 		logger.error(
 			`Error retrieving product category with ID ${req.params.id}.`,
 			{ error: error.message }
 		);
-		res.status(500).json({ error: "Internal server error" });
+		res.error("Internal server error", 500);
 	}
 });
 
 /**
- * PUT /v1/product-categories/:id
- * Update an existing product category.
- * Accepts: name, description, parent_category_id.
+ * @route PUT /v1/product-categories/:id
+ * @description Update an existing product category.
+ * @access Protected
+ * @param {string} req.params.id - The ID of the product category to update.
+ * @param {Object} req.body - The updated product category details.
+ * @param {string} req.body.name - The name of the category (required).
+ * @param {string} [req.body.description] - The updated description.
+ * @param {number} [req.body.parent_category_id] - The updated parent category ID.
+ * @returns {Response} 200 - JSON object containing the updated product category.
+ * @returns {Response} 400 - Bad request if 'name' is missing.
+ * @returns {Response} 404 - Not found if the product category does not exist.
+ * @returns {Response} 500 - Internal server error.
  */
 router.put("/:id", async (req, res) => {
 	try {
@@ -100,7 +130,7 @@ router.put("/:id", async (req, res) => {
 		const { name, description, parent_category_id } = req.body;
 		if (!name) {
 			logger.error("Product category update failed: 'name' is required.");
-			return res.status(400).json({ error: "'name' is required." });
+			return res.error("'name' is required.", 400);
 		}
 		const query = `
       UPDATE product_categories
@@ -122,24 +152,30 @@ router.put("/:id", async (req, res) => {
 			logger.error(
 				`Product category with ID ${id} not found for update.`
 			);
-			return res
-				.status(404)
-				.json({ error: "Product category not found." });
+			return res.error("Product category not found.", 404);
 		}
 		logger.info(`Product category with ID ${id} updated successfully.`);
-		res.status(200).json({ category: result.rows[0] });
+		res.success(
+			{ category: result.rows[0] },
+			"Product category updated successfully"
+		);
 	} catch (error) {
 		logger.error(
 			`Error updating product category with ID ${req.params.id}.`,
 			{ error: error.message }
 		);
-		res.status(500).json({ error: "Internal server error" });
+		res.error("Internal server error", 500);
 	}
 });
 
 /**
- * DELETE /v1/product-categories/:id
- * Delete a product category by ID.
+ * @route DELETE /v1/product-categories/:id
+ * @description Delete a product category by ID.
+ * @access Protected
+ * @param {string} req.params.id - The ID of the product category to delete.
+ * @returns {Response} 200 - JSON object indicating successful deletion.
+ * @returns {Response} 404 - Not found if the product category does not exist.
+ * @returns {Response} 500 - Internal server error.
  */
 router.delete("/:id", async (req, res) => {
 	try {
@@ -152,20 +188,16 @@ router.delete("/:id", async (req, res) => {
 			logger.error(
 				`Product category with ID ${id} not found for deletion.`
 			);
-			return res
-				.status(404)
-				.json({ error: "Product category not found." });
+			return res.error("Product category not found.", 404);
 		}
 		logger.info(`Product category with ID ${id} deleted successfully.`);
-		res.status(200).json({
-			message: "Product category deleted successfully.",
-		});
+		res.success(null, "Product category deleted successfully");
 	} catch (error) {
 		logger.error(
 			`Error deleting product category with ID ${req.params.id}.`,
 			{ error: error.message }
 		);
-		res.status(500).json({ error: "Internal server error" });
+		res.error("Internal server error", 500);
 	}
 });
 

@@ -1,8 +1,6 @@
-// /api/middleware/auth.js
-
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
-import logger from "../logger.js";
+import { logger } from "../logger.js"; // Use named import for logger
 
 dotenv.config();
 

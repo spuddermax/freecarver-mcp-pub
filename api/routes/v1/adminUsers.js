@@ -3,7 +3,7 @@
 import express from "express";
 import bcrypt from "bcrypt";
 import { pool } from "../../db.js";
-import logger from "../../logger.js";
+import { logger } from "../../logger.js";
 import { verifyJWT } from "../../middleware/auth.js";
 
 const router = express.Router();
@@ -19,14 +19,16 @@ router.use(verifyJWT);
 router.get("/", async (req, res) => {
 	try {
 		const result = await pool.query(
-			// Join the roles table to get the role name
 			"SELECT au.id, au.email, au.first_name, au.last_name, au.phone_number, au.avatar_url, au.timezone, ar.role_name, au.mfa_enabled, au.mfa_method, au.created_at, au.updated_at FROM admin_users au JOIN admin_roles ar ON au.role_id = ar.id;"
 		);
 		logger.info("Retrieved admin users list");
-		res.status(200).json({ admins: result.rows });
+		res.success(
+			{ admins: result.rows },
+			"Admin users retrieved successfully"
+		);
 	} catch (error) {
 		logger.error("Error retrieving admin users", { error: error.message });
-		res.status(500).json({ error: "Internal server error" });
+		res.error("Internal server error", 500);
 	}
 });
 
@@ -44,13 +46,16 @@ router.get("/:id", async (req, res) => {
 		);
 		if (result.rows.length === 0) {
 			logger.error(`Admin user with ID ${id} not found.`);
-			return res.status(404).json({ error: "Admin user not found." });
+			return res.error("Admin user not found.", 404);
 		}
 		logger.info(`Retrieved admin user with ID ${id}`);
-		res.status(200).json({ admin: result.rows[0] });
+		res.success(
+			{ admin: result.rows[0] },
+			"Admin user retrieved successfully"
+		);
 	} catch (error) {
 		logger.error("Error retrieving admin user", { error: error.message });
-		res.status(500).json({ error: "Internal server error" });
+		res.error("Internal server error", 500);
 	}
 });
 
@@ -76,9 +81,13 @@ router.post("/", async (req, res) => {
 			logger.error(
 				"Admin user creation failed: Email and password are required."
 			);
-			return res
-				.status(400)
-				.json({ error: "Email and password are required." });
+			return res.validationError(
+				{
+					email: "Email is required",
+					password: "Password is required",
+				},
+				"Email and password are required."
+			);
 		}
 
 		// Check if the email is already in use
@@ -90,7 +99,7 @@ router.post("/", async (req, res) => {
 			logger.error(
 				`Admin user creation failed: Email ${email} is already in use.`
 			);
-			return res.status(409).json({ error: "Email already in use." });
+			return res.error("Email already in use.", 409);
 		}
 
 		// Hash the password before storing it
@@ -113,10 +122,13 @@ router.post("/", async (req, res) => {
 			]
 		);
 		logger.info(`Admin user created successfully: ${email}`);
-		res.status(201).json({ admin: result.rows[0] });
+		res.success(
+			{ admin: result.rows[0] },
+			"Admin user created successfully"
+		);
 	} catch (error) {
 		logger.error("Error creating admin user", { error: error.message });
-		res.status(500).json({ error: "Internal server error" });
+		res.error("Internal server error", 500);
 	}
 });
 
@@ -129,7 +141,7 @@ router.put("/:id", async (req, res) => {
 	try {
 		const { id } = req.params;
 		if (!id) {
-			return res.status(400).json({ error: "User ID is required." });
+			return res.error("User ID is required.", 400);
 		}
 
 		const {
@@ -154,13 +166,15 @@ router.put("/:id", async (req, res) => {
 		if (mfa_method) updateFields.mfa_method = mfa_method;
 		if (password)
 			updateFields.password_hash = await bcrypt.hash(password, 10);
+
 		// If no valid fields are provided, return an error.
 		const keys = Object.keys(updateFields);
 		if (keys.length === 0) {
 			logger.error("No valid fields to update for admin user", { id });
-			return res
-				.status(400)
-				.json({ error: "No valid fields to update." });
+			return res.validationError(
+				{ error: "No valid fields to update." },
+				"No valid fields to update."
+			);
 		}
 
 		// Build dynamic SET clause and values array
@@ -173,24 +187,27 @@ router.put("/:id", async (req, res) => {
 
 		// Include updated_at in the query and use the proper placeholder for the id
 		const queryText = `
-		UPDATE admin_users
-		SET ${setClause}, updated_at = NOW()
-		WHERE id = $${values.length}
-		RETURNING id, email, first_name, last_name, phone_number, avatar_url, timezone, role_id, mfa_enabled, mfa_method, created_at, updated_at
-	  `;
+      UPDATE admin_users
+      SET ${setClause}, updated_at = NOW()
+      WHERE id = $${values.length}
+      RETURNING id, email, first_name, last_name, phone_number, avatar_url, timezone, role_id, mfa_enabled, mfa_method, created_at, updated_at
+    `;
 
 		const result = await pool.query(queryText, values);
 
 		if (result.rows.length === 0) {
 			logger.error(`Admin user with ID ${id} not found for update.`);
-			return res.status(404).json({ error: "Admin user not found." });
+			return res.error("Admin user not found.", 404);
 		}
 
 		logger.info(`Admin user with ID ${id} updated successfully.`);
-		res.status(200).json({ admin: result.rows[0] });
+		res.success(
+			{ admin: result.rows[0] },
+			"Admin user updated successfully"
+		);
 	} catch (error) {
 		logger.error("Error updating admin user", { error: error.message });
-		res.status(500).json({ error: "Internal server error" });
+		res.error("Internal server error", 500);
 	}
 });
 
@@ -208,13 +225,13 @@ router.delete("/:id", async (req, res) => {
 		);
 		if (result.rows.length === 0) {
 			logger.error(`Admin user with ID ${id} not found for deletion.`);
-			return res.status(404).json({ error: "Admin user not found." });
+			return res.error("Admin user not found.", 404);
 		}
 		logger.info(`Admin user with ID ${id} deleted successfully.`);
-		res.status(200).json({ message: "Admin user deleted successfully." });
+		res.success(null, "Admin user deleted successfully.");
 	} catch (error) {
 		logger.error("Error deleting admin user", { error: error.message });
-		res.status(500).json({ error: "Internal server error" });
+		res.error("Internal server error", 500);
 	}
 });
 
@@ -233,9 +250,10 @@ router.post("/:id/validatePassword", async (req, res) => {
 			[id]
 		);
 		if (result.rows.length === 0) {
-			return res
-				.status(200)
-				.json({ result: false, message: "Invalid user." });
+			return res.success(
+				{ result: false, message: "Invalid user." },
+				"Invalid user."
+			);
 		}
 		const isPasswordValid = await bcrypt.compare(
 			password,
@@ -245,29 +263,22 @@ router.post("/:id/validatePassword", async (req, res) => {
 			logger.error(
 				`Admin user with ID ${id} validation failed: Invalid password.`
 			);
-			return res
-				.status(200)
-				.json({ result: false, message: "Invalid password." });
+			return res.success(
+				{ result: false, message: "Invalid password." },
+				"Invalid password."
+			);
 		}
 		logger.info(`Admin user with ID ${id} validated successfully.`);
-		res.status(200).json({ result: true, message: "Valid password." });
+		res.success(
+			{ result: true, message: "Valid password." },
+			"Valid password."
+		);
 	} catch (error) {
 		logger.error("Error validating admin user password", {
 			error: error.message,
 		});
-		res.status(500).json({ error: "Internal server error" });
+		res.error("Internal server error", 500);
 	}
 });
-
-/**
- * (Optional) @route POST /v1/adminUsers/:id/avatar
- * @desc    Upload or update an admin user's avatar
- * @access  Protected
- *
- * Note: For file uploads, you might use middleware such as multer.
- */
-// router.post("/:id/avatar", upload.single('avatar'), async (req, res) => {
-//   // Implement file handling and update admin_users.avatar_url accordingly
-// });
 
 export default router;

@@ -1,11 +1,9 @@
 {
-  "files": [],
-  "references": [
-    { "path": "./tsconfig.app.json" },
-    { "path": "./tsconfig.node.json" }
-  ],
-  "compilerOptions": {
-    "target": "es2022",
-    "lib": ["dom", "es2022", "es2022.intl"]
-  }
+	"files": [],
+	"references": [{ "path": "./tsconfig.app.json" }],
+	"compilerOptions": {
+		"target": "es2022",
+		"lib": ["dom", "es2022", "es2022.intl"]
+	},
+	"include": ["api/**/*", "api/types/**/*"]
 }

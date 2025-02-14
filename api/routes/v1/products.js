@@ -2,12 +2,11 @@
 
 import express from "express";
 import { pool } from "../../db.js";
-import logger from "../../logger.js";
+import { logger } from "../../logger.js";
 import { verifyJWT } from "../../middleware/auth.js";
 
 const router = express.Router();
 
-// Apply JWT authentication to all endpoints in this file.
 router.use(verifyJWT);
 
 /**
@@ -18,12 +17,15 @@ router.get("/", async (req, res) => {
 	try {
 		const result = await pool.query("SELECT * FROM products ORDER BY id");
 		logger.info("Retrieved products list.");
-		res.status(200).json({ products: result.rows });
+		res.success(
+			{ products: result.rows },
+			"Products retrieved successfully"
+		);
 	} catch (error) {
 		logger.error("Error retrieving products list.", {
 			error: error.message,
 		});
-		res.status(500).json({ error: "Internal server error" });
+		res.error("Internal server error", 500);
 	}
 });
 
@@ -46,7 +48,7 @@ router.post("/", async (req, res) => {
 		} = req.body;
 		if (!name) {
 			logger.error('Product creation failed: "name" is required.');
-			return res.status(400).json({ error: '"name" is required.' });
+			return res.error('"name" is required.', 400);
 		}
 
 		const query = `
@@ -65,10 +67,13 @@ router.post("/", async (req, res) => {
 		];
 		const result = await pool.query(query, values);
 		logger.info(`Product created successfully: ${name}`);
-		res.status(201).json({ product: result.rows[0] });
+		res.success(
+			{ product: result.rows[0] },
+			"Product created successfully"
+		);
 	} catch (error) {
 		logger.error("Error creating product.", { error: error.message });
-		res.status(500).json({ error: "Internal server error" });
+		res.error("Internal server error", 500);
 	}
 });
 
@@ -85,15 +90,18 @@ router.get("/:id", async (req, res) => {
 		);
 		if (result.rows.length === 0) {
 			logger.error(`Product with ID ${id} not found.`);
-			return res.status(404).json({ error: "Product not found." });
+			return res.error("Product not found.", 404);
 		}
 		logger.info(`Retrieved product with ID ${id}.`);
-		res.status(200).json({ product: result.rows[0] });
+		res.success(
+			{ product: result.rows[0] },
+			"Product retrieved successfully"
+		);
 	} catch (error) {
 		logger.error(`Error retrieving product with ID ${req.params.id}.`, {
 			error: error.message,
 		});
-		res.status(500).json({ error: "Internal server error" });
+		res.error("Internal server error", 500);
 	}
 });
 
@@ -140,15 +148,18 @@ router.put("/:id", async (req, res) => {
 		const result = await pool.query(query, values);
 		if (result.rows.length === 0) {
 			logger.error(`Product with ID ${id} not found for update.`);
-			return res.status(404).json({ error: "Product not found." });
+			return res.error("Product not found.", 404);
 		}
 		logger.info(`Product with ID ${id} updated successfully.`);
-		res.status(200).json({ product: result.rows[0] });
+		res.success(
+			{ product: result.rows[0] },
+			"Product updated successfully"
+		);
 	} catch (error) {
 		logger.error(`Error updating product with ID ${req.params.id}.`, {
 			error: error.message,
 		});
-		res.status(500).json({ error: "Internal server error" });
+		res.error("Internal server error", 500);
 	}
 });
 
@@ -165,15 +176,15 @@ router.delete("/:id", async (req, res) => {
 		);
 		if (result.rows.length === 0) {
 			logger.error(`Product with ID ${id} not found for deletion.`);
-			return res.status(404).json({ error: "Product not found." });
+			return res.error("Product not found.", 404);
 		}
 		logger.info(`Product with ID ${id} deleted successfully.`);
-		res.status(200).json({ message: "Product deleted successfully." });
+		res.success(null, "Product deleted successfully");
 	} catch (error) {
 		logger.error(`Error deleting product with ID ${req.params.id}.`, {
 			error: error.message,
 		});
-		res.status(500).json({ error: "Internal server error" });
+		res.error("Internal server error", 500);
 	}
 });
 

@@ -6,8 +6,8 @@ dotenv.config();
 const { combine, timestamp, printf, colorize, json, prettyPrint } = format;
 
 // Custom log format for console output
-const customFormat = printf(({ level, message, timestamp, stack }) => {
-	return `${timestamp} ${level}: ${stack || message}`;
+const customFormat = printf(({ level, message, timestamp, stack, ip }) => {
+	return `${timestamp} [${ip || "N/A"}] ${level}: ${stack || message}`;
 });
 
 // Define file paths with fallback defaults
@@ -18,13 +18,11 @@ const infoLogFile =
 
 // Create an array of transports based on environment
 const loggerTransports = [
-	// Always log errors to file
 	new transports.File({
 		filename: errorLogFile,
 		level: "error",
 		format: combine(timestamp(), json()),
 	}),
-	// Always log info and above to a separate file
 	new transports.File({
 		filename: infoLogFile,
 		level: "info",
@@ -32,7 +30,6 @@ const loggerTransports = [
 	}),
 ];
 
-// In non-production environments, add a console transport with colorized output
 if (process.env.NODE_ENV !== "production") {
 	loggerTransports.push(
 		new transports.Console({
@@ -47,10 +44,27 @@ if (process.env.NODE_ENV !== "production") {
 	);
 }
 
+// Create logger instance
 const logger = createLogger({
 	level: process.env.NODE_ENV !== "production" ? "debug" : "info",
 	transports: loggerTransports,
-	exitOnError: false, // Do not exit on handled exceptions
+	exitOnError: false,
 });
 
-export default logger;
+// Middleware for attaching client IP to logs
+const logRequest = (req, res, next) => {
+	req.log = (level, message, extraData = {}) => {
+		const clientIp =
+			req.headers["x-forwarded-for"] || req.connection.remoteAddress;
+		logger.log({
+			level,
+			message,
+			ip: clientIp,
+			...extraData,
+		});
+	};
+	next();
+};
+
+export { logger }; // Correctly export as named export
+export { logRequest }; // Ensure logRequest is exported properly
