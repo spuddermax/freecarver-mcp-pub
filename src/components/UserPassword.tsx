@@ -1,15 +1,19 @@
-import React, { useRef, useState, useCallback } from "react";
+import React, { useRef, useState } from "react";
 import { Lock, Loader2, Save } from "lucide-react";
-import { validatePassword, updateUserPassword } from "../lib/api";
+import {
+	validateAdminPassword,
+	updateAdminUser,
+} from "../lib/api_client/adminUsers";
 
 interface UserPasswordProps {
+	id: string; // Required admin user ID for the update API call
 	email: string;
 	onMessage: (
 		message: { type: "success" | "error"; text: string } | null
 	) => void;
 }
 
-export function UserPassword({ email, onMessage }: UserPasswordProps) {
+export function UserPassword({ id, email, onMessage }: UserPasswordProps) {
 	const [isVerifyingPassword, setIsVerifyingPassword] = useState(false);
 	const [currentPasswordValid, setCurrentPasswordValid] = useState<
 		boolean | null
@@ -27,7 +31,6 @@ export function UserPassword({ email, onMessage }: UserPasswordProps) {
 	});
 	const [passwordErrors, setPasswordErrors] = useState<string[]>([]);
 	const currentPasswordRef = useRef<HTMLInputElement>(null);
-	const passwordFieldsRef = useRef<HTMLDivElement>(null);
 
 	const checkPasswordErrors = (newData: typeof passwordData) => {
 		let newErrors: string[] = [];
@@ -63,13 +66,13 @@ export function UserPassword({ email, onMessage }: UserPasswordProps) {
 	};
 
 	async function validateCurrentPassword(showErrors = false) {
-		if (!passwordData.currentPassword || !email) return;
+		if (!passwordData.currentPassword || !id) return;
 
 		setIsVerifyingPassword(true);
 		try {
-			// Validate current password using our new API function
-			const isValid = await validatePassword(
-				email,
+			// Validate current password using the provided API function
+			const isValid = await validateAdminPassword(
+				id,
 				passwordData.currentPassword
 			);
 			setCurrentPasswordValid(isValid);
@@ -137,8 +140,12 @@ export function UserPassword({ email, onMessage }: UserPasswordProps) {
 		}
 
 		try {
-			// Update the password via our API function
-			await updateUserPassword(passwordData.newPassword);
+			// Update the password via our new updateAdminUser API call.
+			// We pass the admin user's id and only the password field.
+			await updateAdminUser({
+				id: id,
+				password: passwordData.newPassword,
+			});
 			onMessage({
 				type: "success",
 				text: "Password updated successfully!",
@@ -207,7 +214,7 @@ export function UserPassword({ email, onMessage }: UserPasswordProps) {
 			<legend className="text-lg font-medium text-gray-700 dark:text-gray-300 px-2">
 				Password
 			</legend>
-			<div ref={passwordFieldsRef} className="space-y-4">
+			<div className="space-y-4">
 				<div>
 					<label
 						htmlFor="currentPassword"

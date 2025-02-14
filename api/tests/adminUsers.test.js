@@ -146,4 +146,36 @@ describe("Admin Users Routes", () => {
 			expect(getRes.statusCode).toEqual(404);
 		});
 	});
+
+	describe("POST /v1/adminUsers/:id/validatePassword", () => {
+		it("should validate the password for an existing admin user with correct password", async () => {
+			// Using the auth admin user created in beforeAll with password "password"
+			const res = await request(app)
+				.post(`/v1/adminUsers/${authAdmin.id}/validatePassword`)
+				.set("Authorization", `Bearer ${authToken}`)
+				.send({ password: "password" });
+			expect(res.statusCode).toEqual(200);
+			expect(res.body.message).toEqual(
+				"Password validated successfully."
+			);
+		});
+
+		it("should fail to validate the password for an existing admin user with an incorrect password", async () => {
+			const res = await request(app)
+				.post(`/v1/adminUsers/${authAdmin.id}/validatePassword`)
+				.set("Authorization", `Bearer ${authToken}`)
+				.send({ password: "wrongpassword" });
+			expect(res.statusCode).toEqual(401);
+			expect(res.body.error).toEqual("Invalid password.");
+		});
+
+		it("should return 401 when validating password for a non-existent admin user", async () => {
+			const res = await request(app)
+				.post(`/v1/adminUsers/999999/validatePassword`)
+				.set("Authorization", `Bearer ${authToken}`)
+				.send({ password: "password" });
+			expect(res.statusCode).toEqual(401);
+			expect(res.body.error).toEqual("Invalid user.");
+		});
+	});
 });

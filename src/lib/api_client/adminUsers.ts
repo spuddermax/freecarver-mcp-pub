@@ -97,6 +97,7 @@ export async function updateAdminUser(data: {
 	timezone?: string;
 	mfa_enabled?: boolean;
 	mfa_method?: string | null;
+	password?: string;
 }): Promise<any> {
 	const token = localStorage.getItem("jwtToken");
 	console.log(data);
@@ -137,6 +138,35 @@ export async function deleteAdminUser(id: string): Promise<any> {
 	if (!response.ok) {
 		const errorData = await response.json();
 		throw new Error(errorData.error || "Failed to delete admin user");
+	}
+	return response.json();
+}
+
+/**
+ * Validate an admin user's password.
+ * @param id - The ID of the admin user to update.
+ * @param password	- The admin user's password.
+ * @returns A promise that resolves to the updated admin user.
+ */
+export async function validateAdminPassword(
+	id: string,
+	password: string
+): Promise<any> {
+	const token = localStorage.getItem("jwtToken");
+	const response = await fetch(
+		import.meta.env.VITE_API_URL + `/v1/adminUsers/${id}/validatePassword`,
+		{
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				Authorization: `Bearer ${token}`,
+			},
+			body: JSON.stringify({ password: password }),
+		}
+	);
+	if (!response.ok) {
+		const errorData = await response.json();
+		throw new Error(errorData.error || "Failed to validate admin password");
 	}
 	return response.json();
 }

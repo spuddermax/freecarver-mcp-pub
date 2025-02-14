@@ -154,6 +154,7 @@ export default function UserEdit() {
 							/>
 
 							<UserPassword
+								id={userData.id}
 								email={userData.email}
 								onMessage={setMessage}
 							/>

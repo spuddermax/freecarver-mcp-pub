@@ -140,6 +140,7 @@ router.put("/:id", async (req, res) => {
 			timezone,
 			mfa_enabled,
 			mfa_method,
+			password,
 		} = req.body;
 
 		// Build an object with only the fields provided
@@ -151,7 +152,8 @@ router.put("/:id", async (req, res) => {
 		if (timezone) updateFields.timezone = timezone;
 		if (mfa_enabled !== undefined) updateFields.mfa_enabled = mfa_enabled;
 		if (mfa_method) updateFields.mfa_method = mfa_method;
-
+		if (password)
+			updateFields.password_hash = await bcrypt.hash(password, 10);
 		// If no valid fields are provided, return an error.
 		const keys = Object.keys(updateFields);
 		if (keys.length === 0) {
@@ -212,6 +214,43 @@ router.delete("/:id", async (req, res) => {
 		res.status(200).json({ message: "Admin user deleted successfully." });
 	} catch (error) {
 		logger.error("Error deleting admin user", { error: error.message });
+		res.status(500).json({ error: "Internal server error" });
+	}
+});
+
+/**
+ * @route   POST /v1/adminUsers/:id/validatePassword
+ * @desc    Validate an admin user's password
+ * @access  Protected
+ */
+router.post("/:id/validatePassword", async (req, res) => {
+	try {
+		const { id } = req.params;
+		const { password } = req.body;
+
+		const result = await pool.query(
+			"SELECT password_hash FROM admin_users WHERE id = $1",
+			[id]
+		);
+		if (result.rows.length === 0) {
+			return res.status(401).json({ error: "Invalid user." });
+		}
+		const isPasswordValid = await bcrypt.compare(
+			password,
+			result.rows[0].password_hash
+		);
+		if (!isPasswordValid) {
+			logger.error(
+				`Admin user with ID ${id} validation failed: Invalid password.`
+			);
+			return res.status(401).json({ error: "Invalid password." });
+		}
+		logger.info(`Admin user with ID ${id} validated successfully.`);
+		res.status(200).json({ message: "Password validated successfully." });
+	} catch (error) {
+		logger.error("Error validating admin user password", {
+			error: error.message,
+		});
 		res.status(500).json({ error: "Internal server error" });
 	}
 });
