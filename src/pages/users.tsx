@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
 	User as UserIcon,
 	Mail as MailIcon,
@@ -10,7 +11,8 @@ import {
 } from "lucide-react";
 import Layout from "../components/Layout";
 import { Toast } from "../components/Toast";
-import { fetchAdminUsers } from "../lib/api"; // new API function
+import { fetchAdminUsers } from "../lib/api_client/adminUsers";
+import { formatUser } from "../utils/formatters";
 
 interface UserData {
 	id: string;
@@ -23,6 +25,7 @@ interface UserData {
 }
 
 export default function Users() {
+	const navigate = useNavigate();
 	const [users, setUsers] = useState<UserData[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [searchQuery, setSearchQuery] = useState("");
@@ -40,7 +43,7 @@ export default function Users() {
 	useEffect(() => {
 		const timer = setTimeout(() => {
 			setIsSearching(true);
-			filterUsers();
+			// The search filtering is done immediately based on state.
 			setIsSearching(false);
 		}, 300);
 
@@ -49,28 +52,14 @@ export default function Users() {
 
 	async function loadUsers() {
 		try {
-			// Use the new API endpoint to fetch users
 			const usersData = await fetchAdminUsers();
-			// Format the returned users; adjust property names if needed
-			const formattedUsers = usersData.map((user: any) => ({
-				id: user.id,
-				email: user.email,
-				role: user.role || "viewer",
-				firstName: user.firstName || user.first_name || "",
-				lastName: user.lastName || user.last_name || "",
-				avatarUrl: user.avatarUrl || user.avatar_url || "",
-				createdAt: new Date(
-					user.createdAt || user.created_at
-				).toLocaleDateString(),
-			}));
-
+			const formattedUsers = usersData.map((user: any) =>
+				formatUser(user)
+			);
 			setUsers(formattedUsers);
 		} catch (error: any) {
 			console.error("Error loading users:", error);
-			setMessage({
-				type: "error",
-				text: error.message,
-			});
+			setMessage({ type: "error", text: error.message });
 		} finally {
 			setLoading(false);
 		}
@@ -79,7 +68,6 @@ export default function Users() {
 	const filterUsers = () => {
 		const searchLower = searchQuery.toLowerCase();
 		if (!searchLower) return users;
-
 		return users.filter((user) => {
 			const fullName = `${user.firstName} ${user.lastName}`.toLowerCase();
 			return (
@@ -95,11 +83,11 @@ export default function Users() {
 
 	const getRoleColor = (role: string) => {
 		switch (role) {
-			case "super_admin":
+			case "Super Admin":
 				return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200";
-			case "admin":
+			case "Admin":
 				return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
-			case "editor":
+			case "Editor":
 				return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
 			default:
 				return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200";
@@ -107,7 +95,13 @@ export default function Users() {
 	};
 
 	return (
-		<Layout>
+		<Layout
+			pageInfo={{
+				title: "Manage Users",
+				icon: UserIcon,
+				iconColor: "text-green-500 dark:text-green-400",
+			}}
+		>
 			{message && (
 				<Toast
 					message={message.text}
@@ -269,8 +263,8 @@ export default function Users() {
 													<div className="flex items-center justify-end space-x-3">
 														<button
 															onClick={() =>
-																setSelectedUser(
-																	user
+																navigate(
+																	`/userEdit/${user.id}`
 																)
 															}
 															className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300"
@@ -279,7 +273,7 @@ export default function Users() {
 														</button>
 														<button
 															onClick={() => {
-																/* Delete user logic */
+																// Delete user logic: ideally call an API function from your client library here
 															}}
 															className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
 														>

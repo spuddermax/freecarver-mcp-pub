@@ -18,7 +18,9 @@ export async function fetchAdminUsers(): Promise<any> {
 		const errorData = await response.json();
 		throw new Error(errorData.error || "Failed to fetch admin users");
 	}
-	return response.json();
+	const data = await response.json();
+	console.log(data.admins);
+	return data.admins;
 }
 
 /**
@@ -86,21 +88,20 @@ export async function createAdminUser(data: {
  * @param data - The admin user fields to update.
  * @returns A promise that resolves to the updated admin user.
  */
-export async function updateAdminUser(
-	id: string,
-	data: {
-		email: string;
-		first_name?: string;
-		last_name?: string;
-		phone_number?: string;
-		timezone?: string;
-		mfa_enabled?: boolean;
-		mfa_method?: string | null;
-	}
-): Promise<any> {
+export async function updateAdminUser(data: {
+	id: string;
+	email?: string;
+	first_name?: string;
+	last_name?: string;
+	phone_number?: string;
+	timezone?: string;
+	mfa_enabled?: boolean;
+	mfa_method?: string | null;
+}): Promise<any> {
 	const token = localStorage.getItem("jwtToken");
+	console.log(data);
 	const response = await fetch(
-		import.meta.env.VITE_API_URL + `/v1/adminUsers/${id}`,
+		import.meta.env.VITE_API_URL + `/v1/adminUsers/${data.id}`,
 		{
 			method: "PUT",
 			headers: {

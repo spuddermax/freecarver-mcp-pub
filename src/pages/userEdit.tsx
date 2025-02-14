@@ -7,7 +7,8 @@ import { UserPicture } from "../components/UserPicture";
 import { UserPassword } from "../components/UserPassword";
 import { UserPreferences } from "../components/UserPreferences";
 import { useParams } from "react-router-dom";
-import { fetchUserData } from "../lib/api";
+import { fetchAdminUser } from "../lib/api_client/adminUsers";
+import { UserIcon } from "lucide-react";
 
 export interface UserData {
 	id: string;
@@ -61,27 +62,19 @@ export default function UserEdit() {
 				return;
 			}
 			try {
-				const data = await fetchUserData(uuid);
+				const result = await fetchAdminUser(uuid);
+				const data = result.admin;
 				// Adjust the property names if your API returns different keys.
 				setUserData({
 					id: data.id,
 					email: data.email || "",
-					firstName: data.firstName || data.first_name || "",
-					lastName: data.lastName || data.last_name || "",
-					phoneNumber: data.phoneNumber || data.phone_number || "",
-					avatarUrl: data.avatarUrl || data.avatar_url || "",
-					twoFactorEnabled:
-						data.twoFactorEnabled ||
-						data.two_factor_enabled ||
-						false,
-					notificationsEnabled:
-						data.notificationsEnabled ??
-						data.notifications_enabled ??
-						true,
-					notificationPreference:
-						data.notificationPreference ||
-						data.notification_preference ||
-						"email",
+					firstName: data.first_name || "",
+					lastName: data.last_name || "",
+					phoneNumber: data.phone_number || "",
+					avatarUrl: data.avatar_url || "",
+					twoFactorEnabled: data.mfa_enabled || false,
+					notificationsEnabled: true,
+					notificationPreference: "email",
 					timezone:
 						data.timezone ||
 						Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -102,7 +95,13 @@ export default function UserEdit() {
 	}, [uuid]);
 
 	return (
-		<Layout>
+		<Layout
+			pageInfo={{
+				title: "User Editor",
+				icon: UserIcon,
+				iconColor: "text-green-500 dark:text-green-400",
+			}}
+		>
 			{message && (
 				<Toast
 					message={message.text}
@@ -130,6 +129,7 @@ export default function UserEdit() {
 
 							<UserPersonalDetails
 								User={{
+									id: userData.id,
 									firstName: userData.firstName,
 									lastName: userData.lastName,
 									phoneNumber: userData.phoneNumber,

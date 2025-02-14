@@ -9,11 +9,18 @@ import NavMenu from "./NavMenu";
 import { fetchUserData } from "../lib/api";
 import { decodeJWT } from "../lib/helpers";
 
-interface LayoutProps {
-	children: React.ReactNode;
+interface PageInfo {
+	title: string;
+	icon: React.ElementType | null;
+	iconColor: string;
 }
 
-export default function Layout({ children }: LayoutProps) {
+interface LayoutProps {
+	children: React.ReactNode;
+	pageInfo?: PageInfo;
+}
+
+export default function Layout({ children, pageInfo }: LayoutProps) {
 	const navigate = useNavigate();
 	const location = useLocation();
 	const [notifications] = useState(3);
@@ -36,7 +43,6 @@ export default function Layout({ children }: LayoutProps) {
 				const decoded = decodeJWT(token);
 				if (decoded && decoded.id) {
 					try {
-						// Fetch user data from the API using the admin's id from the token
 						setUserMySettings({
 							email: decoded.email || "User",
 							firstName: decoded.firstName || "",
@@ -92,36 +98,8 @@ export default function Layout({ children }: LayoutProps) {
 		setShowNavMenu(false);
 	};
 
-	const getPageInfo = () => {
-		switch (location.pathname) {
-			case "/dashboard":
-				return {
-					title: "Dashboard",
-					icon: LayoutDashboard,
-					iconColor: "text-blue-500 dark:text-blue-400",
-				};
-			case "/userEdit":
-				return {
-					title: "User Editor",
-					icon: User,
-					iconColor: "text-purple-500 dark:text-purple-400",
-				};
-			case "/users":
-				return {
-					title: "Manage Users",
-					icon: User,
-					iconColor: "text-green-500 dark:text-green-400",
-				};
-			default:
-				return {
-					title: "",
-					icon: null,
-					iconColor: "",
-				};
-		}
-	};
-
-	const pageInfo = getPageInfo();
+	// Use pageInfo passed from the page or fallback to a default empty state
+	const { title = "", icon: Icon, iconColor = "" } = pageInfo || {};
 
 	return (
 		<div className="min-h-screen">
@@ -218,13 +196,11 @@ export default function Layout({ children }: LayoutProps) {
 						</div>
 						<div className="h-12 flex items-center border-t dark:border-gray-700">
 							<div className="flex items-center space-x-2">
-								{pageInfo.icon && (
-									<pageInfo.icon
-										className={`h-5 w-5 ${pageInfo.iconColor}`}
-									/>
+								{Icon && (
+									<Icon className={`h-5 w-5 ${iconColor}`} />
 								)}
 								<h2 className="text-lg font-medium text-gray-600 dark:text-gray-300">
-									{pageInfo.title}
+									{title}
 								</h2>
 							</div>
 						</div>

@@ -19,7 +19,8 @@ router.use(verifyJWT);
 router.get("/", async (req, res) => {
 	try {
 		const result = await pool.query(
-			"SELECT id, email, first_name, last_name, phone_number, avatar_url, timezone, role_id, mfa_enabled, mfa_method, created_at, updated_at FROM admin_users"
+			// Join the roles table to get the role name
+			"SELECT au.id, au.email, au.first_name, au.last_name, au.phone_number, au.avatar_url, au.timezone, ar.role_name, au.mfa_enabled, au.mfa_method, au.created_at, au.updated_at FROM admin_users au JOIN admin_roles ar ON au.role_id = ar.id;"
 		);
 		logger.info("Retrieved admin users list");
 		res.status(200).json({ admins: result.rows });
@@ -127,6 +128,10 @@ router.post("/", async (req, res) => {
 router.put("/:id", async (req, res) => {
 	try {
 		const { id } = req.params;
+		if (!id) {
+			return res.status(400).json({ error: "User ID is required." });
+		}
+
 		const {
 			email,
 			first_name,
@@ -137,31 +142,42 @@ router.put("/:id", async (req, res) => {
 			mfa_method,
 		} = req.body;
 
-		// Optional: Add validation for required fields if needed
+		// Build an object with only the fields provided
+		const updateFields = {};
+		if (email) updateFields.email = email;
+		if (first_name) updateFields.first_name = first_name;
+		if (last_name) updateFields.last_name = last_name;
+		if (phone_number) updateFields.phone_number = phone_number;
+		if (timezone) updateFields.timezone = timezone;
+		if (mfa_enabled !== undefined) updateFields.mfa_enabled = mfa_enabled;
+		if (mfa_method) updateFields.mfa_method = mfa_method;
 
-		const result = await pool.query(
-			`UPDATE admin_users
-       SET email = $1,
-           first_name = $2,
-           last_name = $3,
-           phone_number = $4,
-           timezone = $5,
-           mfa_enabled = $6,
-           mfa_method = $7,
-           updated_at = NOW()
-       WHERE id = $8
-       RETURNING id, email, first_name, last_name, phone_number, avatar_url, timezone, role_id, mfa_enabled, mfa_method, created_at, updated_at`,
-			[
-				email,
-				first_name,
-				last_name,
-				phone_number,
-				timezone,
-				mfa_enabled,
-				mfa_method,
-				id,
-			]
-		);
+		// If no valid fields are provided, return an error.
+		const keys = Object.keys(updateFields);
+		if (keys.length === 0) {
+			logger.error("No valid fields to update for admin user", { id });
+			return res
+				.status(400)
+				.json({ error: "No valid fields to update." });
+		}
+
+		// Build dynamic SET clause and values array
+		const setClause = keys
+			.map((field, index) => `${field} = $${index + 1}`)
+			.join(", ");
+		const values = keys.map((key) => updateFields[key]);
+		// Append the user id as the last parameter
+		values.push(id);
+
+		// Include updated_at in the query and use the proper placeholder for the id
+		const queryText = `
+		UPDATE admin_users
+		SET ${setClause}, updated_at = NOW()
+		WHERE id = $${values.length}
+		RETURNING id, email, first_name, last_name, phone_number, avatar_url, timezone, role_id, mfa_enabled, mfa_method, created_at, updated_at
+	  `;
+
+		const result = await pool.query(queryText, values);
 
 		if (result.rows.length === 0) {
 			logger.error(`Admin user with ID ${id} not found for update.`);
