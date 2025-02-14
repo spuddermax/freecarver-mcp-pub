@@ -7,7 +7,7 @@ import { UserPicture } from "../components/UserPicture";
 import { UserPassword } from "../components/UserPassword";
 import { UserPreferences } from "../components/UserPreferences";
 import { UserDelete } from "../components/UserDelete";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { fetchAdminUser } from "../lib/api_client/adminUsers";
 import { UserIcon } from "lucide-react";
 
@@ -32,6 +32,7 @@ export interface UserData {
  */
 export default function UserEdit() {
 	const { uuid } = useParams<{ uuid: string }>();
+	const navigate = useNavigate();
 
 	// State for messages (for success/error notifications)
 	const [message, setMessage] = useState<{
@@ -179,8 +180,16 @@ export default function UserEdit() {
 							/>
 
 							<UserDelete
-								id={userData.id}
+								userId={userData.id}
 								onMessage={setMessage}
+								onDelete={() => {
+									// popup a confirmation toast
+									setMessage({
+										type: "info",
+										text: "User deleted successfully",
+									});
+									navigate("/users");
+								}}
 							/>
 						</div>
 					</div>
