@@ -75,7 +75,7 @@ export async function getAuditLogs(): Promise<any> {
  */
 export async function getDatabaseStatus(): Promise<any> {
 	const response = await fetch(
-		import.meta.env.VITE_API_URL + "/v1/system/database-status"
+		import.meta.env.VITE_API_URL + "/v1/system/database_status"
 	);
 	if (!response.ok) {
 		const errorData = await response.json();

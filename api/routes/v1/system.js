@@ -75,7 +75,7 @@ router.put("/preferences/:key", verifyJWT, async (req, res) => {
  * @desc    Retrieve all audit logs (optionally, add filtering via query parameters)
  * @access  Protected (Admin)
  */
-router.get("/audit-logs", verifyJWT, async (req, res) => {
+router.get("/audit_logs", verifyJWT, async (req, res) => {
 	try {
 		const result = await pool.query(
 			"SELECT * FROM audit_logs ORDER BY created_at DESC"
@@ -96,7 +96,7 @@ router.get("/audit-logs", verifyJWT, async (req, res) => {
  * @desc    Retrieve the status of the database
  * @access  Public
  */
-router.get("/database-status", async (req, res) => {
+router.get("/database_status", async (req, res) => {
 	try {
 		const result = await pool.query("SELECT NOW()");
 		logger.info("Database status retrieved successfully");

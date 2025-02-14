@@ -37,6 +37,7 @@ export default function Login({ onLogin }: LoginProps) {
 		getDatabaseStatus()
 			.then((res) => {
 				if (res) {
+					console.log("res: ", res);
 					setConnectionStatus("connected");
 				} else {
 					setConnectionStatus("error");

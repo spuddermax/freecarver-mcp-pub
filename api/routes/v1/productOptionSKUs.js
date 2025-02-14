@@ -11,7 +11,7 @@ const router = express.Router();
 router.use(verifyJWT);
 
 /**
- * @route GET /v1/product-option-skus
+ * @route GET /v1/product_option_skus
  * @description Retrieve a list of all product option SKU associations.
  * @access Protected
  * @returns {Response} 200 - JSON object containing an array of product option SKU associations.
@@ -36,7 +36,7 @@ router.get("/", async (req, res) => {
 });
 
 /**
- * @route POST /v1/product-option-skus
+ * @route POST /v1/product_option_skus
  * @description Create a new product option SKU association.
  * @access Protected
  * @param {Object} req.body - The request body.
@@ -105,7 +105,7 @@ router.post("/", async (req, res) => {
 });
 
 /**
- * @route GET /v1/product-option-skus/:id
+ * @route GET /v1/product_option_skus/:id
  * @description Retrieve details for a specific product option SKU by ID.
  * @access Protected
  * @param {string} req.params.id - The ID of the product option SKU association.
@@ -139,7 +139,7 @@ router.get("/:id", async (req, res) => {
 });
 
 /**
- * @route PUT /v1/product-option-skus/:id
+ * @route PUT /v1/product_option_skus/:id
  * @description Update an existing product option SKU association.
  * @access Protected
  * @param {string} req.params.id - The ID of the product option SKU association to update.
@@ -226,7 +226,7 @@ router.put("/:id", async (req, res) => {
 });
 
 /**
- * @route DELETE /v1/product-option-skus/:id
+ * @route DELETE /v1/product_option_skus/:id
  * @description Delete a product option SKU association by ID.
  * @access Protected
  * @param {string} req.params.id - The ID of the product option SKU association to delete.
