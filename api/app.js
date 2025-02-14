@@ -1,6 +1,7 @@
 // /api/app.js
 
 import express from "express";
+import rateLimit from "express-rate-limit";
 import dotenv from "dotenv";
 import cors from "cors";
 import logger from "./logger.js";
@@ -27,6 +28,18 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors());
+
+// Set up a rate limiter: maximum of 100 requests per 5 minutes per IP
+const apiLimiter = rateLimit({
+	windowMs: 5 * 60 * 1000, // 5 minutes
+	max: 100, // limit each IP to 100 requests per windowMs
+	standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+	legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+	message: "Too many requests from this IP, please try again later.",
+});
+
+// Apply the rate limiter to API calls starting with '/v1'
+app.use("/v1", apiLimiter);
 
 // Log incoming requests
 app.use((req, res, next) => {
