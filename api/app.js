@@ -35,7 +35,10 @@ const apiLimiter = rateLimit({
 	max: 100, // limit each IP to 100 requests per windowMs
 	standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
 	legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-	message: "Too many requests from this IP, please try again later.",
+	message: async (req, res) => {
+		logger.info(`Rate limit exceeded for IP: ${req.ip}`);
+		return "Too many requests from this IP, please try again later.";
+	},
 });
 
 // Apply the rate limiter to API calls starting with '/v1'
@@ -43,7 +46,7 @@ app.use("/v1", apiLimiter);
 
 // Log incoming requests
 app.use((req, res, next) => {
-	logger.info(`Incoming request: ${req.method} ${req.url}`);
+	logger.info(`Incoming request: ${req.method} ${req.url} ${req.ip}`);
 	next();
 });
 

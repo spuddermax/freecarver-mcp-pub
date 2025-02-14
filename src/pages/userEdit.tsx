@@ -6,6 +6,7 @@ import { UserPersonalDetails } from "../components/UserPersonalDetails";
 import { UserPicture } from "../components/UserPicture";
 import { UserPassword } from "../components/UserPassword";
 import { UserPreferences } from "../components/UserPreferences";
+import { UserDelete } from "../components/UserDelete";
 import { useParams } from "react-router-dom";
 import { fetchAdminUser } from "../lib/api_client/adminUsers";
 import { UserIcon } from "lucide-react";
@@ -175,6 +176,11 @@ export default function UserEdit() {
 										...changes,
 									}))
 								}
+							/>
+
+							<UserDelete
+								id={userData.id}
+								onMessage={setMessage}
 							/>
 						</div>
 					</div>

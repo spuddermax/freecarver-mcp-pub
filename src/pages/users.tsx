@@ -191,9 +191,9 @@ export default function Users() {
 										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 											Created
 										</th>
-										<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+										{/* <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 											Actions
-										</th>
+										</th> */}
 									</tr>
 								</thead>
 								<tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
@@ -217,7 +217,16 @@ export default function Users() {
 										</tr>
 									) : (
 										filteredUsers.map((user) => (
-											<tr key={user.id}>
+											// Start of Selection
+											<tr
+												key={user.id}
+												className="hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+												onClick={() =>
+													navigate(
+														`/userEdit/${user.id}`
+													)
+												}
+											>
 												<td className="px-6 py-4 whitespace-nowrap">
 													<div className="flex items-center">
 														{user.avatarUrl ? (
@@ -259,7 +268,7 @@ export default function Users() {
 												<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
 													{user.createdAt}
 												</td>
-												<td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+												{/* <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
 													<div className="flex items-center justify-end space-x-3">
 														<button
 															onClick={() =>
@@ -280,7 +289,7 @@ export default function Users() {
 															<Trash2Icon className="h-4 w-4" />
 														</button>
 													</div>
-												</td>
+												</td> */}
 											</tr>
 										))
 									)}
