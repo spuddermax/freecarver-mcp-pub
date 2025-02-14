@@ -1,3 +1,5 @@
+// /api/routes/v1/adminAuth.js
+
 import express from "express";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
@@ -11,24 +13,33 @@ dotenv.config();
 const router = express.Router();
 
 /**
- * @route   POST /v1/adminAuth/login
- * @desc    Authenticate an admin user and return a JWT token
- * @access  Public
+ * @route POST /v1/adminAuth/login
+ * @description Authenticate an admin user and return a JWT token.
+ * @access Public
+ * @param {Object} req.body - The request body.
+ * @param {string} req.body.email - The admin's email address.
+ * @param {string} req.body.password - The admin's password.
+ * @returns {Response} 200 - Returns a JSON object with the JWT token on successful login.
+ * @returns {Response} 400 - Returns a validation error if email or password is missing.
+ * @returns {Response} 401 - Returns an error if credentials are invalid.
+ * @returns {Response} 500 - Returns an error for an internal server error.
  */
 router.post("/login", async (req, res) => {
 	try {
 		const { email, password } = req.body;
-
 		// Validate request body
 		if (!email || !password) {
 			req.log(
 				"error",
 				"Admin login failed: Email and password are required."
 			);
-			return res.validationError({
-				email: "Email is required",
-				password: "Password is required",
-			});
+			return res.validationError(
+				{
+					email: "Email is required",
+					password: "Password is required",
+				},
+				"Email and password are required."
+			);
 		}
 
 		// Query the admin_users table for the provided email
@@ -78,9 +89,12 @@ router.post("/login", async (req, res) => {
 });
 
 /**
- * @route   GET /v1/adminAuth/me
- * @desc    Retrieve the current authenticated admin's details
- * @access  Protected
+ * @route GET /v1/adminAuth/me
+ * @description Retrieve the current authenticated admin's details.
+ * @access Protected
+ * @param {Object} req - The Express request object. Assumes that verifyJWT middleware attaches the decoded admin payload to req.admin.
+ * @returns {Response} 200 - Returns a JSON object with the admin's details.
+ * @returns {Response} 500 - Returns an error for an internal server error.
  */
 router.get("/me", verifyJWT, (req, res) => {
 	try {
@@ -95,9 +109,12 @@ router.get("/me", verifyJWT, (req, res) => {
 });
 
 /**
- * @route   POST /v1/adminAuth/logout
- * @desc    Logs out an admin (Token handling on frontend)
- * @access  Protected
+ * @route POST /v1/adminAuth/logout
+ * @description Logs out an admin user. (Token handling is assumed to be managed on the frontend.)
+ * @access Protected
+ * @param {Object} req - The Express request object. Assumes that verifyJWT middleware attaches the decoded admin payload to req.admin.
+ * @returns {Response} 200 - Returns a success message upon logout.
+ * @returns {Response} 500 - Returns an error for an internal server error.
  */
 router.post("/logout", verifyJWT, (req, res) => {
 	try {

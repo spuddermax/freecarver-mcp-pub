@@ -1,8 +1,7 @@
 // /api/middleware/responseFormatter.js
-
 const responseFormatter = (req, res, next) => {
-	res.success = (data = {}, message = "Request completed successfully") => {
-		res.status(200).json({
+	res.success = (data = {}, message = "Request successful") => {
+		return res.status(200).json({
 			status: "success",
 			message,
 			data,
@@ -14,7 +13,7 @@ const responseFormatter = (req, res, next) => {
 		errorCode = 500,
 		errors = null
 	) => {
-		res.status(errorCode).json({
+		return res.status(errorCode).json({
 			status: "error",
 			message,
 			error_code: errorCode,
@@ -23,7 +22,7 @@ const responseFormatter = (req, res, next) => {
 	};
 
 	res.validationError = (errors = {}, message = "Validation failed") => {
-		res.status(422).json({
+		return res.status(422).json({
 			status: "fail",
 			message,
 			errors,

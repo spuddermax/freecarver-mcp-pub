@@ -19,6 +19,7 @@ import customersRoutes from "./routes/v1/customers.js";
 import ordersRoutes from "./routes/v1/orders.js";
 import inventoryRoutes from "./routes/v1/inventory.js";
 import shipmentsRoutes from "./routes/v1/shipments.js";
+import responseFormatter from "./middleware/responseFormatter.js";
 
 dotenv.config();
 
@@ -43,6 +44,9 @@ const apiLimiter = rateLimit({
 		return "Too many requests from this IP, please try again later.";
 	},
 });
+
+// Apply the response formatter middleware before your routes
+app.use(responseFormatter);
 
 // Apply the rate limiter to API calls starting with '/v1'
 app.use("/v1", apiLimiter);

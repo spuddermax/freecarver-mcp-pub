@@ -12,9 +12,11 @@ const router = express.Router();
 router.use(verifyJWT);
 
 /**
- * @route   GET /v1/adminUsers
- * @desc    Retrieve a list of all admin users
- * @access  Protected
+ * @route GET /v1/adminUsers
+ * @description Retrieve a list of all admin users.
+ * @access Protected
+ * @returns {Response} 200 - Returns a JSON object containing an array of admin users.
+ * @returns {Response} 500 - Returns an error message for internal server error.
  */
 router.get("/", async (req, res) => {
 	try {
@@ -33,9 +35,13 @@ router.get("/", async (req, res) => {
 });
 
 /**
- * @route   GET /v1/adminUsers/:id
- * @desc    Retrieve details for a single admin user by ID
- * @access  Protected
+ * @route GET /v1/adminUsers/:id
+ * @description Retrieve details for a single admin user by ID.
+ * @access Protected
+ * @param {string} req.params.id - The ID of the admin user.
+ * @returns {Response} 200 - Returns a JSON object containing the admin user details.
+ * @returns {Response} 404 - Returns an error message if the admin user is not found.
+ * @returns {Response} 500 - Returns an error message for internal server error.
  */
 router.get("/:id", async (req, res) => {
 	try {
@@ -60,9 +66,23 @@ router.get("/:id", async (req, res) => {
 });
 
 /**
- * @route   POST /v1/adminUsers
- * @desc    Create a new admin user
- * @access  Protected
+ * @route POST /v1/adminUsers
+ * @description Create a new admin user.
+ * @access Protected
+ * @param {Object} req.body - The request body.
+ * @param {string} req.body.email - The admin user's email (required).
+ * @param {string} req.body.password - The admin user's password (required).
+ * @param {string} req.body.first_name - The admin user's first name.
+ * @param {string} req.body.last_name - The admin user's last name.
+ * @param {string} req.body.phone_number - The admin user's phone number.
+ * @param {number} req.body.role_id - The admin user's role ID.
+ * @param {string} req.body.timezone - The admin user's timezone.
+ * @param {boolean} req.body.mfa_enabled - Whether multi-factor authentication is enabled.
+ * @param {string} req.body.mfa_method - The multi-factor authentication method.
+ * @returns {Response} 201 - Returns a JSON object containing the newly created admin user.
+ * @returns {Response} 400 - Returns validation error if email or password is missing.
+ * @returns {Response} 409 - Returns an error if the email is already in use.
+ * @returns {Response} 500 - Returns an error message for internal server error.
  */
 router.post("/", async (req, res) => {
 	try {
@@ -133,9 +153,23 @@ router.post("/", async (req, res) => {
 });
 
 /**
- * @route   PUT /v1/adminUsers/:id
- * @desc    Update an existing admin user's details
- * @access  Protected
+ * @route PUT /v1/adminUsers/:id
+ * @description Update an existing admin user's details.
+ * @access Protected
+ * @param {string} req.params.id - The ID of the admin user to update.
+ * @param {Object} req.body - The updated admin user details.
+ * @param {string} [req.body.email] - The updated email.
+ * @param {string} [req.body.first_name] - The updated first name.
+ * @param {string} [req.body.last_name] - The updated last name.
+ * @param {string} [req.body.phone_number] - The updated phone number.
+ * @param {string} [req.body.timezone] - The updated timezone.
+ * @param {boolean} [req.body.mfa_enabled] - The updated MFA enabled status.
+ * @param {string} [req.body.mfa_method] - The updated MFA method.
+ * @param {string} [req.body.password] - The updated password.
+ * @returns {Response} 200 - Returns a JSON object containing the updated admin user.
+ * @returns {Response} 400 - Returns an error if no valid fields are provided or if ID is missing.
+ * @returns {Response} 404 - Returns an error if the admin user is not found.
+ * @returns {Response} 500 - Returns an error message for internal server error.
  */
 router.put("/:id", async (req, res) => {
 	try {
@@ -212,9 +246,13 @@ router.put("/:id", async (req, res) => {
 });
 
 /**
- * @route   DELETE /v1/adminUsers/:id
- * @desc    Delete an admin user by ID
- * @access  Protected
+ * @route DELETE /v1/adminUsers/:id
+ * @description Delete an admin user by ID.
+ * @access Protected
+ * @param {string} req.params.id - The ID of the admin user to delete.
+ * @returns {Response} 200 - Returns a JSON object indicating successful deletion.
+ * @returns {Response} 404 - Returns an error if the admin user is not found.
+ * @returns {Response} 500 - Returns an error message for internal server error.
  */
 router.delete("/:id", async (req, res) => {
 	try {
@@ -236,9 +274,14 @@ router.delete("/:id", async (req, res) => {
 });
 
 /**
- * @route   POST /v1/adminUsers/:id/validatePassword
- * @desc    Validate an admin user's password
- * @access  Protected
+ * @route POST /v1/adminUsers/:id/validatePassword
+ * @description Validate an admin user's password.
+ * @access Protected
+ * @param {string} req.params.id - The ID of the admin user whose password will be validated.
+ * @param {Object} req.body - The request body.
+ * @param {string} req.body.password - The password to validate.
+ * @returns {Response} 200 - Returns a JSON object indicating whether the password is valid.
+ * @returns {Response} 500 - Returns an error message for internal server error.
  */
 router.post("/:id/validatePassword", async (req, res) => {
 	try {

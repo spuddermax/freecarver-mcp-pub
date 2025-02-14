@@ -2,7 +2,7 @@
 
 import express from "express";
 import { pool } from "../../db.js";
-import logger from "../../logger.js";
+import { logger } from "../../logger.js";
 import { verifyJWT } from "../../middleware/auth.js";
 import bcrypt from "bcrypt";
 
@@ -12,8 +12,11 @@ const router = express.Router();
 router.use(verifyJWT);
 
 /**
- * GET /v1/customers
- * Retrieve a list of all customers.
+ * @route GET /v1/customers
+ * @description Retrieve a list of all customers.
+ * @access Protected
+ * @returns {Response} 200 - Returns a JSON object containing an array of customers.
+ * @returns {Response} 500 - Returns an error message for internal server error.
  */
 router.get("/", async (req, res) => {
 	try {
@@ -21,21 +24,32 @@ router.get("/", async (req, res) => {
 			"SELECT id, email, first_name, last_name, phone_number, created_at, updated_at FROM customers ORDER BY id"
 		);
 		logger.info("Retrieved customers list.");
-		res.status(200).json({ customers: result.rows });
+		res.success(
+			{ customers: result.rows },
+			"Customers retrieved successfully"
+		);
 	} catch (error) {
 		logger.error("Error retrieving customers list.", {
 			error: error.message,
 		});
-		res.status(500).json({ error: "Internal server error" });
+		res.error("Internal server error", 500);
 	}
 });
 
 /**
- * POST /v1/customers
- * Create a new customer.
- * Required fields: email, password.
- * Optional: first_name, last_name, phone_number.
- * Note: This endpoint may be used by an admin to add customers manually.
+ * @route POST /v1/customers
+ * @description Create a new customer.
+ * @access Protected
+ * @param {Object} req.body - The request body.
+ * @param {string} req.body.email - The customer's email (required).
+ * @param {string} req.body.password - The customer's password (required).
+ * @param {string} [req.body.first_name] - The customer's first name.
+ * @param {string} [req.body.last_name] - The customer's last name.
+ * @param {string} [req.body.phone_number] - The customer's phone number.
+ * @returns {Response} 201 - Returns a JSON object containing the newly created customer.
+ * @returns {Response} 400 - Returns an error if email or password is missing.
+ * @returns {Response} 409 - Returns an error if the email is already in use.
+ * @returns {Response} 500 - Returns an error message for internal server error.
  */
 router.post("/", async (req, res) => {
 	try {
@@ -45,9 +59,7 @@ router.post("/", async (req, res) => {
 			logger.error(
 				"Customer creation failed: Email and password are required."
 			);
-			return res
-				.status(400)
-				.json({ error: "Email and password are required." });
+			return res.error("Email and password are required.", 400);
 		}
 
 		// Check if a customer with the given email already exists.
@@ -59,7 +71,7 @@ router.post("/", async (req, res) => {
 			logger.error(
 				`Customer creation failed: Email ${email} is already in use.`
 			);
-			return res.status(409).json({ error: "Email already in use." });
+			return res.error("Email already in use.", 409);
 		}
 
 		// Hash the password.
@@ -77,16 +89,24 @@ router.post("/", async (req, res) => {
 			phone_number,
 		]);
 		logger.info(`Customer created successfully: ${email}`);
-		res.status(201).json({ customer: result.rows[0] });
+		res.success(
+			{ customer: result.rows[0] },
+			"Customer created successfully"
+		);
 	} catch (error) {
 		logger.error("Error creating customer.", { error: error.message });
-		res.status(500).json({ error: "Internal server error" });
+		res.error("Internal server error", 500);
 	}
 });
 
 /**
- * GET /v1/customers/:id
- * Retrieve details for a specific customer by ID.
+ * @route GET /v1/customers/:id
+ * @description Retrieve details for a specific customer by ID.
+ * @access Protected
+ * @param {string} req.params.id - The ID of the customer.
+ * @returns {Response} 200 - Returns a JSON object containing the customer details.
+ * @returns {Response} 404 - Returns an error if the customer is not found.
+ * @returns {Response} 500 - Returns an error message for internal server error.
  */
 router.get("/:id", async (req, res) => {
 	try {
@@ -97,22 +117,35 @@ router.get("/:id", async (req, res) => {
 		);
 		if (result.rows.length === 0) {
 			logger.error(`Customer with ID ${id} not found.`);
-			return res.status(404).json({ error: "Customer not found." });
+			return res.error("Customer not found.", 404);
 		}
 		logger.info(`Retrieved customer with ID ${id}.`);
-		res.status(200).json({ customer: result.rows[0] });
+		res.success(
+			{ customer: result.rows[0] },
+			"Customer retrieved successfully"
+		);
 	} catch (error) {
 		logger.error(`Error retrieving customer with ID ${req.params.id}.`, {
 			error: error.message,
 		});
-		res.status(500).json({ error: "Internal server error" });
+		res.error("Internal server error", 500);
 	}
 });
 
 /**
- * PUT /v1/customers/:id
- * Update an existing customer's details.
- * Accepts: email, first_name, last_name, phone_number.
+ * @route PUT /v1/customers/:id
+ * @description Update an existing customer's details.
+ * @access Protected
+ * @param {string} req.params.id - The ID of the customer to update.
+ * @param {Object} req.body - The updated customer details.
+ * @param {string} req.body.email - The customer's updated email (required).
+ * @param {string} [req.body.first_name] - The customer's updated first name.
+ * @param {string} [req.body.last_name] - The customer's updated last name.
+ * @param {string} [req.body.phone_number] - The customer's updated phone number.
+ * @returns {Response} 200 - Returns a JSON object containing the updated customer details.
+ * @returns {Response} 400 - Returns an error if email is missing.
+ * @returns {Response} 404 - Returns an error if the customer is not found.
+ * @returns {Response} 500 - Returns an error message for internal server error.
  */
 router.put("/:id", async (req, res) => {
 	try {
@@ -120,7 +153,7 @@ router.put("/:id", async (req, res) => {
 		const { email, first_name, last_name, phone_number } = req.body;
 		if (!email) {
 			logger.error("Customer update failed: Email is required.");
-			return res.status(400).json({ error: "Email is required." });
+			return res.error("Email is required.", 400);
 		}
 		const query = `
       UPDATE customers
@@ -141,21 +174,29 @@ router.put("/:id", async (req, res) => {
 		]);
 		if (result.rows.length === 0) {
 			logger.error(`Customer with ID ${id} not found for update.`);
-			return res.status(404).json({ error: "Customer not found." });
+			return res.error("Customer not found.", 404);
 		}
 		logger.info(`Customer with ID ${id} updated successfully.`);
-		res.status(200).json({ customer: result.rows[0] });
+		res.success(
+			{ customer: result.rows[0] },
+			"Customer updated successfully"
+		);
 	} catch (error) {
 		logger.error(`Error updating customer with ID ${req.params.id}.`, {
 			error: error.message,
 		});
-		res.status(500).json({ error: "Internal server error" });
+		res.error("Internal server error", 500);
 	}
 });
 
 /**
- * DELETE /v1/customers/:id
- * Delete a customer by ID.
+ * @route DELETE /v1/customers/:id
+ * @description Delete a customer by ID.
+ * @access Protected
+ * @param {string} req.params.id - The ID of the customer to delete.
+ * @returns {Response} 200 - Returns a JSON object indicating successful deletion.
+ * @returns {Response} 404 - Returns an error if the customer is not found.
+ * @returns {Response} 500 - Returns an error message for internal server error.
  */
 router.delete("/:id", async (req, res) => {
 	try {
@@ -166,15 +207,15 @@ router.delete("/:id", async (req, res) => {
 		);
 		if (result.rows.length === 0) {
 			logger.error(`Customer with ID ${id} not found for deletion.`);
-			return res.status(404).json({ error: "Customer not found." });
+			return res.error("Customer not found.", 404);
 		}
 		logger.info(`Customer with ID ${id} deleted successfully.`);
-		res.status(200).json({ message: "Customer deleted successfully." });
+		res.success(null, "Customer deleted successfully");
 	} catch (error) {
 		logger.error(`Error deleting customer with ID ${req.params.id}.`, {
 			error: error.message,
 		});
-		res.status(500).json({ error: "Internal server error" });
+		res.error("Internal server error", 500);
 	}
 });
 

@@ -11,8 +11,11 @@ const router = express.Router();
 router.use(verifyJWT);
 
 /**
- * GET /v1/product-option-skus
- * Retrieve a list of all product option SKU associations.
+ * @route GET /v1/product-option-skus
+ * @description Retrieve a list of all product option SKU associations.
+ * @access Protected
+ * @returns {Response} 200 - JSON object containing an array of product option SKU associations.
+ * @returns {Response} 500 - Internal server error.
  */
 router.get("/", async (req, res) => {
 	try {
@@ -33,10 +36,21 @@ router.get("/", async (req, res) => {
 });
 
 /**
- * POST /v1/product-option-skus
- * Create a new product option SKU association.
- * Required fields: product_id, option_id, variant_id, sku.
- * Optional fields: price, sale_price, sale_start, sale_end.
+ * @route POST /v1/product-option-skus
+ * @description Create a new product option SKU association.
+ * @access Protected
+ * @param {Object} req.body - The request body.
+ * @param {number} req.body.product_id - The product ID (required).
+ * @param {number} req.body.option_id - The option ID (required).
+ * @param {number} req.body.variant_id - The variant ID (required).
+ * @param {string} req.body.sku - The SKU value (required).
+ * @param {number} [req.body.price] - The price.
+ * @param {number} [req.body.sale_price] - The sale price.
+ * @param {string} [req.body.sale_start] - The sale start date.
+ * @param {string} [req.body.sale_end] - The sale end date.
+ * @returns {Response} 201 - JSON object containing the newly created product option SKU association.
+ * @returns {Response} 400 - Bad request if required fields are missing.
+ * @returns {Response} 500 - Internal server error.
  */
 router.post("/", async (req, res) => {
 	try {
@@ -91,8 +105,13 @@ router.post("/", async (req, res) => {
 });
 
 /**
- * GET /v1/product-option-skus/:id
- * Retrieve details for a specific product option SKU by ID.
+ * @route GET /v1/product-option-skus/:id
+ * @description Retrieve details for a specific product option SKU by ID.
+ * @access Protected
+ * @param {string} req.params.id - The ID of the product option SKU association.
+ * @returns {Response} 200 - JSON object containing the product option SKU details.
+ * @returns {Response} 404 - Not found if the product option SKU association does not exist.
+ * @returns {Response} 500 - Internal server error.
  */
 router.get("/:id", async (req, res) => {
 	try {
@@ -120,9 +139,23 @@ router.get("/:id", async (req, res) => {
 });
 
 /**
- * PUT /v1/product-option-skus/:id
- * Update an existing product option SKU association.
- * Accepts: product_id, option_id, variant_id, sku, price, sale_price, sale_start, sale_end.
+ * @route PUT /v1/product-option-skus/:id
+ * @description Update an existing product option SKU association.
+ * @access Protected
+ * @param {string} req.params.id - The ID of the product option SKU association to update.
+ * @param {Object} req.body - The updated product option SKU details.
+ * @param {number} req.body.product_id - The updated product ID (required).
+ * @param {number} req.body.option_id - The updated option ID (required).
+ * @param {number} req.body.variant_id - The updated variant ID (required).
+ * @param {string} req.body.sku - The updated SKU value (required).
+ * @param {number} [req.body.price] - The updated price.
+ * @param {number} [req.body.sale_price] - The updated sale price.
+ * @param {string} [req.body.sale_start] - The updated sale start date.
+ * @param {string} [req.body.sale_end] - The updated sale end date.
+ * @returns {Response} 200 - JSON object containing the updated product option SKU association.
+ * @returns {Response} 400 - Bad request if required fields are missing.
+ * @returns {Response} 404 - Not found if the product option SKU association does not exist.
+ * @returns {Response} 500 - Internal server error.
  */
 router.put("/:id", async (req, res) => {
 	try {
@@ -193,8 +226,13 @@ router.put("/:id", async (req, res) => {
 });
 
 /**
- * DELETE /v1/product-option-skus/:id
- * Delete a product option SKU association by ID.
+ * @route DELETE /v1/product-option-skus/:id
+ * @description Delete a product option SKU association by ID.
+ * @access Protected
+ * @param {string} req.params.id - The ID of the product option SKU association to delete.
+ * @returns {Response} 200 - JSON object indicating successful deletion.
+ * @returns {Response} 404 - Not found if the product option SKU association does not exist.
+ * @returns {Response} 500 - Internal server error.
  */
 router.delete("/:id", async (req, res) => {
 	try {

@@ -2,7 +2,7 @@
 
 import express from "express";
 import { pool } from "../../db.js";
-import logger from "../../logger.js";
+import { logger } from "../../logger.js";
 import { verifyJWT } from "../../middleware/auth.js";
 
 const router = express.Router();
@@ -11,25 +11,38 @@ const router = express.Router();
 router.use(verifyJWT);
 
 /**
- * GET /v1/orders
- * Retrieve a list of all orders.
+ * @route GET /v1/orders
+ * @description Retrieve a list of all orders.
+ * @access Protected
+ * @returns {Response} 200 - Returns a JSON object containing an array of orders.
+ * @returns {Response} 500 - Returns an error message for an internal server error.
  */
 router.get("/", async (req, res) => {
 	try {
 		const result = await pool.query("SELECT * FROM orders ORDER BY id");
 		logger.info("Retrieved orders list.");
-		res.status(200).json({ orders: result.rows });
+		res.success({ orders: result.rows }, "Orders retrieved successfully");
 	} catch (error) {
 		logger.error("Error retrieving orders.", { error: error.message });
-		res.status(500).json({ error: "Internal server error" });
+		res.error("Internal server error", 500);
 	}
 });
 
 /**
- * POST /v1/orders
- * Create a new order.
- * Required: customer_id, order_total.
- * Optional: status, refund_total, refund_date, refund_status, refund_reason.
+ * @route POST /v1/orders
+ * @description Create a new order.
+ * @access Protected
+ * @param {Object} req.body - The request body.
+ * @param {number} req.body.customer_id - The ID of the customer placing the order (required).
+ * @param {number} req.body.order_total - The total amount for the order (required).
+ * @param {string} [req.body.status] - The order status.
+ * @param {number} [req.body.refund_total] - The refund total.
+ * @param {string} [req.body.refund_date] - The date of the refund.
+ * @param {string} [req.body.refund_status] - The refund status.
+ * @param {string} [req.body.refund_reason] - The reason for the refund.
+ * @returns {Response} 201 - Returns a JSON object containing the newly created order.
+ * @returns {Response} 400 - Returns an error if customer_id or order_total is missing.
+ * @returns {Response} 500 - Returns an error message for an internal server error.
  */
 router.post("/", async (req, res) => {
 	try {
@@ -46,9 +59,7 @@ router.post("/", async (req, res) => {
 			logger.error(
 				"Order creation failed: customer_id and order_total are required."
 			);
-			return res
-				.status(400)
-				.json({ error: "customer_id and order_total are required." });
+			return res.error("customer_id and order_total are required.", 400);
 		}
 		const query = `
       INSERT INTO orders (customer_id, status, order_total, refund_total, refund_date, refund_status, refund_reason)
@@ -66,16 +77,21 @@ router.post("/", async (req, res) => {
 		];
 		const result = await pool.query(query, values);
 		logger.info(`Order created successfully with ID ${result.rows[0].id}.`);
-		res.status(201).json({ order: result.rows[0] });
+		res.success({ order: result.rows[0] }, "Order created successfully");
 	} catch (error) {
 		logger.error("Error creating order.", { error: error.message });
-		res.status(500).json({ error: "Internal server error" });
+		res.error("Internal server error", 500);
 	}
 });
 
 /**
- * GET /v1/orders/:id
- * Retrieve details for a specific order.
+ * @route GET /v1/orders/:id
+ * @description Retrieve details for a specific order.
+ * @access Protected
+ * @param {string} req.params.id - The ID of the order.
+ * @returns {Response} 200 - Returns a JSON object containing the order details.
+ * @returns {Response} 404 - Returns an error if the order is not found.
+ * @returns {Response} 500 - Returns an error message for an internal server error.
  */
 router.get("/:id", async (req, res) => {
 	try {
@@ -85,22 +101,34 @@ router.get("/:id", async (req, res) => {
 		]);
 		if (result.rows.length === 0) {
 			logger.error(`Order with ID ${id} not found.`);
-			return res.status(404).json({ error: "Order not found." });
+			return res.error("Order not found.", 404);
 		}
 		logger.info(`Retrieved order with ID ${id}.`);
-		res.status(200).json({ order: result.rows[0] });
+		res.success({ order: result.rows[0] }, "Order retrieved successfully");
 	} catch (error) {
 		logger.error(`Error retrieving order with ID ${req.params.id}.`, {
 			error: error.message,
 		});
-		res.status(500).json({ error: "Internal server error" });
+		res.error("Internal server error", 500);
 	}
 });
 
 /**
- * PUT /v1/orders/:id
- * Update an existing order.
- * Accepts updates to: customer_id, status, order_total, refund_total, refund_date, refund_status, refund_reason.
+ * @route PUT /v1/orders/:id
+ * @description Update an existing order.
+ * @access Protected
+ * @param {string} req.params.id - The ID of the order to update.
+ * @param {Object} req.body - The updated order details.
+ * @param {number} [req.body.customer_id] - The updated customer ID.
+ * @param {string} [req.body.status] - The updated order status.
+ * @param {number} [req.body.order_total] - The updated order total.
+ * @param {number} [req.body.refund_total] - The updated refund total.
+ * @param {string} [req.body.refund_date] - The updated refund date.
+ * @param {string} [req.body.refund_status] - The updated refund status.
+ * @param {string} [req.body.refund_reason] - The updated refund reason.
+ * @returns {Response} 200 - Returns a JSON object containing the updated order.
+ * @returns {Response} 404 - Returns an error if the order is not found.
+ * @returns {Response} 500 - Returns an error message for an internal server error.
  */
 router.put("/:id", async (req, res) => {
 	try {
@@ -140,21 +168,26 @@ router.put("/:id", async (req, res) => {
 		const result = await pool.query(query, values);
 		if (result.rows.length === 0) {
 			logger.error(`Order with ID ${id} not found for update.`);
-			return res.status(404).json({ error: "Order not found." });
+			return res.error("Order not found.", 404);
 		}
 		logger.info(`Order with ID ${id} updated successfully.`);
-		res.status(200).json({ order: result.rows[0] });
+		res.success({ order: result.rows[0] }, "Order updated successfully");
 	} catch (error) {
 		logger.error(`Error updating order with ID ${req.params.id}.`, {
 			error: error.message,
 		});
-		res.status(500).json({ error: "Internal server error" });
+		res.error("Internal server error", 500);
 	}
 });
 
 /**
- * DELETE /v1/orders/:id
- * Delete an order by ID.
+ * @route DELETE /v1/orders/:id
+ * @description Delete an order by ID.
+ * @access Protected
+ * @param {string} req.params.id - The ID of the order to delete.
+ * @returns {Response} 200 - Returns a JSON object indicating successful deletion.
+ * @returns {Response} 404 - Returns an error if the order is not found.
+ * @returns {Response} 500 - Returns an error message for an internal server error.
  */
 router.delete("/:id", async (req, res) => {
 	try {
@@ -165,27 +198,27 @@ router.delete("/:id", async (req, res) => {
 		);
 		if (result.rows.length === 0) {
 			logger.error(`Order with ID ${id} not found for deletion.`);
-			return res.status(404).json({ error: "Order not found." });
+			return res.error("Order not found.", 404);
 		}
 		logger.info(`Order with ID ${id} deleted successfully.`);
-		res.status(200).json({ message: "Order deleted successfully." });
+		res.success(null, "Order deleted successfully");
 	} catch (error) {
 		logger.error(`Error deleting order with ID ${req.params.id}.`, {
 			error: error.message,
 		});
-		res.status(500).json({ error: "Internal server error" });
+		res.error("Internal server error", 500);
 	}
 });
 
 /**
- * Order Items Endpoints (Nested Routes)
+ * @route GET /v1/orders/:orderId/items
+ * @description Retrieve all order items for a given order.
+ * @access Protected
+ * @param {string} req.params.orderId - The ID of the order.
+ * @returns {Response} 200 - Returns a JSON object containing an array of order items.
+ * @returns {Response} 500 - Returns an error message for an internal server error.
  */
 const itemsRouter = express.Router({ mergeParams: true });
-
-/**
- * GET /v1/orders/:orderId/items
- * Retrieve all order items for a given order.
- */
 itemsRouter.get("/", async (req, res) => {
 	try {
 		const { orderId } = req.params;
@@ -194,20 +227,31 @@ itemsRouter.get("/", async (req, res) => {
 			[orderId]
 		);
 		logger.info(`Retrieved order items for order ID ${orderId}.`);
-		res.status(200).json({ items: result.rows });
+		res.success(
+			{ items: result.rows },
+			"Order items retrieved successfully"
+		);
 	} catch (error) {
 		logger.error(
 			`Error retrieving order items for order ID ${req.params.orderId}.`,
 			{ error: error.message }
 		);
-		res.status(500).json({ error: "Internal server error" });
+		res.error("Internal server error", 500);
 	}
 });
 
 /**
- * POST /v1/orders/:orderId/items
- * Create a new order item for a given order.
- * Required: product_id, quantity, price.
+ * @route POST /v1/orders/:orderId/items
+ * @description Create a new order item for a given order.
+ * @access Protected
+ * @param {string} req.params.orderId - The ID of the order.
+ * @param {Object} req.body - The order item details.
+ * @param {number} req.body.product_id - The product ID (required).
+ * @param {number} req.body.quantity - The quantity (required).
+ * @param {number} req.body.price - The price (required).
+ * @returns {Response} 201 - Returns a JSON object containing the newly created order item.
+ * @returns {Response} 400 - Returns an error if required fields are missing.
+ * @returns {Response} 500 - Returns an error message for an internal server error.
  */
 itemsRouter.post("/", async (req, res) => {
 	try {
@@ -217,9 +261,10 @@ itemsRouter.post("/", async (req, res) => {
 			logger.error(
 				"Order item creation failed: product_id, quantity, and price are required."
 			);
-			return res.status(400).json({
-				error: "product_id, quantity, and price are required.",
-			});
+			return res.error(
+				"product_id, quantity, and price are required.",
+				400
+			);
 		}
 		const query = `
       INSERT INTO order_items (order_id, product_id, quantity, price)
@@ -229,19 +274,28 @@ itemsRouter.post("/", async (req, res) => {
 		const values = [orderId, product_id, quantity, price];
 		const result = await pool.query(query, values);
 		logger.info(`Order item created successfully for order ID ${orderId}.`);
-		res.status(201).json({ item: result.rows[0] });
+		res.success(
+			{ item: result.rows[0] },
+			"Order item created successfully"
+		);
 	} catch (error) {
 		logger.error(
 			`Error creating order item for order ID ${req.params.orderId}.`,
 			{ error: error.message }
 		);
-		res.status(500).json({ error: "Internal server error" });
+		res.error("Internal server error", 500);
 	}
 });
 
 /**
- * GET /v1/orders/:orderId/items/:itemId
- * Retrieve details for a specific order item.
+ * @route GET /v1/orders/:orderId/items/:itemId
+ * @description Retrieve details for a specific order item.
+ * @access Protected
+ * @param {string} req.params.orderId - The ID of the order.
+ * @param {string} req.params.itemId - The ID of the order item.
+ * @returns {Response} 200 - Returns a JSON object containing the order item details.
+ * @returns {Response} 404 - Returns an error if the order item is not found.
+ * @returns {Response} 500 - Returns an error message for an internal server error.
  */
 itemsRouter.get("/:itemId", async (req, res) => {
 	try {
@@ -254,25 +308,38 @@ itemsRouter.get("/:itemId", async (req, res) => {
 			logger.error(
 				`Order item with ID ${itemId} for order ID ${orderId} not found.`
 			);
-			return res.status(404).json({ error: "Order item not found." });
+			return res.error("Order item not found.", 404);
 		}
 		logger.info(
 			`Retrieved order item with ID ${itemId} for order ID ${orderId}.`
 		);
-		res.status(200).json({ item: result.rows[0] });
+		res.success(
+			{ item: result.rows[0] },
+			"Order item retrieved successfully"
+		);
 	} catch (error) {
 		logger.error(
 			`Error retrieving order item with ID ${req.params.itemId} for order ID ${req.params.orderId}.`,
 			{ error: error.message }
 		);
-		res.status(500).json({ error: "Internal server error" });
+		res.error("Internal server error", 500);
 	}
 });
 
 /**
- * PUT /v1/orders/:orderId/items/:itemId
- * Update an existing order item.
- * Accepts: product_id, quantity, price.
+ * @route PUT /v1/orders/:orderId/items/:itemId
+ * @description Update an existing order item.
+ * @access Protected
+ * @param {string} req.params.orderId - The ID of the order.
+ * @param {string} req.params.itemId - The ID of the order item to update.
+ * @param {Object} req.body - The updated order item details.
+ * @param {number} req.body.product_id - The updated product ID (required).
+ * @param {number} req.body.quantity - The updated quantity (required).
+ * @param {number} req.body.price - The updated price (required).
+ * @returns {Response} 200 - Returns a JSON object containing the updated order item.
+ * @returns {Response} 400 - Returns an error if required fields are missing.
+ * @returns {Response} 404 - Returns an error if the order item is not found.
+ * @returns {Response} 500 - Returns an error message for an internal server error.
  */
 itemsRouter.put("/:itemId", async (req, res) => {
 	try {
@@ -282,9 +349,10 @@ itemsRouter.put("/:itemId", async (req, res) => {
 			logger.error(
 				"Order item update failed: product_id, quantity, and price are required."
 			);
-			return res.status(400).json({
-				error: "product_id, quantity, and price are required.",
-			});
+			return res.error(
+				"product_id, quantity, and price are required.",
+				400
+			);
 		}
 		const query = `
       UPDATE order_items
@@ -301,24 +369,33 @@ itemsRouter.put("/:itemId", async (req, res) => {
 			logger.error(
 				`Order item with ID ${itemId} for order ID ${orderId} not found for update.`
 			);
-			return res.status(404).json({ error: "Order item not found." });
+			return res.error("Order item not found.", 404);
 		}
 		logger.info(
 			`Order item with ID ${itemId} for order ID ${orderId} updated successfully.`
 		);
-		res.status(200).json({ item: result.rows[0] });
+		res.success(
+			{ item: result.rows[0] },
+			"Order item updated successfully"
+		);
 	} catch (error) {
 		logger.error(
 			`Error updating order item with ID ${req.params.itemId} for order ID ${req.params.orderId}.`,
 			{ error: error.message }
 		);
-		res.status(500).json({ error: "Internal server error" });
+		res.error("Internal server error", 500);
 	}
 });
 
 /**
- * DELETE /v1/orders/:orderId/items/:itemId
- * Delete a specific order item.
+ * @route DELETE /v1/orders/:orderId/items/:itemId
+ * @description Delete a specific order item.
+ * @access Protected
+ * @param {string} req.params.orderId - The ID of the order.
+ * @param {string} req.params.itemId - The ID of the order item to delete.
+ * @returns {Response} 200 - Returns a JSON object indicating successful deletion.
+ * @returns {Response} 404 - Returns an error if the order item is not found.
+ * @returns {Response} 500 - Returns an error message for an internal server error.
  */
 itemsRouter.delete("/:itemId", async (req, res) => {
 	try {
@@ -331,18 +408,18 @@ itemsRouter.delete("/:itemId", async (req, res) => {
 			logger.error(
 				`Order item with ID ${itemId} for order ID ${orderId} not found for deletion.`
 			);
-			return res.status(404).json({ error: "Order item not found." });
+			return res.error("Order item not found.", 404);
 		}
 		logger.info(
 			`Order item with ID ${itemId} for order ID ${orderId} deleted successfully.`
 		);
-		res.status(200).json({ message: "Order item deleted successfully." });
+		res.success(null, "Order item deleted successfully");
 	} catch (error) {
 		logger.error(
 			`Error deleting order item with ID ${req.params.itemId} for order ID ${req.params.orderId}.`,
 			{ error: error.message }
 		);
-		res.status(500).json({ error: "Internal server error" });
+		res.error("Internal server error", 500);
 	}
 });
 

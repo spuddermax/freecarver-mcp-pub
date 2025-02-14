@@ -11,8 +11,11 @@ const router = express.Router();
 router.use(verifyJWT);
 
 /**
- * GET /v1/product-options
- * Retrieve a list of all product options.
+ * @route GET /v1/product-options
+ * @description Retrieve a list of all product options.
+ * @access Protected
+ * @returns {Response} 200 - JSON object containing an array of product options.
+ * @returns {Response} 500 - Internal server error.
  */
 router.get("/", async (req, res) => {
 	try {
@@ -33,9 +36,14 @@ router.get("/", async (req, res) => {
 });
 
 /**
- * POST /v1/product-options
- * Create a new product option.
- * Required: option_name
+ * @route POST /v1/product-options
+ * @description Create a new product option.
+ * @access Protected
+ * @param {Object} req.body - The product option details.
+ * @param {string} req.body.option_name - The name of the option (required).
+ * @returns {Response} 201 - JSON object containing the newly created product option.
+ * @returns {Response} 400 - Bad request if 'option_name' is missing.
+ * @returns {Response} 500 - Internal server error.
  */
 router.post("/", async (req, res) => {
 	try {
@@ -64,8 +72,13 @@ router.post("/", async (req, res) => {
 });
 
 /**
- * GET /v1/product-options/:id
- * Retrieve details for a specific product option by ID.
+ * @route GET /v1/product-options/:id
+ * @description Retrieve details for a specific product option by ID.
+ * @access Protected
+ * @param {string} req.params.id - The ID of the product option.
+ * @returns {Response} 200 - JSON object containing the product option details.
+ * @returns {Response} 404 - Not found if the product option does not exist.
+ * @returns {Response} 500 - Internal server error.
  */
 router.get("/:id", async (req, res) => {
 	try {
@@ -93,9 +106,16 @@ router.get("/:id", async (req, res) => {
 });
 
 /**
- * PUT /v1/product-options/:id
- * Update an existing product option.
- * Accepts: option_name.
+ * @route PUT /v1/product-options/:id
+ * @description Update an existing product option.
+ * @access Protected
+ * @param {string} req.params.id - The ID of the product option to update.
+ * @param {Object} req.body - The updated product option details.
+ * @param {string} req.body.option_name - The updated option name (required).
+ * @returns {Response} 200 - JSON object containing the updated product option.
+ * @returns {Response} 400 - Bad request if 'option_name' is missing.
+ * @returns {Response} 404 - Not found if the product option does not exist.
+ * @returns {Response} 500 - Internal server error.
  */
 router.put("/:id", async (req, res) => {
 	try {
@@ -130,8 +150,13 @@ router.put("/:id", async (req, res) => {
 });
 
 /**
- * DELETE /v1/product-options/:id
- * Delete a product option by ID.
+ * @route DELETE /v1/product-options/:id
+ * @description Delete a product option by ID.
+ * @access Protected
+ * @param {string} req.params.id - The ID of the product option to delete.
+ * @returns {Response} 200 - JSON object indicating successful deletion.
+ * @returns {Response} 404 - Not found if the product option does not exist.
+ * @returns {Response} 500 - Internal server error.
  */
 router.delete("/:id", async (req, res) => {
 	try {
@@ -158,14 +183,14 @@ router.delete("/:id", async (req, res) => {
 });
 
 /**
- * Nested routes for product option variants.
+ * @route GET /v1/product-options/:optionId/variants
+ * @description Retrieve all variants for a given product option.
+ * @access Protected
+ * @param {string} req.params.optionId - The ID of the product option.
+ * @returns {Response} 200 - JSON object containing an array of variants.
+ * @returns {Response} 500 - Internal server error.
  */
 const variantsRouter = express.Router({ mergeParams: true });
-
-/**
- * GET /v1/product-options/:optionId/variants
- * Retrieve all variants for a given product option.
- */
 variantsRouter.get("/", async (req, res) => {
 	try {
 		const { optionId } = req.params;
@@ -188,9 +213,15 @@ variantsRouter.get("/", async (req, res) => {
 });
 
 /**
- * POST /v1/product-options/:optionId/variants
- * Create a new variant for a given product option.
- * Required: option_value.
+ * @route POST /v1/product-options/:optionId/variants
+ * @description Create a new variant for a given product option.
+ * @access Protected
+ * @param {string} req.params.optionId - The ID of the product option.
+ * @param {Object} req.body - The variant details.
+ * @param {string} req.body.option_value - The value of the variant (required).
+ * @returns {Response} 201 - JSON object containing the newly created variant.
+ * @returns {Response} 400 - Bad request if 'option_value' is missing.
+ * @returns {Response} 500 - Internal server error.
  */
 variantsRouter.post("/", async (req, res) => {
 	try {
@@ -223,8 +254,14 @@ variantsRouter.post("/", async (req, res) => {
 });
 
 /**
- * GET /v1/product-options/:optionId/variants/:variantId
- * Retrieve a specific variant for a given product option.
+ * @route GET /v1/product-options/:optionId/variants/:variantId
+ * @description Retrieve a specific variant for a given product option.
+ * @access Protected
+ * @param {string} req.params.optionId - The ID of the product option.
+ * @param {string} req.params.variantId - The ID of the variant.
+ * @returns {Response} 200 - JSON object containing the variant details.
+ * @returns {Response} 404 - Not found if the variant does not exist.
+ * @returns {Response} 500 - Internal server error.
  */
 variantsRouter.get("/:variantId", async (req, res) => {
 	try {
@@ -256,9 +293,17 @@ variantsRouter.get("/:variantId", async (req, res) => {
 });
 
 /**
- * PUT /v1/product-options/:optionId/variants/:variantId
- * Update an existing variant for a given product option.
- * Accepts: option_value.
+ * @route PUT /v1/product-options/:optionId/variants/:variantId
+ * @description Update an existing variant for a given product option.
+ * @access Protected
+ * @param {string} req.params.optionId - The ID of the product option.
+ * @param {string} req.params.variantId - The ID of the variant to update.
+ * @param {Object} req.body - The updated variant details.
+ * @param {string} req.body.option_value - The updated variant value (required).
+ * @returns {Response} 200 - JSON object containing the updated variant.
+ * @returns {Response} 400 - Bad request if 'option_value' is missing.
+ * @returns {Response} 404 - Not found if the variant does not exist.
+ * @returns {Response} 500 - Internal server error.
  */
 variantsRouter.put("/:variantId", async (req, res) => {
 	try {
@@ -295,8 +340,14 @@ variantsRouter.put("/:variantId", async (req, res) => {
 });
 
 /**
- * DELETE /v1/product-options/:optionId/variants/:variantId
- * Delete a variant for a given product option.
+ * @route DELETE /v1/product-options/:optionId/variants/:variantId
+ * @description Delete a variant for a given product option.
+ * @access Protected
+ * @param {string} req.params.optionId - The ID of the product option.
+ * @param {string} req.params.variantId - The ID of the variant to delete.
+ * @returns {Response} 200 - JSON object indicating successful deletion.
+ * @returns {Response} 404 - Not found if the variant does not exist.
+ * @returns {Response} 500 - Internal server error.
  */
 variantsRouter.delete("/:variantId", async (req, res) => {
 	try {

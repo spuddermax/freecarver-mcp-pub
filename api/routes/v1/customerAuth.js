@@ -13,9 +13,16 @@ dotenv.config();
 const router = express.Router();
 
 /**
- * @route   POST /v1/customerAuth/login
- * @desc    Authenticate a customer and return a JWT token
- * @access  Public
+ * @route POST /v1/customerAuth/login
+ * @description Authenticate a customer and return a JWT token.
+ * @access Public
+ * @param {Object} req.body - The request body.
+ * @param {string} req.body.email - The customer's email address.
+ * @param {string} req.body.password - The customer's password.
+ * @returns {Response} 200 - Returns a JSON object containing the JWT token.
+ * @returns {Response} 400 - Returns a validation error if email or password is missing.
+ * @returns {Response} 401 - Returns an error if credentials are invalid.
+ * @returns {Response} 500 - Returns an error message for an internal server error.
  */
 router.post("/login", async (req, res) => {
 	try {
@@ -64,9 +71,12 @@ router.post("/login", async (req, res) => {
 });
 
 /**
- * @route   GET /v1/customerAuth/me
- * @desc    Retrieve the current authenticated customer's details
- * @access  Protected
+ * @route GET /v1/customerAuth/me
+ * @description Retrieve the current authenticated customer's details.
+ * @access Protected
+ * @param {Object} req - The Express request object (expects req.admin to be set by verifyJWT middleware).
+ * @returns {Response} 200 - Returns a JSON object containing the customer's details.
+ * @returns {Response} 500 - Returns an error message for an internal server error.
  */
 router.get("/me", verifyJWT, (req, res) => {
 	logger.info(`Retrieving customer details for: ${req.admin.email}`);

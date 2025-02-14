@@ -60,10 +60,10 @@ export default function Login({ onLogin }: LoginProps) {
 		}
 
 		try {
-			const data = await adminLogin(email, password);
+			const response = await adminLogin(email, password);
 
-			if (data.token) {
-				localStorage.setItem("jwtToken", data.token);
+			if (response.data.token) {
+				localStorage.setItem("jwtToken", response.data.token);
 				setEmail("");
 				setPassword("");
 				onLogin();
