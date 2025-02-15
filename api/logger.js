@@ -1,16 +1,22 @@
 // /api/logger.js
 
 import { createLogger, format, transports } from "winston";
+import DailyRotateFile from "winston-daily-rotate-file";
 import dotenv from "dotenv";
 
 dotenv.config();
 
-const { combine, timestamp, printf, colorize, json, prettyPrint } = format;
+const { combine, timestamp, printf, colorize } = format;
 
-// Custom log format for console output
-const customFormat = printf(({ level, message, timestamp, stack, ip }) => {
-	return `${timestamp} [${ip || "N/A"}] ${level}: ${stack || message}`;
-});
+// Custom log format for both console and file output
+const customFormat = printf(
+	({ level, message, timestamp, stack, ip, body }) => {
+		const bodyStr = body ? ` | Request Body: ${JSON.stringify(body)}` : "";
+		return `${timestamp} [${ip || "N/A"}] ${level}: ${
+			stack || message
+		}${bodyStr}`;
+	}
+);
 
 // Define file paths with fallback defaults
 const errorLogFile =
@@ -18,30 +24,38 @@ const errorLogFile =
 const infoLogFile =
 	process.env.INFO_LOG_FILE || "/var/log/freecarver-api/info.log";
 
-// Create an array of transports based on environment
+// Daily rotate transport configuration
+const dailyRotateTransport = new DailyRotateFile({
+	filename:
+		process.env.LOG_FILE_PATH ||
+		"/var/log/freecarver-api/application-%DATE%.log",
+	datePattern: "YYYY-MM-DD",
+	zippedArchive: true,
+	maxSize: "20m",
+	maxFiles: "14d",
+});
+
+// Create an array of transports with the same plain text format for file logs
 const loggerTransports = [
 	new transports.File({
 		filename: errorLogFile,
 		level: "error",
-		format: combine(timestamp(), json()),
+		format: combine(timestamp(), customFormat),
 	}),
 	new transports.File({
 		filename: infoLogFile,
 		level: "info",
-		format: combine(timestamp(), json()),
+		format: combine(timestamp(), customFormat),
 	}),
+	// Add the daily rotating transport
+	dailyRotateTransport,
 ];
 
 if (process.env.NODE_ENV !== "production") {
 	loggerTransports.push(
 		new transports.Console({
 			level: "debug",
-			format: combine(
-				colorize(),
-				timestamp(),
-				prettyPrint(),
-				customFormat
-			),
+			format: combine(colorize(), timestamp(), customFormat),
 		})
 	);
 }
@@ -53,7 +67,19 @@ const logger = createLogger({
 	exitOnError: false,
 });
 
-// Middleware for attaching client IP to logs
+function sanitizeData(data) {
+	if (!data || typeof data !== "object") return data;
+	const sanitized = { ...data };
+	// Mask sensitive fields
+	["password", "newPassword", "confirmPassword"].forEach((field) => {
+		if (sanitized[field]) {
+			sanitized[field] = "******";
+		}
+	});
+	return sanitized;
+}
+
+// Middleware for attaching client IP and sanitized request body to logs
 const logRequest = (req, res, next) => {
 	req.log = (level, message, extraData = {}) => {
 		const clientIp =
@@ -62,6 +88,7 @@ const logRequest = (req, res, next) => {
 			level,
 			message,
 			ip: clientIp,
+			body: sanitizeData(req.body),
 			...extraData,
 		});
 	};

@@ -24,11 +24,11 @@ const pool = new Pool({
 });
 
 // Log when a new client connects (optional, can be verbose in high-traffic apps)
-pool.on("connect", (client) => {
-	logger.info("A new database connection has been established.", {
-		clientId: client.processID,
-	});
-});
+// pool.on("connect", (client) => {
+// 	console.info("A new database connection has been established.", {
+// 		clientId: client.processID,
+// 	});
+// });
 
 // Log errors on the pool and exit if an unexpected error occurs
 pool.on("error", (err) => {

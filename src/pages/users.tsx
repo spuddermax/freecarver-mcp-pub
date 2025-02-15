@@ -3,11 +3,9 @@ import { useNavigate } from "react-router-dom";
 import {
 	User as UserIcon,
 	Mail as MailIcon,
-	Trash2 as Trash2Icon,
 	Search as SearchIcon,
 	UserPlus as UserPlusIcon,
 	Loader2 as Loader2Icon,
-	Edit as EditIcon,
 } from "lucide-react";
 import Layout from "../components/Layout";
 import { Toast } from "../components/Toast";

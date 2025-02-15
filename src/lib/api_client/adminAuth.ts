@@ -23,7 +23,7 @@ export async function adminLogin(
 
 	if (!response.ok) {
 		const errorData = await response.json();
-		throw new Error(errorData.error || "Admin login failed");
+		throw new Error(errorData.message || "Admin login failed");
 	}
 
 	return response.json();
