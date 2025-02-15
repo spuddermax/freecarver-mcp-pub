@@ -19,3 +19,18 @@ export function formatUser(user: any): any {
 		createdAt: user.created_at,
 	};
 }
+
+/**
+ * Formats a product object as needed.
+ * @param product - The product object to format.
+ * @returns The formatted product object.
+ */
+export function formatProduct(product: any): any {
+	return {
+		id: product.id,
+		name: product.name,
+		price: product.price,
+		imageUrl: product.image_url || null,
+		createdAt: product.created_at,
+	};
+}
