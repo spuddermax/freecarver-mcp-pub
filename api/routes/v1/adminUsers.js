@@ -293,10 +293,7 @@ router.post("/:id/validatePassword", async (req, res) => {
 			[id]
 		);
 		if (result.rows.length === 0) {
-			return res.success(
-				{ result: false, message: "Invalid user." },
-				"Invalid user."
-			);
+			return res.error("Invalid user.", 401);
 		}
 		const isPasswordValid = await bcrypt.compare(
 			password,
@@ -306,10 +303,7 @@ router.post("/:id/validatePassword", async (req, res) => {
 			logger.error(
 				`Admin user with ID ${id} validation failed: Invalid password.`
 			);
-			return res.success(
-				{ result: false, message: "Invalid password." },
-				"Invalid password."
-			);
+			return res.error("Invalid password.", 401);
 		}
 		logger.info(`Admin user with ID ${id} validated successfully.`);
 		res.success(

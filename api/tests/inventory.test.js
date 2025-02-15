@@ -12,9 +12,9 @@ dotenv.config();
 describe("Inventory Routes", () => {
 	let authToken;
 	let authAdmin;
-	let locationId; // For inventory locations
+	let locationId; // Will store the inventory location ID
 	let productId; // For seeding inventory products
-	let inventoryProductId; // For inventory product record
+	let inventoryProductId; // For the inventory product record
 
 	beforeAll(async () => {
 		// Ensure admin role with id = 1 exists.
@@ -80,10 +80,12 @@ describe("Inventory Routes", () => {
 					location_identifier: "LOC-001",
 					description: "Test Location",
 				});
-			expect(res.statusCode).toEqual(201);
-			expect(res.body.location).toBeDefined();
-			expect(res.body.location.location_identifier).toEqual("LOC-001");
-			locationId = res.body.location.id;
+			expect(res.statusCode).toEqual(200);
+			expect(res.body.data.location).toBeDefined();
+			expect(res.body.data.location.location_identifier).toEqual(
+				"LOC-001"
+			);
+			locationId = res.body.data.location.id;
 		});
 
 		it("should retrieve a list of inventory locations", async () => {
@@ -91,8 +93,10 @@ describe("Inventory Routes", () => {
 				.get("/v1/inventory/locations")
 				.set("Authorization", `Bearer ${authToken}`);
 			expect(res.statusCode).toEqual(200);
-			expect(Array.isArray(res.body.locations)).toBe(true);
-			const loc = res.body.locations.find((l) => l.id === locationId);
+			expect(Array.isArray(res.body.data.locations)).toBe(true);
+			const loc = res.body.data.locations.find(
+				(l) => l.id === locationId
+			);
 			expect(loc).toBeDefined();
 		});
 
@@ -101,8 +105,8 @@ describe("Inventory Routes", () => {
 				.get(`/v1/inventory/locations/${locationId}`)
 				.set("Authorization", `Bearer ${authToken}`);
 			expect(res.statusCode).toEqual(200);
-			expect(res.body.location).toBeDefined();
-			expect(res.body.location.id).toEqual(locationId);
+			expect(res.body.data.location).toBeDefined();
+			expect(res.body.data.location.id).toEqual(locationId);
 		});
 
 		it("should update an inventory location", async () => {
@@ -114,8 +118,10 @@ describe("Inventory Routes", () => {
 					description: "Updated Location",
 				});
 			expect(res.statusCode).toEqual(200);
-			expect(res.body.location).toBeDefined();
-			expect(res.body.location.location_identifier).toEqual("LOC-002");
+			expect(res.body.data.location).toBeDefined();
+			expect(res.body.data.location.location_identifier).toEqual(
+				"LOC-002"
+			);
 		});
 
 		it("should delete an inventory location", async () => {
@@ -127,13 +133,13 @@ describe("Inventory Routes", () => {
 					location_identifier: "TEMP-LOC",
 					description: "Temporary Location",
 				});
-			const tempLocationId = tempRes.body.location.id;
+			const tempLocationId = tempRes.body.data.location.id;
 			const res = await request(app)
 				.delete(`/v1/inventory/locations/${tempLocationId}`)
 				.set("Authorization", `Bearer ${authToken}`);
 			expect(res.statusCode).toEqual(200);
 			expect(res.body.message).toEqual(
-				"Inventory location deleted successfully."
+				"Inventory location deleted successfully"
 			);
 			// Verify deletion.
 			const getRes = await request(app)
@@ -153,11 +159,11 @@ describe("Inventory Routes", () => {
 					location_id: locationId,
 					quantity: 100,
 				});
-			expect(res.statusCode).toEqual(201);
-			expect(res.body.product).toBeDefined();
-			expect(res.body.product.product_id).toEqual(productId);
-			expect(res.body.product.location_id).toEqual(locationId);
-			inventoryProductId = res.body.product.id;
+			expect(res.statusCode).toEqual(200);
+			expect(res.body.data.product).toBeDefined();
+			expect(res.body.data.product.product_id).toEqual(productId);
+			expect(res.body.data.product.location_id).toEqual(locationId);
+			inventoryProductId = res.body.data.product.id;
 		});
 
 		it("should retrieve a list of inventory product records", async () => {
@@ -165,8 +171,8 @@ describe("Inventory Routes", () => {
 				.get("/v1/inventory/products")
 				.set("Authorization", `Bearer ${authToken}`);
 			expect(res.statusCode).toEqual(200);
-			expect(Array.isArray(res.body.products)).toBe(true);
-			const record = res.body.products.find(
+			expect(Array.isArray(res.body.data.products)).toBe(true);
+			const record = res.body.data.products.find(
 				(p) => p.id === inventoryProductId
 			);
 			expect(record).toBeDefined();
@@ -177,8 +183,8 @@ describe("Inventory Routes", () => {
 				.get(`/v1/inventory/products/${inventoryProductId}`)
 				.set("Authorization", `Bearer ${authToken}`);
 			expect(res.statusCode).toEqual(200);
-			expect(res.body.product).toBeDefined();
-			expect(res.body.product.id).toEqual(inventoryProductId);
+			expect(res.body.data.product).toBeDefined();
+			expect(res.body.data.product.id).toEqual(inventoryProductId);
 		});
 
 		it("should update an inventory product record", async () => {
@@ -191,8 +197,8 @@ describe("Inventory Routes", () => {
 					quantity: 150,
 				});
 			expect(res.statusCode).toEqual(200);
-			expect(res.body.product).toBeDefined();
-			expect(res.body.product.quantity).toEqual(150);
+			expect(res.body.data.product).toBeDefined();
+			expect(res.body.data.product.quantity).toEqual(150);
 		});
 
 		it("should delete an inventory product record", async () => {
@@ -205,13 +211,13 @@ describe("Inventory Routes", () => {
 					location_id: locationId,
 					quantity: 50,
 				});
-			const tempProductId = tempRes.body.product.id;
+			const tempProductId = tempRes.body.data.product.id;
 			const res = await request(app)
 				.delete(`/v1/inventory/products/${tempProductId}`)
 				.set("Authorization", `Bearer ${authToken}`);
 			expect(res.statusCode).toEqual(200);
 			expect(res.body.message).toEqual(
-				"Inventory product record deleted successfully."
+				"Inventory product record deleted successfully"
 			);
 			// Verify deletion.
 			const getRes = await request(app)

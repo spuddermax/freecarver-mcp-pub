@@ -70,10 +70,12 @@ describe("Customers Routes", () => {
 				.post("/v1/customers")
 				.set("Authorization", `Bearer ${authToken}`)
 				.send(payload);
-			expect(res.statusCode).toEqual(201);
-			expect(res.body.customer).toBeDefined();
-			expect(res.body.customer.email).toEqual("testcustomer@example.com");
-			customerId = res.body.customer.id;
+			expect(res.statusCode).toEqual(200);
+			expect(res.body.data.customer).toBeDefined();
+			expect(res.body.data.customer.email).toEqual(
+				"testcustomer@example.com"
+			);
+			customerId = res.body.data.customer.id;
 		});
 
 		it("should return 400 if email or password is missing", async () => {
@@ -82,7 +84,9 @@ describe("Customers Routes", () => {
 				.set("Authorization", `Bearer ${authToken}`)
 				.send({ email: "incomplete@example.com" }); // missing password
 			expect(res.statusCode).toEqual(400);
-			expect(res.body.error).toEqual("Email and password are required.");
+			expect(res.body.message).toEqual(
+				"Email and password are required."
+			);
 		});
 	});
 
@@ -92,8 +96,8 @@ describe("Customers Routes", () => {
 				.get("/v1/customers")
 				.set("Authorization", `Bearer ${authToken}`);
 			expect(res.statusCode).toEqual(200);
-			expect(Array.isArray(res.body.customers)).toBe(true);
-			const customer = res.body.customers.find(
+			expect(Array.isArray(res.body.data.customers)).toBe(true);
+			const customer = res.body.data.customers.find(
 				(c) => c.id === customerId
 			);
 			expect(customer).toBeDefined();
@@ -106,8 +110,8 @@ describe("Customers Routes", () => {
 				.get(`/v1/customers/${customerId}`)
 				.set("Authorization", `Bearer ${authToken}`);
 			expect(res.statusCode).toEqual(200);
-			expect(res.body.customer).toBeDefined();
-			expect(res.body.customer.id).toEqual(customerId);
+			expect(res.body.data.customer).toBeDefined();
+			expect(res.body.data.customer.id).toEqual(customerId);
 		});
 
 		it("should return 404 for a non-existent customer", async () => {
@@ -115,7 +119,7 @@ describe("Customers Routes", () => {
 				.get("/v1/customers/999999")
 				.set("Authorization", `Bearer ${authToken}`);
 			expect(res.statusCode).toEqual(404);
-			expect(res.body.error).toEqual("Customer not found.");
+			expect(res.body.message).toEqual("Customer not found.");
 		});
 	});
 
@@ -132,8 +136,8 @@ describe("Customers Routes", () => {
 				.set("Authorization", `Bearer ${authToken}`)
 				.send(updatedPayload);
 			expect(res.statusCode).toEqual(200);
-			expect(res.body.customer).toBeDefined();
-			expect(res.body.customer.email).toEqual(
+			expect(res.body.data.customer).toBeDefined();
+			expect(res.body.data.customer.email).toEqual(
 				"updatedcustomer@example.com"
 			);
 		});
@@ -144,7 +148,7 @@ describe("Customers Routes", () => {
 				.set("Authorization", `Bearer ${authToken}`)
 				.send({ first_name: "NoEmail" });
 			expect(res.statusCode).toEqual(400);
-			expect(res.body.error).toEqual("Email is required.");
+			expect(res.body.message).toEqual("Email is required.");
 		});
 	});
 
@@ -154,7 +158,7 @@ describe("Customers Routes", () => {
 				.delete(`/v1/customers/${customerId}`)
 				.set("Authorization", `Bearer ${authToken}`);
 			expect(res.statusCode).toEqual(200);
-			expect(res.body.message).toEqual("Customer deleted successfully.");
+			expect(res.body.message).toEqual("Customer deleted successfully");
 			// Verify deletion by attempting to fetch it.
 			const getRes = await request(app)
 				.get(`/v1/customers/${customerId}`)

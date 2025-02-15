@@ -58,7 +58,7 @@ describe("Product Categories Routes", () => {
 		// Note: global teardown will close the pool.
 	});
 
-	describe("POST /v1/product-categories", () => {
+	describe("POST /v1/product_categories", () => {
 		it("should create a new product category", async () => {
 			const payload = {
 				name: "Test Category",
@@ -66,59 +66,59 @@ describe("Product Categories Routes", () => {
 				// Optionally, you can include parent_category_id if needed
 			};
 			const res = await request(app)
-				.post("/v1/product-categories")
+				.post("/v1/product_categories")
 				.set("Authorization", `Bearer ${authToken}`)
 				.send(payload);
-			expect(res.statusCode).toEqual(201);
-			expect(res.body.category).toBeDefined();
-			expect(res.body.category.name).toEqual("Test Category");
-			categoryId = res.body.category.id;
+			expect(res.statusCode).toEqual(200);
+			expect(res.body.data.category).toBeDefined();
+			expect(res.body.data.category.name).toEqual("Test Category");
+			categoryId = res.body.data.category.id;
 		});
 
 		it("should return 400 if 'name' is missing", async () => {
 			const res = await request(app)
-				.post("/v1/product-categories")
+				.post("/v1/product_categories")
 				.set("Authorization", `Bearer ${authToken}`)
 				.send({ description: "Missing name field" });
 			expect(res.statusCode).toEqual(400);
-			expect(res.body.error).toEqual("'name' is required.");
+			expect(res.body.message).toEqual("'name' is required.");
 		});
 	});
 
-	describe("GET /v1/product-categories", () => {
+	describe("GET /v1/product_categories", () => {
 		it("should retrieve a list of product categories", async () => {
 			const res = await request(app)
-				.get("/v1/product-categories")
+				.get("/v1/product_categories")
 				.set("Authorization", `Bearer ${authToken}`);
 			expect(res.statusCode).toEqual(200);
-			expect(Array.isArray(res.body.categories)).toBe(true);
-			const category = res.body.categories.find(
+			expect(Array.isArray(res.body.data.categories)).toBe(true);
+			const category = res.body.data.categories.find(
 				(cat) => cat.id === categoryId
 			);
 			expect(category).toBeDefined();
 		});
 	});
 
-	describe("GET /v1/product-categories/:id", () => {
+	describe("GET /v1/product_categories/:id", () => {
 		it("should retrieve details for a specific product category", async () => {
 			const res = await request(app)
-				.get(`/v1/product-categories/${categoryId}`)
+				.get(`/v1/product_categories/${categoryId}`)
 				.set("Authorization", `Bearer ${authToken}`);
 			expect(res.statusCode).toEqual(200);
-			expect(res.body.category).toBeDefined();
-			expect(res.body.category.id).toEqual(categoryId);
+			expect(res.body.data.category).toBeDefined();
+			expect(res.body.data.category.id).toEqual(categoryId);
 		});
 
 		it("should return 404 for a non-existent category", async () => {
 			const res = await request(app)
-				.get("/v1/product-categories/999999")
+				.get("/v1/product_categories/999999")
 				.set("Authorization", `Bearer ${authToken}`);
 			expect(res.statusCode).toEqual(404);
-			expect(res.body.error).toEqual("Product category not found.");
+			expect(res.body.message).toEqual("Product category not found.");
 		});
 	});
 
-	describe("PUT /v1/product-categories/:id", () => {
+	describe("PUT /v1/product_categories/:id", () => {
 		it("should update an existing product category", async () => {
 			const updatedPayload = {
 				name: "Updated Category",
@@ -126,37 +126,37 @@ describe("Product Categories Routes", () => {
 				parent_category_id: null, // or a valid parent id if needed
 			};
 			const res = await request(app)
-				.put(`/v1/product-categories/${categoryId}`)
+				.put(`/v1/product_categories/${categoryId}`)
 				.set("Authorization", `Bearer ${authToken}`)
 				.send(updatedPayload);
 			expect(res.statusCode).toEqual(200);
-			expect(res.body.category).toBeDefined();
-			expect(res.body.category.name).toEqual("Updated Category");
+			expect(res.body.data.category).toBeDefined();
+			expect(res.body.data.category.name).toEqual("Updated Category");
 		});
 
 		it("should return 400 if 'name' is missing during update", async () => {
 			const res = await request(app)
-				.put(`/v1/product-categories/${categoryId}`)
+				.put(`/v1/product_categories/${categoryId}`)
 				.set("Authorization", `Bearer ${authToken}`)
 				.send({ description: "No name provided" });
 			expect(res.statusCode).toEqual(400);
-			expect(res.body.error).toEqual("'name' is required.");
+			expect(res.body.message).toEqual("'name' is required.");
 		});
 	});
 
-	describe("DELETE /v1/product-categories/:id", () => {
+	describe("DELETE /v1/product_categories/:id", () => {
 		it("should delete an existing product category", async () => {
 			const res = await request(app)
-				.delete(`/v1/product-categories/${categoryId}`)
+				.delete(`/v1/product_categories/${categoryId}`)
 				.set("Authorization", `Bearer ${authToken}`);
 			expect(res.statusCode).toEqual(200);
 			expect(res.body.message).toEqual(
-				"Product category deleted successfully."
+				"Product category deleted successfully"
 			);
 
 			// Verify deletion by attempting to fetch it.
 			const getRes = await request(app)
-				.get(`/v1/product-categories/${categoryId}`)
+				.get(`/v1/product_categories/${categoryId}`)
 				.set("Authorization", `Bearer ${authToken}`);
 			expect(getRes.statusCode).toEqual(404);
 		});

@@ -56,102 +56,102 @@ describe("Product Options Routes", () => {
 				optionId,
 			]);
 		}
-		// No need to close the pool here; global teardown will handle that.
 	});
 
 	describe("Product Options Endpoints", () => {
 		it("should create a new product option", async () => {
 			const res = await request(app)
-				.post("/v1/product-options")
+				.post("/v1/product_options")
 				.set("Authorization", `Bearer ${authToken}`)
 				.send({ option_name: "Color" });
-			expect(res.statusCode).toEqual(201);
-			expect(res.body.option).toBeDefined();
-			expect(res.body.option.option_name).toEqual("Color");
-			optionId = res.body.option.id;
+			expect(res.statusCode).toEqual(200);
+			expect(res.body.data.option).toBeDefined();
+			expect(res.body.data.option.option_name).toEqual("Color");
+			optionId = res.body.data.option.id;
 		});
 
 		it("should retrieve a list of product options", async () => {
 			const res = await request(app)
-				.get("/v1/product-options")
+				.get("/v1/product_options")
 				.set("Authorization", `Bearer ${authToken}`);
 			expect(res.statusCode).toEqual(200);
-			expect(Array.isArray(res.body.options)).toBe(true);
-			const option = res.body.options.find((o) => o.id === optionId);
+			expect(Array.isArray(res.body.data.options)).toBe(true);
+			const option = res.body.data.options.find((o) => o.id === optionId);
 			expect(option).toBeDefined();
 		});
 
 		it("should retrieve details for a specific product option", async () => {
 			const res = await request(app)
-				.get(`/v1/product-options/${optionId}`)
+				.get(`/v1/product_options/${optionId}`)
 				.set("Authorization", `Bearer ${authToken}`);
 			expect(res.statusCode).toEqual(200);
-			expect(res.body.option).toBeDefined();
-			expect(res.body.option.option_name).toEqual("Color");
+			expect(res.body.data.option).toBeDefined();
+			expect(res.body.data.option.option_name).toEqual("Color");
 		});
 
 		it("should update an existing product option", async () => {
 			const res = await request(app)
-				.put(`/v1/product-options/${optionId}`)
+				.put(`/v1/product_options/${optionId}`)
 				.set("Authorization", `Bearer ${authToken}`)
 				.send({ option_name: "Shade" });
 			expect(res.statusCode).toEqual(200);
-			expect(res.body.option).toBeDefined();
-			expect(res.body.option.option_name).toEqual("Shade");
+			expect(res.body.data.option).toBeDefined();
+			expect(res.body.data.option.option_name).toEqual("Shade");
 		});
 	});
 
 	describe("Product Option Variants Endpoints", () => {
 		it("should create a new variant for the product option", async () => {
 			const res = await request(app)
-				.post(`/v1/product-options/${optionId}/variants`)
+				.post(`/v1/product_options/${optionId}/variants`)
 				.set("Authorization", `Bearer ${authToken}`)
 				.send({ option_value: "Red" });
-			expect(res.statusCode).toEqual(201);
-			expect(res.body.variant).toBeDefined();
-			expect(res.body.variant.option_value).toEqual("Red");
-			variantId = res.body.variant.id;
+			expect(res.statusCode).toEqual(200);
+			expect(res.body.data.variant).toBeDefined();
+			expect(res.body.data.variant.option_value).toEqual("Red");
+			variantId = res.body.data.variant.id;
 		});
 
 		it("should retrieve all variants for the product option", async () => {
 			const res = await request(app)
-				.get(`/v1/product-options/${optionId}/variants`)
+				.get(`/v1/product_options/${optionId}/variants`)
 				.set("Authorization", `Bearer ${authToken}`);
 			expect(res.statusCode).toEqual(200);
-			expect(Array.isArray(res.body.variants)).toBe(true);
-			const variant = res.body.variants.find((v) => v.id === variantId);
+			expect(Array.isArray(res.body.data.variants)).toBe(true);
+			const variant = res.body.data.variants.find(
+				(v) => v.id === variantId
+			);
 			expect(variant).toBeDefined();
 		});
 
 		it("should retrieve a specific variant for the product option", async () => {
 			const res = await request(app)
-				.get(`/v1/product-options/${optionId}/variants/${variantId}`)
+				.get(`/v1/product_options/${optionId}/variants/${variantId}`)
 				.set("Authorization", `Bearer ${authToken}`);
 			expect(res.statusCode).toEqual(200);
-			expect(res.body.variant).toBeDefined();
-			expect(res.body.variant.option_value).toEqual("Red");
+			expect(res.body.data.variant).toBeDefined();
+			expect(res.body.data.variant.option_value).toEqual("Red");
 		});
 
 		it("should update an existing variant for the product option", async () => {
 			const res = await request(app)
-				.put(`/v1/product-options/${optionId}/variants/${variantId}`)
+				.put(`/v1/product_options/${optionId}/variants/${variantId}`)
 				.set("Authorization", `Bearer ${authToken}`)
 				.send({ option_value: "Blue" });
 			expect(res.statusCode).toEqual(200);
-			expect(res.body.variant).toBeDefined();
-			expect(res.body.variant.option_value).toEqual("Blue");
+			expect(res.body.data.variant).toBeDefined();
+			expect(res.body.data.variant.option_value).toEqual("Blue");
 		});
 
 		it("should delete a variant for the product option", async () => {
 			const res = await request(app)
-				.delete(`/v1/product-options/${optionId}/variants/${variantId}`)
+				.delete(`/v1/product_options/${optionId}/variants/${variantId}`)
 				.set("Authorization", `Bearer ${authToken}`);
 			expect(res.statusCode).toEqual(200);
-			expect(res.body.message).toEqual("Variant deleted successfully.");
-
+			expect(res.body.message).toEqual("Variant deleted successfully");
 			// Verify deletion: attempt to retrieve the deleted variant.
 			const getRes = await request(app)
-				.get(`/v1/product-options/${optionId}/variants/${variantId}`)
+				.get(`/v1/product_options/${optionId}/variants/${variantId}`)
 				.set("Authorization", `Bearer ${authToken}`);
 			expect(getRes.statusCode).toEqual(404);
 		});
@@ -160,11 +160,11 @@ describe("Product Options Routes", () => {
 	describe("Cleanup", () => {
 		it("should delete the product option", async () => {
 			const res = await request(app)
-				.delete(`/v1/product-options/${optionId}`)
+				.delete(`/v1/product_options/${optionId}`)
 				.set("Authorization", `Bearer ${authToken}`);
 			expect(res.statusCode).toEqual(200);
 			expect(res.body.message).toEqual(
-				"Product option deleted successfully."
+				"Product option deleted successfully"
 			);
 		});
 	});

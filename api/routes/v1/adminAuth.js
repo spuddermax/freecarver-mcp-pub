@@ -71,6 +71,7 @@ router.post("/login", async (req, res) => {
 		// Create JWT token
 		const tokenPayload = {
 			adminId: admin.id,
+			adminEmail: admin.email,
 			adminFirstName: admin.first_name,
 			adminLastName: admin.last_name,
 			adminRoleName: admin.role_name,

@@ -20,17 +20,17 @@ describe("Product Option SKUs Routes", () => {
 	beforeAll(async () => {
 		// Ensure admin role with id = 1 exists
 		await pool.query(`
-      INSERT INTO admin_roles (id, role_name)
-      VALUES (1, 'admin')
-      ON CONFLICT (id) DO NOTHING
-    `);
+			INSERT INTO admin_roles (id, role_name)
+			VALUES (1, 'admin')
+			ON CONFLICT (id) DO NOTHING
+		`);
 
 		// Create an admin user for authentication
 		const adminPassword = "password";
 		const hashedPassword = await bcrypt.hash(adminPassword, 10);
 		const adminResult = await pool.query(
 			`INSERT INTO admin_users (email, password_hash, first_name, last_name, role_id)
-       VALUES ($1, $2, 'SKU', 'Tester', 1) RETURNING *`,
+			 VALUES ($1, $2, 'SKU', 'Tester', 1) RETURNING *`,
 			["sku_tester@example.com", hashedPassword]
 		);
 		authAdmin = adminResult.rows[0];
@@ -48,22 +48,22 @@ describe("Product Option SKUs Routes", () => {
 
 		// Seed a product for the SKU association
 		const productResult = await pool.query(
-			`INSERT INTO products (name, description, price) 
-       VALUES ('Test Product', 'Product for SKU tests', 9.99) RETURNING id`
+			`INSERT INTO products (name, description, price)
+			 VALUES ('Test Product', 'Product for SKU tests', 9.99) RETURNING id`
 		);
 		productId = productResult.rows[0].id;
 
 		// Seed a product option
 		const optionResult = await pool.query(
-			`INSERT INTO product_options (option_name) 
-       VALUES ('Color') RETURNING id`
+			`INSERT INTO product_options (option_name)
+			 VALUES ('Color') RETURNING id`
 		);
 		optionId = optionResult.rows[0].id;
 
 		// Seed a product option variant for the product option
 		const variantResult = await pool.query(
-			`INSERT INTO product_option_variants (option_id, option_value) 
-       VALUES ($1, 'Red') RETURNING id`,
+			`INSERT INTO product_option_variants (option_id, option_value)
+			 VALUES ($1, 'Red') RETURNING id`,
 			[optionId]
 		);
 		variantId = variantResult.rows[0].id;
@@ -89,7 +89,7 @@ describe("Product Option SKUs Routes", () => {
 		]);
 	});
 
-	describe("POST /v1/product-option-skus", () => {
+	describe("POST /v1/product_option_skus", () => {
 		it("should create a new product option SKU association", async () => {
 			const payload = {
 				product_id: productId,
@@ -102,57 +102,63 @@ describe("Product Option SKUs Routes", () => {
 				sale_end: "2025-05-10T00:00:00Z",
 			};
 			const res = await request(app)
-				.post("/v1/product-option-skus")
+				.post("/v1/product_option_skus")
 				.set("Authorization", `Bearer ${authToken}`)
 				.send(payload);
-			expect(res.statusCode).toEqual(201);
-			expect(res.body.sku).toBeDefined();
-			expect(res.body.sku.sku).toEqual("SKU12345");
-			skuId = res.body.sku.id;
+			// Expect status code 200
+			expect(res.statusCode).toEqual(200);
+			// Verify the SKU is wrapped in the data property.
+			expect(res.body.data.sku).toBeDefined();
+			expect(res.body.data.sku.sku).toEqual("SKU12345");
+			skuId = res.body.data.sku.id;
 		});
 
 		it("should return 400 if required fields are missing", async () => {
 			const res = await request(app)
-				.post("/v1/product-option-skus")
+				.post("/v1/product_option_skus")
 				.set("Authorization", `Bearer ${authToken}`)
 				.send({ product_id: productId }); // missing option_id, variant_id, sku
 			expect(res.statusCode).toEqual(400);
-			expect(res.body.error).toBeDefined();
+			// Check error response using the message property.
+			expect(res.body.message).toBeDefined();
 		});
 	});
 
-	describe("GET /v1/product-option-skus", () => {
+	describe("GET /v1/product_option_skus", () => {
 		it("should retrieve a list of product option SKUs", async () => {
 			const res = await request(app)
-				.get("/v1/product-option-skus")
+				.get("/v1/product_option_skus")
 				.set("Authorization", `Bearer ${authToken}`);
 			expect(res.statusCode).toEqual(200);
-			expect(Array.isArray(res.body.skus)).toBe(true);
-			const skuEntry = res.body.skus.find((sku) => sku.id === skuId);
+			// Expect an array of SKUs within the data property.
+			expect(Array.isArray(res.body.data.skus)).toBe(true);
+			const skuEntry = res.body.data.skus.find((sku) => sku.id === skuId);
 			expect(skuEntry).toBeDefined();
 		});
 	});
 
-	describe("GET /v1/product-option-skus/:id", () => {
+	describe("GET /v1/product_option_skus/:id", () => {
 		it("should retrieve a specific product option SKU", async () => {
 			const res = await request(app)
-				.get(`/v1/product-option-skus/${skuId}`)
+				.get(`/v1/product_option_skus/${skuId}`)
 				.set("Authorization", `Bearer ${authToken}`);
 			expect(res.statusCode).toEqual(200);
-			expect(res.body.sku).toBeDefined();
-			expect(res.body.sku.id).toEqual(skuId);
+			// Verify SKU is returned inside the data property.
+			expect(res.body.data.sku).toBeDefined();
+			expect(res.body.data.sku.id).toEqual(skuId);
 		});
 
 		it("should return 404 for non-existent SKU", async () => {
 			const res = await request(app)
-				.get("/v1/product-option-skus/999999")
+				.get("/v1/product_option_skus/999999")
 				.set("Authorization", `Bearer ${authToken}`);
 			expect(res.statusCode).toEqual(404);
-			expect(res.body.error).toEqual("Product option SKU not found.");
+			// Check error response using the message property.
+			expect(res.body.message).toEqual("Product option SKU not found.");
 		});
 	});
 
-	describe("PUT /v1/product-option-skus/:id", () => {
+	describe("PUT /v1/product_option_skus/:id", () => {
 		it("should update an existing product option SKU", async () => {
 			const updatedPayload = {
 				product_id: productId,
@@ -165,37 +171,38 @@ describe("Product Option SKUs Routes", () => {
 				sale_end: "2025-06-10T00:00:00Z",
 			};
 			const res = await request(app)
-				.put(`/v1/product-option-skus/${skuId}`)
+				.put(`/v1/product_option_skus/${skuId}`)
 				.set("Authorization", `Bearer ${authToken}`)
 				.send(updatedPayload);
 			expect(res.statusCode).toEqual(200);
-			expect(res.body.sku).toBeDefined();
-			expect(res.body.sku.sku).toEqual("SKU67890");
+			// Verify updated SKU is returned within the data property.
+			expect(res.body.data.sku).toBeDefined();
+			expect(res.body.data.sku.sku).toEqual("SKU67890");
 		});
 
 		it("should return 400 if required fields are missing", async () => {
 			const res = await request(app)
-				.put(`/v1/product-option-skus/${skuId}`)
+				.put(`/v1/product_option_skus/${skuId}`)
 				.set("Authorization", `Bearer ${authToken}`)
 				.send({ sku: "Incomplete" });
 			expect(res.statusCode).toEqual(400);
-			expect(res.body.error).toBeDefined();
+			expect(res.body.message).toBeDefined();
 		});
 	});
 
-	describe("DELETE /v1/product-option-skus/:id", () => {
+	describe("DELETE /v1/product_option_skus/:id", () => {
 		it("should delete an existing product option SKU", async () => {
 			const res = await request(app)
-				.delete(`/v1/product-option-skus/${skuId}`)
+				.delete(`/v1/product_option_skus/${skuId}`)
 				.set("Authorization", `Bearer ${authToken}`);
 			expect(res.statusCode).toEqual(200);
+			// Verify the delete response message (without trailing punctuation).
 			expect(res.body.message).toEqual(
-				"Product option SKU deleted successfully."
+				"Product option SKU deleted successfully"
 			);
-
-			// Verify deletion by attempting to fetch it.
+			// Confirm deletion by trying to fetch the SKU.
 			const getRes = await request(app)
-				.get(`/v1/product-option-skus/${skuId}`)
+				.get(`/v1/product_option_skus/${skuId}`)
 				.set("Authorization", `Bearer ${authToken}`);
 			expect(getRes.statusCode).toEqual(404);
 		});

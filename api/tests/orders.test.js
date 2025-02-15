@@ -63,7 +63,7 @@ describe("Orders Routes", () => {
 	});
 
 	afterAll(async () => {
-		// Clean up order items and orders if they still exist.
+		// Clean up any order items and orders (if they still exist).
 		if (orderId) {
 			await pool.query("DELETE FROM order_items WHERE order_id = $1", [
 				orderId,
@@ -95,10 +95,11 @@ describe("Orders Routes", () => {
 				.post("/v1/orders")
 				.set("Authorization", `Bearer ${authToken}`)
 				.send(payload);
-			expect(res.statusCode).toEqual(201);
-			expect(res.body.order).toBeDefined();
-			expect(res.body.order.customer_id).toEqual(customerId);
-			orderId = res.body.order.id;
+			// Standardized to expect 200 and the order inside the data property.
+			expect(res.statusCode).toEqual(200);
+			expect(res.body.data.order).toBeDefined();
+			expect(res.body.data.order.customer_id).toEqual(customerId);
+			orderId = res.body.data.order.id;
 		});
 
 		it("should retrieve a list of orders", async () => {
@@ -106,8 +107,8 @@ describe("Orders Routes", () => {
 				.get("/v1/orders")
 				.set("Authorization", `Bearer ${authToken}`);
 			expect(res.statusCode).toEqual(200);
-			expect(Array.isArray(res.body.orders)).toBe(true);
-			const order = res.body.orders.find((o) => o.id === orderId);
+			expect(Array.isArray(res.body.data.orders)).toBe(true);
+			const order = res.body.data.orders.find((o) => o.id === orderId);
 			expect(order).toBeDefined();
 		});
 
@@ -116,8 +117,8 @@ describe("Orders Routes", () => {
 				.get(`/v1/orders/${orderId}`)
 				.set("Authorization", `Bearer ${authToken}`);
 			expect(res.statusCode).toEqual(200);
-			expect(res.body.order).toBeDefined();
-			expect(res.body.order.id).toEqual(orderId);
+			expect(res.body.data.order).toBeDefined();
+			expect(res.body.data.order.id).toEqual(orderId);
 		});
 
 		it("should update an existing order", async () => {
@@ -135,8 +136,8 @@ describe("Orders Routes", () => {
 				.set("Authorization", `Bearer ${authToken}`)
 				.send(updatedPayload);
 			expect(res.statusCode).toEqual(200);
-			expect(res.body.order).toBeDefined();
-			expect(res.body.order.status).toEqual("completed");
+			expect(res.body.data.order).toBeDefined();
+			expect(res.body.data.order.status).toEqual("completed");
 		});
 	});
 
@@ -151,10 +152,10 @@ describe("Orders Routes", () => {
 				.post(`/v1/orders/${orderId}/items`)
 				.set("Authorization", `Bearer ${authToken}`)
 				.send(payload);
-			expect(res.statusCode).toEqual(201);
-			expect(res.body.item).toBeDefined();
-			expect(res.body.item.product_id).toEqual(productId);
-			orderItemId = res.body.item.id;
+			expect(res.statusCode).toEqual(200);
+			expect(res.body.data.item).toBeDefined();
+			expect(res.body.data.item.product_id).toEqual(productId);
+			orderItemId = res.body.data.item.id;
 		});
 
 		it("should retrieve all order items for the order", async () => {
@@ -162,8 +163,8 @@ describe("Orders Routes", () => {
 				.get(`/v1/orders/${orderId}/items`)
 				.set("Authorization", `Bearer ${authToken}`);
 			expect(res.statusCode).toEqual(200);
-			expect(Array.isArray(res.body.items)).toBe(true);
-			const item = res.body.items.find((i) => i.id === orderItemId);
+			expect(Array.isArray(res.body.data.items)).toBe(true);
+			const item = res.body.data.items.find((i) => i.id === orderItemId);
 			expect(item).toBeDefined();
 		});
 
@@ -172,8 +173,8 @@ describe("Orders Routes", () => {
 				.get(`/v1/orders/${orderId}/items/${orderItemId}`)
 				.set("Authorization", `Bearer ${authToken}`);
 			expect(res.statusCode).toEqual(200);
-			expect(res.body.item).toBeDefined();
-			expect(res.body.item.id).toEqual(orderItemId);
+			expect(res.body.data.item).toBeDefined();
+			expect(res.body.data.item.id).toEqual(orderItemId);
 		});
 
 		it("should update an existing order item", async () => {
@@ -187,8 +188,8 @@ describe("Orders Routes", () => {
 				.set("Authorization", `Bearer ${authToken}`)
 				.send(updatedPayload);
 			expect(res.statusCode).toEqual(200);
-			expect(res.body.item).toBeDefined();
-			expect(res.body.item.quantity).toEqual(3);
+			expect(res.body.data.item).toBeDefined();
+			expect(res.body.data.item.quantity).toEqual(3);
 		});
 
 		it("should delete an order item", async () => {
@@ -196,10 +197,7 @@ describe("Orders Routes", () => {
 				.delete(`/v1/orders/${orderId}/items/${orderItemId}`)
 				.set("Authorization", `Bearer ${authToken}`);
 			expect(res.statusCode).toEqual(200);
-			expect(res.body.message).toEqual(
-				"Order item deleted successfully."
-			);
-
+			expect(res.body.message).toEqual("Order item deleted successfully");
 			// Verify deletion.
 			const getRes = await request(app)
 				.get(`/v1/orders/${orderId}/items/${orderItemId}`)
@@ -214,9 +212,8 @@ describe("Orders Routes", () => {
 				.delete(`/v1/orders/${orderId}`)
 				.set("Authorization", `Bearer ${authToken}`);
 			expect(res.statusCode).toEqual(200);
-			expect(res.body.message).toEqual("Order deleted successfully.");
-
-			// Verify deletion.
+			expect(res.body.message).toEqual("Order deleted successfully");
+			// Verify deletion by attempting to fetch the deleted order.
 			const getRes = await request(app)
 				.get(`/v1/orders/${orderId}`)
 				.set("Authorization", `Bearer ${authToken}`);

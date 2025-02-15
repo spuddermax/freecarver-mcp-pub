@@ -79,8 +79,20 @@ router.post("/login", async (req, res) => {
  * @returns {Response} 500 - Returns an error message for an internal server error.
  */
 router.get("/me", verifyJWT, (req, res) => {
-	logger.info(`Retrieving customer details for: ${req.admin.email}`);
-	res.success({ customer: req.admin }, "Customer details retrieved");
+	//Customer Authentication Routes › GET /v1/customerAuth/me › should return 401 if no verifyJWT
+	if (!req.admin) {
+		logger.error("No token provided");
+		return res.error("No token provided", 401);
+	}
+	try {
+		logger.info(`Retrieving customer details for: ${req.admin.email}`);
+		res.success({ customer: req.admin }, "Customer details retrieved");
+	} catch (error) {
+		logger.error("Error during customer details retrieval", {
+			error: error.message,
+		});
+		res.error("Internal server error", 500);
+	}
 });
 
 export default router;

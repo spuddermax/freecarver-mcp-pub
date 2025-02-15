@@ -34,16 +34,18 @@ describe("Admin Authentication Routes", () => {
 		await pool.query("DELETE FROM admin_users WHERE email = $1", [
 			testEmail,
 		]);
-		// Do not call pool.end() here because globalTeardown will handle it.
+		// Global teardown will handle closing the connection pool.
 	});
 
 	describe("POST /v1/adminAuth/login", () => {
-		it("should return 400 if email or password is missing", async () => {
+		it("should return 422 if email or password is missing", async () => {
 			const res = await request(app)
 				.post("/v1/adminAuth/login")
 				.send({ email: testEmail }); // Missing password
-			expect(res.statusCode).toEqual(400);
-			expect(res.body.error).toEqual("Email and password are required.");
+			expect(res.statusCode).toEqual(422);
+			expect(res.body.message).toEqual(
+				"Email and password are required."
+			);
 		});
 
 		it("should return 200 and a token if valid credentials are provided", async () => {
@@ -51,7 +53,7 @@ describe("Admin Authentication Routes", () => {
 				.post("/v1/adminAuth/login")
 				.send({ email: testEmail, password: testPassword });
 			expect(res.statusCode).toEqual(200);
-			expect(res.body.token).toBeDefined();
+			expect(res.body.data.token).toBeDefined();
 		});
 
 		it("should return 401 if invalid credentials are provided (wrong password)", async () => {
@@ -59,18 +61,16 @@ describe("Admin Authentication Routes", () => {
 				.post("/v1/adminAuth/login")
 				.send({ email: testEmail, password: "wrongpassword" });
 			expect(res.statusCode).toEqual(401);
-			expect(res.body.error).toEqual("Invalid credentials.");
+			expect(res.body.message).toEqual("Invalid credentials.");
 		});
 
 		it("should return 401 if email is not found", async () => {
-			const res = await request(app)
-				.post("/v1/adminAuth/login")
-				.send({
-					email: "nonexistent@example.com",
-					password: testPassword,
-				});
+			const res = await request(app).post("/v1/adminAuth/login").send({
+				email: "nonexistent@example.com",
+				password: testPassword,
+			});
 			expect(res.statusCode).toEqual(401);
-			expect(res.body.error).toEqual("Invalid credentials.");
+			expect(res.body.message).toEqual("Invalid credentials.");
 		});
 	});
 
@@ -87,15 +87,16 @@ describe("Admin Authentication Routes", () => {
 				.post("/v1/adminAuth/login")
 				.send({ email: testEmail, password: testPassword });
 			expect(loginRes.statusCode).toEqual(200);
-			const token = loginRes.body.token;
+			const token = loginRes.body.data.token;
 
 			// Use the token to access the protected route
 			const res = await request(app)
 				.get("/v1/adminAuth/me")
 				.set("Authorization", `Bearer ${token}`);
+			console.log(res.body.data.admin);
 			expect(res.statusCode).toEqual(200);
-			expect(res.body.admin).toBeDefined();
-			expect(res.body.admin.email).toEqual(testEmail);
+			expect(res.body.data.admin).toBeDefined();
+			expect(res.body.data.admin.adminEmail).toEqual(testEmail);
 		});
 	});
 });

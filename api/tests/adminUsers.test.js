@@ -54,7 +54,7 @@ describe("Admin Users Routes", () => {
 				"updatedadmin@example.com",
 			]
 		);
-		// Do not close the pool here; globalTeardown will handle that.
+		// Global teardown will handle closing the pool.
 	});
 
 	describe("GET /v1/adminUsers", () => {
@@ -63,7 +63,7 @@ describe("Admin Users Routes", () => {
 				.get("/v1/adminUsers")
 				.set("Authorization", `Bearer ${authToken}`);
 			expect(res.statusCode).toEqual(200);
-			expect(Array.isArray(res.body.admins)).toBe(true);
+			expect(Array.isArray(res.body.data.admins)).toBe(true);
 		});
 	});
 
@@ -83,10 +83,10 @@ describe("Admin Users Routes", () => {
 					mfa_enabled: false,
 					mfa_method: null,
 				});
-			expect(res.statusCode).toEqual(201);
-			expect(res.body.admin).toBeDefined();
-			expect(res.body.admin.email).toEqual("newadmin@example.com");
-			newAdminId = res.body.admin.id; // Save the ID for subsequent tests
+			expect(res.statusCode).toEqual(200);
+			expect(res.body.data.admin).toBeDefined();
+			expect(res.body.data.admin.email).toEqual("newadmin@example.com");
+			newAdminId = res.body.data.admin.id; // Save the ID for subsequent tests
 		});
 	});
 
@@ -96,8 +96,8 @@ describe("Admin Users Routes", () => {
 				.get(`/v1/adminUsers/${newAdminId}`)
 				.set("Authorization", `Bearer ${authToken}`);
 			expect(res.statusCode).toEqual(200);
-			expect(res.body.admin).toBeDefined();
-			expect(res.body.admin.id).toEqual(newAdminId);
+			expect(res.body.data.admin).toBeDefined();
+			expect(res.body.data.admin.id).toEqual(newAdminId);
 		});
 
 		it("should return 404 for a non-existent admin user", async () => {
@@ -105,7 +105,7 @@ describe("Admin Users Routes", () => {
 				.get("/v1/adminUsers/999999")
 				.set("Authorization", `Bearer ${authToken}`);
 			expect(res.statusCode).toEqual(404);
-			expect(res.body.error).toEqual("Admin user not found.");
+			expect(res.body.message).toEqual("Admin user not found.");
 		});
 	});
 
@@ -124,8 +124,10 @@ describe("Admin Users Routes", () => {
 					mfa_method: "sms",
 				});
 			expect(res.statusCode).toEqual(200);
-			expect(res.body.admin).toBeDefined();
-			expect(res.body.admin.email).toEqual("updatedadmin@example.com");
+			expect(res.body.data.admin).toBeDefined();
+			expect(res.body.data.admin.email).toEqual(
+				"updatedadmin@example.com"
+			);
 		});
 	});
 
@@ -155,9 +157,7 @@ describe("Admin Users Routes", () => {
 				.set("Authorization", `Bearer ${authToken}`)
 				.send({ password: "password" });
 			expect(res.statusCode).toEqual(200);
-			expect(res.body.message).toEqual(
-				"Password validated successfully."
-			);
+			expect(res.body.message).toEqual("Valid password.");
 		});
 
 		it("should fail to validate the password for an existing admin user with an incorrect password", async () => {
@@ -166,7 +166,7 @@ describe("Admin Users Routes", () => {
 				.set("Authorization", `Bearer ${authToken}`)
 				.send({ password: "wrongpassword" });
 			expect(res.statusCode).toEqual(401);
-			expect(res.body.error).toEqual("Invalid password.");
+			expect(res.body.message).toEqual("Invalid password.");
 		});
 
 		it("should return 401 when validating password for a non-existent admin user", async () => {
@@ -175,7 +175,7 @@ describe("Admin Users Routes", () => {
 				.set("Authorization", `Bearer ${authToken}`)
 				.send({ password: "password" });
 			expect(res.statusCode).toEqual(401);
-			expect(res.body.error).toEqual("Invalid user.");
+			expect(res.body.message).toEqual("Invalid user.");
 		});
 	});
 });
