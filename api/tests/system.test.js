@@ -71,13 +71,24 @@ describe("System Routes", () => {
 	});
 
 	describe("GET /v1/system/preferences", () => {
-		it("should retrieve all system preferences", async () => {
+		it("should retrieve all system preferences with authorization header", async () => {
 			const res = await request(app)
 				.get("/v1/system/preferences")
 				.set("Authorization", `Bearer ${authToken}`);
 			expect(res.statusCode).toEqual(200);
-			expect(Array.isArray(res.body.preferences)).toBe(true);
-			const pref = res.body.preferences.find(
+			expect(Array.isArray(res.body.data.preferences)).toBe(true);
+			const pref = res.body.data.preferences.find(
+				(p) => p.key === "site_name"
+			);
+			expect(pref).toBeDefined();
+			expect(pref.value).toEqual("Test Site");
+		});
+
+		it("should retrieve all system preferences without authorization header (public)", async () => {
+			const res = await request(app).get("/v1/system/preferences");
+			expect(res.statusCode).toEqual(200);
+			expect(Array.isArray(res.body.data.preferences)).toBe(true);
+			const pref = res.body.data.preferences.find(
 				(p) => p.key === "site_name"
 			);
 			expect(pref).toBeDefined();
@@ -86,15 +97,15 @@ describe("System Routes", () => {
 	});
 
 	describe("PUT /v1/system/preferences/:key", () => {
-		it("should update a system preference", async () => {
+		it("should update a system preference with valid token", async () => {
 			const newValue = "Updated Site";
 			const res = await request(app)
 				.put("/v1/system/preferences/site_name")
 				.set("Authorization", `Bearer ${authToken}`)
 				.send({ value: newValue });
 			expect(res.statusCode).toEqual(200);
-			expect(res.body.preference).toBeDefined();
-			expect(res.body.preference.value).toEqual(newValue);
+			expect(res.body.data.preference).toBeDefined();
+			expect(res.body.data.preference.value).toEqual(newValue);
 		});
 
 		it("should return 400 if 'value' is missing", async () => {
@@ -103,7 +114,7 @@ describe("System Routes", () => {
 				.set("Authorization", `Bearer ${authToken}`)
 				.send({});
 			expect(res.statusCode).toEqual(400);
-			expect(res.body.error).toEqual("'value' field is required.");
+			expect(res.body.message).toEqual("'value' field is required.");
 		});
 
 		it("should return 404 if the preference key is not found", async () => {
@@ -112,27 +123,41 @@ describe("System Routes", () => {
 				.set("Authorization", `Bearer ${authToken}`)
 				.send({ value: "anything" });
 			expect(res.statusCode).toEqual(404);
-			expect(res.body.error).toEqual("System preference not found.");
+			expect(res.body.message).toEqual("System preference not found.");
+		});
+
+		it("should return 401 if no auth token is provided", async () => {
+			const res = await request(app)
+				.put("/v1/system/preferences/site_name")
+				.send({ value: "Another Update" });
+			expect(res.statusCode).toEqual(401);
 		});
 	});
 
-	describe("GET /v1/system/audit-logs", () => {
-		it("should retrieve audit logs", async () => {
-			const res = await request(app).get("/v1/system/audit-logs");
+	describe("GET /v1/system/audit_logs", () => {
+		it("should retrieve audit logs with valid token", async () => {
+			const res = await request(app)
+				.get("/v1/system/audit_logs")
+				.set("Authorization", `Bearer ${authToken}`);
 			expect(res.statusCode).toEqual(200);
-			expect(Array.isArray(res.body.audit_logs)).toBe(true);
-			const log = res.body.audit_logs.find(
+			expect(Array.isArray(res.body.data.audit_logs)).toBe(true);
+			const log = res.body.data.audit_logs.find(
 				(entry) => entry.details === "Test log entry"
 			);
 			expect(log).toBeDefined();
 		});
+
+		it("should return 401 if no auth token is provided", async () => {
+			const res = await request(app).get("/v1/system/audit_logs");
+			expect(res.statusCode).toEqual(401);
+		});
 	});
 });
 
-describe("GET /v1/system/database-status", () => {
-	it("should retrieve the database status", async () => {
-		const res = await request(app).get("/v1/system/database-status");
+describe("GET /v1/system/database_status", () => {
+	it("should retrieve the database status without auth", async () => {
+		const res = await request(app).get("/v1/system/database_status");
 		expect(res.statusCode).toEqual(200);
-		expect(res.body.status).toBeDefined();
+		expect(res.body.data.status).toBeDefined();
 	});
 });

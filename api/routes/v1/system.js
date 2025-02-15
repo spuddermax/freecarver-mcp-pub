@@ -92,7 +92,7 @@ router.get("/audit_logs", verifyJWT, async (req, res) => {
 });
 
 /**
- * @route   GET /v1/system/database-status
+ * @route   GET /v1/system/database_status
  * @desc    Retrieve the status of the database
  * @access  Public
  */
