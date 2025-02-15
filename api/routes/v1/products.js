@@ -11,15 +11,50 @@ router.use(verifyJWT);
 
 /**
  * @route GET /v1/products
- * @description Retrieve a list of all products.
+ * @description Retrieve a list of products with pagination and ordering.
+ * The endpoint supports the following query parameters:
+ *   @param {number} [page=1] - The page number (default: 1).
+ *   @param {number} [limit=20] - The number of products per page (default: 20).
+ *   @param {string} [orderBy=name] - The column to order by. Allowed columns:
+ *           [id, name, price, sale_price, created_at, updated_at] (default: name).
+ *   @param {string} [order=asc] - The order direction: "asc" (ascending) or "desc" (descending) (default: asc).
  * @access Protected
  * @returns {Response} 200 - JSON object containing an array of products.
  * @returns {Response} 500 - Internal server error.
  */
 router.get("/", async (req, res) => {
 	try {
-		const result = await pool.query("SELECT * FROM products ORDER BY id");
-		logger.info("Retrieved products list.");
+		// Default pagination values
+		const page = parseInt(req.query.page, 10) || 1;
+		const limit = parseInt(req.query.limit, 10) || 20;
+		const offset = (page - 1) * limit;
+
+		// Allowed columns for ordering
+		const allowedOrderColumns = [
+			"id",
+			"name",
+			"price",
+			"sale_price",
+			"created_at",
+			"updated_at",
+		];
+		const orderBy = allowedOrderColumns.includes(req.query.orderBy)
+			? req.query.orderBy
+			: "name";
+		const orderDirection =
+			req.query.order && req.query.order.toLowerCase() === "desc"
+				? "DESC"
+				: "ASC";
+
+		const query = `SELECT * FROM products ORDER BY ${orderBy} ${orderDirection} LIMIT $1 OFFSET $2`;
+		const result = await pool.query(query, [limit, offset]);
+
+		logger.info("Retrieved products list with pagination.", {
+			page,
+			limit,
+			orderBy,
+			orderDirection,
+		});
 		res.success(
 			{ products: result.rows },
 			"Products retrieved successfully"

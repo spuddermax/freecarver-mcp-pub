@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import Layout from "../components/Layout";
 import { Toast } from "../components/Toast";
+import { Pagination } from "../components/Pagination";
 import { fetchProducts } from "../lib/api_client/products";
 import { formatProduct } from "../utils/formatters";
 
@@ -29,10 +30,14 @@ export default function Products() {
 		type: "success" | "error";
 		text: string;
 	} | null>(null);
+	// Pagination state
+	const [currentPage, setCurrentPage] = useState<number>(1);
+	const limit = 20; // Always fetch 20 products per page
 
 	useEffect(() => {
 		loadProducts();
-	}, []);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [currentPage]);
 
 	useEffect(() => {
 		const timer = setTimeout(() => {
@@ -43,9 +48,26 @@ export default function Products() {
 	}, [searchQuery]);
 
 	async function loadProducts() {
+		setLoading(true);
 		try {
-			const productsData = await fetchProducts();
-			const formattedProducts = productsData.map((product: any) =>
+			const token = localStorage.getItem("jwtToken");
+			// Build query string with pagination and default ordering params.
+			const queryString = `?page=${currentPage}&limit=${limit}&orderBy=name&order=asc`;
+			const response = await fetch(
+				import.meta.env.VITE_API_URL + "/v1/products" + queryString,
+				{
+					headers: {
+						Authorization: `Bearer ${token}`,
+					},
+				}
+			);
+			if (!response.ok) {
+				const errorData = await response.json();
+				throw new Error(errorData.error || "Failed to fetch products");
+			}
+			const data = await response.json();
+			// Map the products using the formatter.
+			const formattedProducts = data.data.products.map((product: any) =>
 				formatProduct(product)
 			);
 			setProducts(formattedProducts);
@@ -148,6 +170,12 @@ export default function Products() {
 							</div>
 						</div>
 
+						<Pagination
+							currentPage={currentPage}
+							onPageChange={setCurrentPage}
+							canPaginateNext={products.length === limit}
+						/>
+
 						<div className="overflow-x-auto">
 							<table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
 								<thead className="bg-gray-50 dark:bg-gray-900">
@@ -229,6 +257,12 @@ export default function Products() {
 								</tbody>
 							</table>
 						</div>
+
+						<Pagination
+							currentPage={currentPage}
+							onPageChange={setCurrentPage}
+							canPaginateNext={products.length === limit}
+						/>
 					</div>
 				</div>
 			</div>
