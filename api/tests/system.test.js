@@ -68,6 +68,7 @@ describe("System Routes", () => {
 			"system_admin@example.com",
 		]);
 		// Optionally, you can clean up system_preferences if desired.
+		//await pool.end();
 	});
 
 	describe("GET /v1/system/preferences", () => {

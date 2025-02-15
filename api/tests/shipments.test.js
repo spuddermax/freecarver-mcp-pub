@@ -81,16 +81,15 @@ describe("Shipments Routes", () => {
 	});
 
 	afterAll(async () => {
-		// Clean up: Delete shipment items, shipments, order items, order, product, customer, and admin user.
-		if (shipmentId) {
-			await pool.query(
-				"DELETE FROM shipment_items WHERE shipment_id = $1",
-				[shipmentId]
-			);
-			await pool.query("DELETE FROM shipments WHERE id = $1", [
-				shipmentId,
-			]);
-		}
+		// Clean up: first delete any shipment items and shipments associated with the test order
+		await pool.query(
+			"DELETE FROM shipment_items WHERE shipment_id IN (SELECT id FROM shipments WHERE order_id = $1)",
+			[orderId]
+		);
+		await pool.query("DELETE FROM shipments WHERE order_id = $1", [
+			orderId,
+		]);
+
 		if (orderItemId) {
 			await pool.query("DELETE FROM order_items WHERE id = $1", [
 				orderItemId,
@@ -123,10 +122,10 @@ describe("Shipments Routes", () => {
 				.post("/v1/shipments")
 				.set("Authorization", `Bearer ${authToken}`)
 				.send(payload);
-			expect(res.statusCode).toEqual(201);
-			expect(res.body.shipment).toBeDefined();
-			expect(res.body.shipment.order_id).toEqual(orderId);
-			shipmentId = res.body.shipment.id;
+			expect(res.statusCode).toEqual(200);
+			expect(res.body.data.shipment).toBeDefined();
+			expect(res.body.data.shipment.order_id).toEqual(orderId);
+			shipmentId = res.body.data.shipment.id;
 		});
 
 		it("should retrieve a list of shipments", async () => {
@@ -134,8 +133,8 @@ describe("Shipments Routes", () => {
 				.get("/v1/shipments")
 				.set("Authorization", `Bearer ${authToken}`);
 			expect(res.statusCode).toEqual(200);
-			expect(Array.isArray(res.body.shipments)).toBe(true);
-			const shipment = res.body.shipments.find(
+			expect(Array.isArray(res.body.data.shipments)).toBe(true);
+			const shipment = res.body.data.shipments.find(
 				(s) => s.id === shipmentId
 			);
 			expect(shipment).toBeDefined();
@@ -146,8 +145,8 @@ describe("Shipments Routes", () => {
 				.get(`/v1/shipments/${shipmentId}`)
 				.set("Authorization", `Bearer ${authToken}`);
 			expect(res.statusCode).toEqual(200);
-			expect(res.body.shipment).toBeDefined();
-			expect(res.body.shipment.id).toEqual(shipmentId);
+			expect(res.body.data.shipment).toBeDefined();
+			expect(res.body.data.shipment.id).toEqual(shipmentId);
 		});
 
 		it("should update an existing shipment", async () => {
@@ -163,8 +162,8 @@ describe("Shipments Routes", () => {
 				.set("Authorization", `Bearer ${authToken}`)
 				.send(updatedPayload);
 			expect(res.statusCode).toEqual(200);
-			expect(res.body.shipment).toBeDefined();
-			expect(res.body.shipment.tracking_number).toEqual("TRACK456");
+			expect(res.body.data.shipment).toBeDefined();
+			expect(res.body.data.shipment.tracking_number).toEqual("TRACK456");
 		});
 
 		it("should delete a shipment", async () => {
@@ -179,12 +178,12 @@ describe("Shipments Routes", () => {
 					shipping_carrier: "CarrierZ",
 					status: "pending",
 				});
-			const tempShipmentId = tempRes.body.shipment.id;
+			const tempShipmentId = tempRes.body.data.shipment.id;
 			const res = await request(app)
 				.delete(`/v1/shipments/${tempShipmentId}`)
 				.set("Authorization", `Bearer ${authToken}`);
 			expect(res.statusCode).toEqual(200);
-			expect(res.body.message).toEqual("Shipment deleted successfully.");
+			expect(res.body.message).toEqual("Shipment deleted successfully");
 			// Verify deletion.
 			const getRes = await request(app)
 				.get(`/v1/shipments/${tempShipmentId}`)
@@ -203,10 +202,10 @@ describe("Shipments Routes", () => {
 				.post(`/v1/shipments/${shipmentId}/items`)
 				.set("Authorization", `Bearer ${authToken}`)
 				.send(payload);
-			expect(res.statusCode).toEqual(201);
-			expect(res.body.item).toBeDefined();
-			expect(res.body.item.order_item_id).toEqual(orderItemId);
-			shipmentItemId = res.body.item.id;
+			expect(res.statusCode).toEqual(200);
+			expect(res.body.data.item).toBeDefined();
+			expect(res.body.data.item.order_item_id).toEqual(orderItemId);
+			shipmentItemId = res.body.data.item.id;
 		});
 
 		it("should retrieve all shipment items for the shipment", async () => {
@@ -214,8 +213,10 @@ describe("Shipments Routes", () => {
 				.get(`/v1/shipments/${shipmentId}/items`)
 				.set("Authorization", `Bearer ${authToken}`);
 			expect(res.statusCode).toEqual(200);
-			expect(Array.isArray(res.body.items)).toBe(true);
-			const item = res.body.items.find((i) => i.id === shipmentItemId);
+			expect(Array.isArray(res.body.data.items)).toBe(true);
+			const item = res.body.data.items.find(
+				(i) => i.id === shipmentItemId
+			);
 			expect(item).toBeDefined();
 		});
 
@@ -224,8 +225,8 @@ describe("Shipments Routes", () => {
 				.get(`/v1/shipments/${shipmentId}/items/${shipmentItemId}`)
 				.set("Authorization", `Bearer ${authToken}`);
 			expect(res.statusCode).toEqual(200);
-			expect(res.body.item).toBeDefined();
-			expect(res.body.item.id).toEqual(shipmentItemId);
+			expect(res.body.data.item).toBeDefined();
+			expect(res.body.data.item.id).toEqual(shipmentItemId);
 		});
 
 		it("should update an existing shipment item", async () => {
@@ -238,8 +239,8 @@ describe("Shipments Routes", () => {
 				.set("Authorization", `Bearer ${authToken}`)
 				.send(updatedPayload);
 			expect(res.statusCode).toEqual(200);
-			expect(res.body.item).toBeDefined();
-			expect(res.body.item.quantity_shipped).toEqual(2);
+			expect(res.body.data.item).toBeDefined();
+			expect(res.body.data.item.quantity_shipped).toEqual(2);
 		});
 
 		it("should delete a shipment item", async () => {
@@ -248,7 +249,7 @@ describe("Shipments Routes", () => {
 				.set("Authorization", `Bearer ${authToken}`);
 			expect(res.statusCode).toEqual(200);
 			expect(res.body.message).toEqual(
-				"Shipment item deleted successfully."
+				"Shipment item deleted successfully"
 			);
 			// Verify deletion.
 			const getRes = await request(app)

@@ -4,6 +4,7 @@ import { execSync } from "child_process";
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
+import { pool } from "../db.js"; // Import the connection pool
 
 // Resolve __dirname for ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -21,20 +22,23 @@ export default async function globalTeardown() {
 	const dbName = databaseUrl.split("/").pop();
 
 	try {
+		// Wait before closing the pool
+		let seconds = 9;
 		console.log(
-			`Terminating all connections to the database "${dbName}"...`
+			`Wait ${seconds + 1} seconds for database connections to end...`
 		);
-		// This SQL command terminates all other connections to the test database.
-		execSync(
-			`psql ${databaseUrl} -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '${dbName}' AND pid <> pg_backend_pid();"`,
-			{ stdio: "inherit" }
-		);
-
+		// Show a countdown timer that overwrites the previous line
+		for (let i = seconds; i >= 0; i--) {
+			await new Promise((resolve) => setTimeout(resolve, 1000));
+			process.stdout.write(`${i}...\r`);
+		}
 		console.log(
 			`Dropping test database "${dbName}" as part of global teardown...`
 		);
 		execSync(`dropdb ${dbName}`, { stdio: "inherit" });
 		console.log("Test database dropped successfully.");
+
+		await pool.end();
 	} catch (err) {
 		console.warn(
 			`Warning: Could not drop database "${dbName}" during teardown.`,

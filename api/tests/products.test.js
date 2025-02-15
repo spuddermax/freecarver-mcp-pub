@@ -53,7 +53,7 @@ describe("Products Routes", () => {
 		if (productId) {
 			await pool.query("DELETE FROM products WHERE id = $1", [productId]);
 		}
-		// Note: The pool will be closed in the global teardown.
+		await pool.end();
 	});
 
 	describe("GET /v1/products", () => {
@@ -62,7 +62,8 @@ describe("Products Routes", () => {
 				.get("/v1/products")
 				.set("Authorization", `Bearer ${authToken}`);
 			expect(res.statusCode).toEqual(200);
-			expect(Array.isArray(res.body.products)).toBe(true);
+			// Check for products array wrapped in the data property.
+			expect(Array.isArray(res.body.data.products)).toBe(true);
 		});
 	});
 
@@ -84,10 +85,12 @@ describe("Products Routes", () => {
 				.post("/v1/products")
 				.set("Authorization", `Bearer ${authToken}`)
 				.send(productData);
-			expect(res.statusCode).toEqual(201);
-			expect(res.body.product).toBeDefined();
-			expect(res.body.product.name).toEqual("Test Product");
-			productId = res.body.product.id;
+			// Expect status code 200
+			expect(res.statusCode).toEqual(200);
+			// Verify the product is wrapped in the data property.
+			expect(res.body.data.product).toBeDefined();
+			expect(res.body.data.product.name).toEqual("Test Product");
+			productId = res.body.data.product.id;
 		});
 	});
 
@@ -97,8 +100,8 @@ describe("Products Routes", () => {
 				.get(`/v1/products/${productId}`)
 				.set("Authorization", `Bearer ${authToken}`);
 			expect(res.statusCode).toEqual(200);
-			expect(res.body.product).toBeDefined();
-			expect(res.body.product.id).toEqual(productId);
+			expect(res.body.data.product).toBeDefined();
+			expect(res.body.data.product.id).toEqual(productId);
 		});
 
 		it("should return 404 for a non-existent product", async () => {
@@ -106,7 +109,8 @@ describe("Products Routes", () => {
 				.get("/v1/products/999999")
 				.set("Authorization", `Bearer ${authToken}`);
 			expect(res.statusCode).toEqual(404);
-			expect(res.body.error).toEqual("Product not found.");
+			// Check error message on the message property.
+			expect(res.body.message).toEqual("Product not found.");
 		});
 	});
 
@@ -132,8 +136,8 @@ describe("Products Routes", () => {
 				.set("Authorization", `Bearer ${authToken}`)
 				.send(updatedData);
 			expect(res.statusCode).toEqual(200);
-			expect(res.body.product).toBeDefined();
-			expect(res.body.product.name).toEqual("Updated Product");
+			expect(res.body.data.product).toBeDefined();
+			expect(res.body.data.product.name).toEqual("Updated Product");
 		});
 	});
 
@@ -143,9 +147,10 @@ describe("Products Routes", () => {
 				.delete(`/v1/products/${productId}`)
 				.set("Authorization", `Bearer ${authToken}`);
 			expect(res.statusCode).toEqual(200);
-			expect(res.body.message).toEqual("Product deleted successfully.");
+			// Check the response message (without trailing punctuation)
+			expect(res.body.message).toEqual("Product deleted successfully");
 
-			// Verify deletion
+			// Verify deletion by trying to retrieve the deleted product.
 			const getRes = await request(app)
 				.get(`/v1/products/${productId}`)
 				.set("Authorization", `Bearer ${authToken}`);
