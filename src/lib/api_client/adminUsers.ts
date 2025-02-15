@@ -18,8 +18,8 @@ export async function fetchAdminUsers(): Promise<any> {
 		const errorData = await response.json();
 		throw new Error(errorData.error || "Failed to fetch admin users");
 	}
-	const data = await response.json();
-	return data.admins;
+	const responseData = await response.json();
+	return responseData.data.admins;
 }
 
 /**
@@ -43,7 +43,8 @@ export async function fetchAdminUser(id: string): Promise<any> {
 			errorData.error || "Failed to fetch admin user details"
 		);
 	}
-	return response.json();
+	const responseData = await response.json();
+	return responseData.data;
 }
 
 /**
@@ -78,7 +79,8 @@ export async function createAdminUser(data: {
 		const errorData = await response.json();
 		throw new Error(errorData.error || "Failed to create admin user");
 	}
-	return response.json();
+	const responseData = await response.json();
+	return responseData.data;
 }
 
 /**
@@ -115,7 +117,8 @@ export async function updateAdminUser(data: {
 		const errorData = await response.json();
 		throw new Error(errorData.error || "Failed to update admin user");
 	}
-	return response.json();
+	const responseData = await response.json();
+	return responseData.data;
 }
 
 /**
@@ -138,7 +141,8 @@ export async function deleteAdminUser(id: string): Promise<any> {
 		const errorData = await response.json();
 		throw new Error(errorData.error || "Failed to delete admin user");
 	}
-	return response.json();
+	const responseData = await response.json();
+	return responseData.data;
 }
 
 /**
@@ -168,5 +172,6 @@ export async function validateAdminPassword(
 		const errorData = await response.json();
 		throw new Error(errorData.error || "Failed to validate admin password");
 	}
-	return response.json();
+	const responseData = await response.json();
+	return responseData.data;
 }

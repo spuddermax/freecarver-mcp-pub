@@ -238,7 +238,6 @@ export function UserPassword({
 
 			return validationResult;
 		} else {
-			console.log(2);
 			return (
 				passwordData.newPassword.length >= 8 &&
 				passwordData.verifyPassword === passwordData.newPassword
