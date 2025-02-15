@@ -11,10 +11,18 @@ const { combine, timestamp, printf, colorize } = format;
 // Custom log format for both console and file output
 const customFormat = printf(
 	({ level, message, timestamp, stack, ip, body }) => {
-		const bodyStr = body ? ` | Request Body: ${JSON.stringify(body)}` : "";
-		return `${timestamp} [${ip || "N/A"}] ${level}: ${
-			stack || message
-		}${bodyStr}`;
+		let bodyStr = "";
+		// If the body is defined and not empty, log the body
+		if (body && Object.keys(body).length > 0) {
+			bodyStr = ` | Request Body: ${JSON.stringify(body)}`;
+			return `${timestamp} [${ip || "N/A"}] ${level}: ${
+				stack || message
+			}${bodyStr}`;
+		} else {
+			return `${timestamp} [${ip || "N/A"}] ${level}: ${
+				stack || message
+			}${bodyStr}`;
+		}
 	}
 );
 

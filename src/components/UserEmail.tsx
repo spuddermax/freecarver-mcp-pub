@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { Mail, Save } from "lucide-react";
-import { updateUserEmail } from "../lib/api";
+import { updateAdminUser } from "../lib/api_client/adminUsers";
 
 interface UserEmailProps {
+	targetUserId: string;
 	email: string;
 	onEmailChange: (email: string) => void;
 	onMessage: (
@@ -10,16 +11,24 @@ interface UserEmailProps {
 	) => void;
 }
 
-export function UserEmail({ email, onEmailChange, onMessage }: UserEmailProps) {
+export function UserEmail({
+	targetUserId,
+	email,
+	onEmailChange,
+	onMessage,
+}: UserEmailProps) {
 	const [loading, setLoading] = useState(false);
 	const [originalEmail, setOriginalEmail] = useState(email);
+	const [proposedEmail, setCurrentEmail] = useState(email);
 	const [isValid, setIsValid] = useState(true);
 	const [isDirty, setIsDirty] = useState(false);
 
 	useEffect(() => {
-		setOriginalEmail(email);
-		setIsDirty(false);
-	}, [email]);
+		if (!isDirty && email !== proposedEmail) {
+			setOriginalEmail(email);
+			setCurrentEmail(email);
+		}
+	}, [email, isDirty, proposedEmail]);
 
 	const validateEmail = (email: string) => {
 		const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -28,12 +37,13 @@ export function UserEmail({ email, onEmailChange, onMessage }: UserEmailProps) {
 
 	const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const newEmail = e.target.value;
+		setCurrentEmail(newEmail);
 		onEmailChange(newEmail);
 		setIsDirty(true);
 		setIsValid(validateEmail(newEmail));
 	};
 
-	const isEmailChanged = isDirty && email !== originalEmail;
+	const isEmailChanged = isDirty && proposedEmail !== originalEmail;
 	const canSubmit = isEmailChanged && isValid && !loading;
 
 	const handleSubmit = async (e: React.FormEvent) => {
@@ -41,8 +51,7 @@ export function UserEmail({ email, onEmailChange, onMessage }: UserEmailProps) {
 		setLoading(true);
 		onMessage(null);
 
-		// Validate email
-		if (!email || !validateEmail(email)) {
+		if (!proposedEmail || !validateEmail(proposedEmail)) {
 			onMessage({
 				type: "error",
 				text: "Please enter a valid email address",
@@ -52,14 +61,15 @@ export function UserEmail({ email, onEmailChange, onMessage }: UserEmailProps) {
 		}
 
 		try {
-			// Use new API function to update email
-			await updateUserEmail(email);
-
+			await updateAdminUser({
+				id: targetUserId,
+				email: proposedEmail,
+			});
 			onMessage({
 				type: "success",
 				text: "A confirmation email has been sent to your new email address. Please check your inbox.",
 			});
-			setOriginalEmail(email);
+			setOriginalEmail(proposedEmail);
 			setIsDirty(false);
 		} catch (error: any) {
 			console.error("Error updating email:", error);
@@ -93,16 +103,16 @@ export function UserEmail({ email, onEmailChange, onMessage }: UserEmailProps) {
 							<input
 								type="email"
 								id="email"
-								value={email}
+								value={proposedEmail}
 								onChange={handleEmailChange}
 								className={`block w-full pl-10 pr-3 py-2 border ${
-									!isValid && email
+									!isValid && proposedEmail
 										? "border-red-300 dark:border-red-600"
 										: "border-gray-300 dark:border-gray-600"
 								} rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white`}
 							/>
 						</div>
-						{!isValid && email && (
+						{!isValid && proposedEmail && (
 							<p className="mt-1 text-sm text-red-500 dark:text-red-400">
 								Please enter a valid email address
 							</p>

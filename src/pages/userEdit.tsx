@@ -117,6 +117,7 @@ export default function UserEdit() {
 						<div className="p-6 space-y-8">
 							<UserEmail
 								email={userData.email}
+								targetUserId={userData.id}
 								onEmailChange={(email) =>
 									setUserData((prev) => ({ ...prev, email }))
 								}
