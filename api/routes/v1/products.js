@@ -4,6 +4,12 @@ import express from "express";
 import { pool } from "../../db.js";
 import { logger } from "../../logger.js";
 import { verifyJWT } from "../../middleware/auth.js";
+import validateRequest from "../../middleware/validateRequest.js";
+import {
+	productListSchema,
+	createOrUpdateProductSchema,
+	productIdSchema,
+} from "../../validators/products.js";
 
 const router = express.Router();
 
@@ -22,55 +28,61 @@ router.use(verifyJWT);
  * @returns {Response} 200 - JSON object containing the total number of products and an array of products.
  * @returns {Response} 500 - Internal server error.
  */
-router.get("/", async (req, res) => {
-	try {
-		// Default pagination values
-		const page = parseInt(req.query.page, 10) || 1;
-		const limit = parseInt(req.query.limit, 10) || 20;
-		const offset = (page - 1) * limit;
+router.get(
+	"/",
+	validateRequest(productListSchema, "query"),
+	async (req, res) => {
+		try {
+			// Default pagination values
+			const page = parseInt(req.query.page, 10) || 1;
+			const limit = parseInt(req.query.limit, 10) || 20;
+			const offset = (page - 1) * limit;
 
-		// Allowed columns for ordering
-		const allowedOrderColumns = [
-			"id",
-			"name",
-			"price",
-			"sale_price",
-			"created_at",
-			"updated_at",
-		];
-		const orderBy = allowedOrderColumns.includes(req.query.orderBy)
-			? req.query.orderBy
-			: "name";
-		const orderDirection =
-			req.query.order && req.query.order.toLowerCase() === "desc"
-				? "DESC"
-				: "ASC";
+			// Allowed columns for ordering
+			const allowedOrderColumns = [
+				"id",
+				"name",
+				"price",
+				"sale_price",
+				"created_at",
+				"updated_at",
+			];
+			const orderBy = allowedOrderColumns.includes(req.query.orderBy)
+				? req.query.orderBy
+				: "name";
+			const orderDirection =
+				req.query.order && req.query.order.toLowerCase() === "desc"
+					? "DESC"
+					: "ASC";
 
-		// Query the total number of products
-		const countResult = await pool.query("SELECT COUNT(*) FROM products");
-		const total = parseInt(countResult.rows[0].count, 10);
+			// Query the total number of products
+			const countResult = await pool.query(
+				"SELECT COUNT(*) FROM products"
+			);
+			const total = parseInt(countResult.rows[0].count, 10);
 
-		// Paginated query
-		const query = `SELECT * FROM products ORDER BY ${orderBy} ${orderDirection} LIMIT $1 OFFSET $2`;
-		const result = await pool.query(query, [limit, offset]);
+			// Paginated query
+			const query = `SELECT * FROM products ORDER BY ${orderBy} ${orderDirection} LIMIT $1 OFFSET $2`;
+			const result = await pool.query(query, [limit, offset]);
 
-		logger.info("Retrieved products list with pagination.", {
-			page,
-			limit,
-			orderBy,
-			orderDirection,
-		});
-		res.success(
-			{ total, products: result.rows },
-			"Products retrieved successfully"
-		);
-	} catch (error) {
-		logger.error("Error retrieving products list.", {
-			error: error.message,
-		});
-		res.error("Internal server error", 500);
+			logger.info("Retrieved products list with pagination.", {
+				page,
+				limit,
+				orderBy,
+				orderDirection,
+			});
+			res.success(
+				{ total, products: result.rows },
+				"Products retrieved successfully"
+			);
+		} catch (error) {
+			logger.error("Error retrieving products list.", {
+				error: error.message,
+			});
+			res.error("Internal server error", 500);
+		}
 	}
-});
+);
 
 /**
  * @route POST /v1/products
@@ -88,46 +100,51 @@ router.get("/", async (req, res) => {
  * @returns {Response} 400 - Bad request if 'name' is missing.
  * @returns {Response} 500 - Internal server error.
  */
-router.post("/", async (req, res) => {
-	try {
-		const {
-			name,
-			description,
-			price,
-			sale_price,
-			sale_start,
-			sale_end,
-			product_media,
-		} = req.body;
-		if (!name) {
-			logger.error('Product creation failed: "name" is required.');
-			return res.error('"name" is required.', 400);
+router.post(
+	"/",
+	validateRequest(createOrUpdateProductSchema, "body"),
+	async (req, res) => {
+		try {
+			const {
+				name,
+				description,
+				price,
+				sale_price,
+				sale_start,
+				sale_end,
+				product_media,
+			} = req.body;
+			if (!name) {
+				logger.error('Product creation failed: "name" is required.');
+				return res.error('"name" is required.', 400);
+			}
+			const query = `
+        INSERT INTO products (name, description, price, sale_price, sale_start, sale_end, product_media)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        RETURNING *;
+      `;
+			const values = [
+				name,
+				description,
+				price,
+				sale_price,
+				sale_start,
+				sale_end,
+				product_media,
+			];
+			const result = await pool.query(query, values);
+			logger.info(`Product created successfully: ${name}`);
+			res.success(
+				{ product: result.rows[0] },
+				"Product created successfully",
+				201
+			);
+		} catch (error) {
+			logger.error("Error creating product.", { error: error.message });
+			res.error("Internal server error", 500);
 		}
-		const query = `
-      INSERT INTO products (name, description, price, sale_price, sale_start, sale_end, product_media)
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
-      RETURNING *;
-    `;
-		const values = [
-			name,
-			description,
-			price,
-			sale_price,
-			sale_start,
-			sale_end,
-			product_media,
-		];
-		const result = await pool.query(query, values);
-		logger.info(`Product created successfully: ${name}`);
-		res.success(
-			{ product: result.rows[0] },
-			"Product created successfully"
-		);
-	} catch (error) {
-		logger.error("Error creating product.", { error: error.message });
-		res.error("Internal server error", 500);
 	}
-});
+);
 
 /**
  * @route GET /v1/products/:id
@@ -138,29 +155,34 @@ router.post("/", async (req, res) => {
  * @returns {Response} 404 - Not found if the product does not exist.
  * @returns {Response} 500 - Internal server error.
  */
-router.get("/:id", async (req, res) => {
-	try {
-		const { id } = req.params;
-		const result = await pool.query(
-			"SELECT * FROM products WHERE id = $1",
-			[id]
-		);
-		if (result.rows.length === 0) {
-			logger.error(`Product with ID ${id} not found.`);
-			return res.error("Product not found.", 404);
+router.get(
+	"/:id",
+	validateRequest(productIdSchema, "params"),
+	async (req, res) => {
+		try {
+			const { id } = req.params;
+			const result = await pool.query(
+				"SELECT * FROM products WHERE id = $1",
+				[id]
+			);
+			if (result.rows.length === 0) {
+				logger.error(`Product with ID ${id} not found.`);
+				return res.error("Product not found.", 404);
+			}
+			logger.info(`Retrieved product with ID ${id}.`);
+			res.success(
+				{ product: result.rows[0] },
+				"Product retrieved successfully",
+				200
+			);
+		} catch (error) {
+			logger.error(`Error retrieving product with ID ${req.params.id}.`, {
+				error: error.message,
+			});
+			res.error("Internal server error", 500);
 		}
-		logger.info(`Retrieved product with ID ${id}.`);
-		res.success(
-			{ product: result.rows[0] },
-			"Product retrieved successfully"
-		);
-	} catch (error) {
-		logger.error(`Error retrieving product with ID ${req.params.id}.`, {
-			error: error.message,
-		});
-		res.error("Internal server error", 500);
 	}
-});
+);
 
 /**
  * @route PUT /v1/products/:id
@@ -179,19 +201,23 @@ router.get("/:id", async (req, res) => {
  * @returns {Response} 404 - Not found if the product does not exist.
  * @returns {Response} 500 - Internal server error.
  */
-router.put("/:id", async (req, res) => {
-	try {
-		const { id } = req.params;
-		const {
-			name,
-			description,
-			price,
-			sale_price,
-			sale_start,
-			sale_end,
-			product_media,
-		} = req.body;
-		const query = `
+router.put(
+	"/:id",
+	validateRequest(productIdSchema, "params"),
+	validateRequest(createOrUpdateProductSchema, "body"),
+	async (req, res) => {
+		try {
+			const { id } = req.params;
+			const {
+				name,
+				description,
+				price,
+				sale_price,
+				sale_start,
+				sale_end,
+				product_media,
+			} = req.body;
+			const query = `
       UPDATE products
       SET name = $1,
           description = $2,
@@ -204,62 +230,68 @@ router.put("/:id", async (req, res) => {
       WHERE id = $8
       RETURNING *;
     `;
-		const values = [
-			name,
-			description,
-			price,
-			sale_price,
-			sale_start,
-			sale_end,
-			product_media,
-			id,
-		];
-		const result = await pool.query(query, values);
-		if (result.rows.length === 0) {
-			logger.error(`Product with ID ${id} not found for update.`);
-			return res.error("Product not found.", 404);
+			const values = [
+				name,
+				description,
+				price,
+				sale_price,
+				sale_start,
+				sale_end,
+				product_media,
+				id,
+			];
+			const result = await pool.query(query, values);
+			if (result.rows.length === 0) {
+				logger.error(`Product with ID ${id} not found for update.`);
+				return res.error("Product not found.", 404);
+			}
+			logger.info(`Product with ID ${id} updated successfully.`);
+			res.success(
+				{ product: result.rows[0] },
+				"Product updated successfully",
+				200
+			);
+		} catch (error) {
+			logger.error(`Error updating product with ID ${req.params.id}.`, {
+				error: error.message,
+			});
+			res.error("Internal server error", 500);
 		}
-		logger.info(`Product with ID ${id} updated successfully.`);
-		res.success(
-			{ product: result.rows[0] },
-			"Product updated successfully"
-		);
-	} catch (error) {
-		logger.error(`Error updating product with ID ${req.params.id}.`, {
-			error: error.message,
-		});
-		res.error("Internal server error", 500);
 	}
-});
+);
 
 /**
  * @route DELETE /v1/products/:id
  * @description Delete a product by ID.
  * @access Protected
  * @param {string} req.params.id - The ID of the product to delete.
- * @returns {Response} 200 - JSON object indicating successful deletion.
+ * @returns {Response} 204 - No content.
  * @returns {Response} 404 - Not found if the product does not exist.
  * @returns {Response} 500 - Internal server error.
  */
-router.delete("/:id", async (req, res) => {
-	try {
-		const { id } = req.params;
-		const result = await pool.query(
-			"DELETE FROM products WHERE id = $1 RETURNING id",
-			[id]
-		);
-		if (result.rows.length === 0) {
-			logger.error(`Product with ID ${id} not found for deletion.`);
-			return res.error("Product not found.", 404);
+router.delete(
+	"/:id",
+	validateRequest(productIdSchema, "params"),
+	async (req, res) => {
+		try {
+			const { id } = req.params;
+			const result = await pool.query(
+				"DELETE FROM products WHERE id = $1 RETURNING id",
+				[id]
+			);
+			if (result.rows.length === 0) {
+				logger.error(`Product with ID ${id} not found for deletion.`);
+				return res.error("Product not found.", 404);
+			}
+			logger.info(`Product with ID ${id} deleted successfully.`);
+			res.success(null, "Product deleted successfully", 200);
+		} catch (error) {
+			logger.error(`Error deleting product with ID ${req.params.id}.`, {
+				error: error.message,
+			});
+			res.error("Internal server error", 500);
 		}
-		logger.info(`Product with ID ${id} deleted successfully.`);
-		res.success(null, "Product deleted successfully");
-	} catch (error) {
-		logger.error(`Error deleting product with ID ${req.params.id}.`, {
-			error: error.message,
-		});
-		res.error("Internal server error", 500);
 	}
-});
+);
 
 export default router;
