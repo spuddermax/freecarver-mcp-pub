@@ -4,6 +4,11 @@ import express from "express";
 import { pool } from "../../db.js";
 import { logger } from "../../logger.js";
 import { verifyJWT } from "../../middleware/auth.js";
+import validateRequest from "../../middleware/validateRequest.js";
+import {
+	updatePreferenceSchema,
+	preferenceKeySchema,
+} from "../../validators/system.js";
 
 const router = express.Router();
 
@@ -20,7 +25,8 @@ router.get("/preferences", async (req, res) => {
 		logger.info("Retrieved system preferences");
 		res.success(
 			{ preferences: result.rows },
-			"System preferences retrieved successfully"
+			"System preferences retrieved successfully",
+			200
 		);
 	} catch (error) {
 		logger.error("Error retrieving system preferences", {
@@ -35,40 +41,43 @@ router.get("/preferences", async (req, res) => {
  * @desc    Update a system preference by key
  * @access  Protected (Admin)
  */
-router.put("/preferences/:key", verifyJWT, async (req, res) => {
-	const { key } = req.params;
-	const { value } = req.body;
-
-	if (value === undefined) {
-		logger.error(
-			"Update system preference failed: 'value' field is required."
-		);
-		return res.error("'value' field is required.", 400);
-	}
-
-	try {
-		const result = await pool.query(
-			"UPDATE system_preferences SET value = $1, updated_at = NOW() WHERE key = $2 RETURNING *",
-			[value, key]
-		);
-		if (result.rows.length === 0) {
-			logger.error(`System preference with key "${key}" not found.`);
-			return res.error("System preference not found.", 404);
+router.put(
+	"/preferences/:key",
+	verifyJWT,
+	validateRequest(preferenceKeySchema, "params"),
+	validateRequest(updatePreferenceSchema, "body"),
+	async (req, res) => {
+		try {
+			const { key } = req.params;
+			const { value } = req.body;
+			// Look up the existing preference
+			const prefResult = await pool.query(
+				"SELECT * FROM system_preferences WHERE key = $1",
+				[key]
+			);
+			if (prefResult.rows.length === 0) {
+				logger.error(`System preference with key ${key} not found.`);
+				return res.error("System preference not found.", 404);
+			}
+			// Update the preference
+			const updateResult = await pool.query(
+				"UPDATE system_preferences SET value = $1, updated_at = NOW() WHERE key = $2 RETURNING *",
+				[value, key]
+			);
+			logger.info(`System preference ${key} updated successfully.`);
+			res.success(
+				{ preference: updateResult.rows[0] },
+				"Preference updated successfully",
+				200
+			);
+		} catch (error) {
+			logger.error("Error updating system preference", {
+				error: error.message,
+			});
+			res.error("Internal server error", 500);
 		}
-		logger.info(
-			`System preference with key "${key}" updated successfully.`
-		);
-		res.success(
-			{ preference: result.rows[0] },
-			"System preference updated successfully"
-		);
-	} catch (error) {
-		logger.error("Error updating system preference", {
-			error: error.message,
-		});
-		res.error("Internal server error", 500);
 	}
-});
+);
 
 /**
  * @route   GET /v1/system/audit-logs
@@ -83,7 +92,8 @@ router.get("/audit_logs", verifyJWT, async (req, res) => {
 		logger.info("Retrieved audit logs");
 		res.success(
 			{ audit_logs: result.rows },
-			"Audit logs retrieved successfully"
+			"Audit logs retrieved successfully",
+			200
 		);
 	} catch (error) {
 		logger.error("Error retrieving audit logs", { error: error.message });
@@ -102,7 +112,8 @@ router.get("/database_status", async (req, res) => {
 		logger.info("Database status retrieved successfully");
 		res.success(
 			{ status: result.rows[0].now },
-			"Database status retrieved successfully"
+			"Database status retrieved successfully",
+			200
 		);
 	} catch (error) {
 		logger.error("Error retrieving database status", {

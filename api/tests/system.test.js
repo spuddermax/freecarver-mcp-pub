@@ -109,13 +109,18 @@ describe("System Routes", () => {
 			expect(res.body.data.preference.value).toEqual(newValue);
 		});
 
-		it("should return 400 if 'value' is missing", async () => {
+		it("should return a validation error if 'value' is missing", async () => {
 			const res = await request(app)
 				.put("/v1/system/preferences/site_name")
 				.set("Authorization", `Bearer ${authToken}`)
 				.send({});
-			expect(res.statusCode).toEqual(400);
-			expect(res.body.message).toEqual("'value' field is required.");
+			// With the new validation middleware, a missing value yields a 422 response.
+			expect(res.statusCode).toEqual(422);
+			expect(res.body.errors).toBeDefined();
+			const hasValueError = res.body.errors.some(
+				(err) => err.field === "value"
+			);
+			expect(hasValueError).toBe(true);
 		});
 
 		it("should return 404 if the preference key is not found", async () => {
