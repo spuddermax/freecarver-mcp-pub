@@ -42,6 +42,20 @@ describe("Customers Routes", () => {
 			process.env.JWT_SECRET,
 			{ expiresIn: "1h" }
 		);
+
+		// Create a test customer using the POST endpoint.
+		const res = await request(app)
+			.post("/v1/customers")
+			.set("Authorization", `Bearer ${authToken}`)
+			.send({
+				email: "testcustomer@example.com",
+				password: "Test1234", // meets the min length requirement
+				first_name: "Test",
+				last_name: "Customer",
+				phone_number: "1234567890",
+			});
+		expect(res.statusCode).toEqual(201);
+		customerId = res.body.data.customer.id;
 	});
 
 	afterAll(async () => {
@@ -60,32 +74,33 @@ describe("Customers Routes", () => {
 	describe("POST /v1/customers", () => {
 		it("should create a new customer", async () => {
 			const payload = {
-				email: "testcustomer@example.com",
-				password: "testpass",
-				first_name: "Test",
+				email: "newcustomer@example.com",
+				password: "newpass123",
+				first_name: "New",
 				last_name: "Customer",
-				phone_number: "1234567890",
+				phone_number: "0987654321",
 			};
 			const res = await request(app)
 				.post("/v1/customers")
 				.set("Authorization", `Bearer ${authToken}`)
 				.send(payload);
-			expect(res.statusCode).toEqual(200);
+			expect(res.statusCode).toEqual(201);
 			expect(res.body.data.customer).toBeDefined();
 			expect(res.body.data.customer.email).toEqual(
-				"testcustomer@example.com"
+				"newcustomer@example.com"
 			);
+			// Save customerId in case we need it later.
 			customerId = res.body.data.customer.id;
 		});
 
-		it("should return 400 if email or password is missing", async () => {
+		it("should return 422 if email or password is missing", async () => {
 			const res = await request(app)
 				.post("/v1/customers")
 				.set("Authorization", `Bearer ${authToken}`)
-				.send({ email: "incomplete@example.com" }); // missing password
-			expect(res.statusCode).toEqual(400);
-			expect(res.body.message).toEqual(
-				"Email and password are required."
+				.send({ email: "incomplete@example.com" }); // Missing password.
+			expect(res.statusCode).toEqual(422);
+			expect(res.body.message.toLowerCase()).toContain(
+				"validation failed"
 			);
 		});
 	});
@@ -124,7 +139,7 @@ describe("Customers Routes", () => {
 	});
 
 	describe("PUT /v1/customers/:id", () => {
-		it("should update an existing customer's details", async () => {
+		it("should update a customer successfully with a valid payload", async () => {
 			const updatedPayload = {
 				email: "updatedcustomer@example.com",
 				first_name: "Updated",
@@ -142,13 +157,15 @@ describe("Customers Routes", () => {
 			);
 		});
 
-		it("should return 400 if email is missing during update", async () => {
+		it("should return 422 if email is missing during update", async () => {
 			const res = await request(app)
 				.put(`/v1/customers/${customerId}`)
 				.set("Authorization", `Bearer ${authToken}`)
-				.send({ first_name: "NoEmail" });
-			expect(res.statusCode).toEqual(400);
-			expect(res.body.message).toEqual("Email is required.");
+				.send({ first_name: "NoEmail" }); // Email is required, so validation should fail.
+			expect(res.statusCode).toEqual(422);
+			expect(res.body.message.toLowerCase()).toContain(
+				"validation failed"
+			);
 		});
 	});
 
@@ -159,7 +176,7 @@ describe("Customers Routes", () => {
 				.set("Authorization", `Bearer ${authToken}`);
 			expect(res.statusCode).toEqual(200);
 			expect(res.body.message).toEqual("Customer deleted successfully");
-			// Verify deletion by attempting to fetch it.
+			// Verify deletion by attempting to fetch the deleted customer.
 			const getRes = await request(app)
 				.get(`/v1/customers/${customerId}`)
 				.set("Authorization", `Bearer ${authToken}`);

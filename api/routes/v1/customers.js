@@ -5,6 +5,11 @@ import { pool } from "../../db.js";
 import { logger } from "../../logger.js";
 import { verifyJWT } from "../../middleware/auth.js";
 import bcrypt from "bcrypt";
+import validateRequest from "../../middleware/validateRequest.js";
+import {
+	createCustomerSchema,
+	updateCustomerSchema,
+} from "../../validators/customers.js";
 
 const router = express.Router();
 
@@ -15,8 +20,8 @@ router.use(verifyJWT);
  * @route GET /v1/customers
  * @description Retrieve a list of all customers.
  * @access Protected
- * @returns {Response} 200 - Returns a JSON object containing an array of customers.
- * @returns {Response} 500 - Returns an error message for internal server error.
+ * @returns {Response} 200 - JSON object containing an array of customers.
+ * @returns {Response} 500 - Internal server error.
  */
 router.get("/", async (req, res) => {
 	try {
@@ -46,58 +51,37 @@ router.get("/", async (req, res) => {
  * @param {string} [req.body.first_name] - The customer's first name.
  * @param {string} [req.body.last_name] - The customer's last name.
  * @param {string} [req.body.phone_number] - The customer's phone number.
- * @returns {Response} 201 - Returns a JSON object containing the newly created customer.
- * @returns {Response} 400 - Returns an error if email or password is missing.
- * @returns {Response} 409 - Returns an error if the email is already in use.
- * @returns {Response} 500 - Returns an error message for internal server error.
+ * @returns {Response} 201 - JSON object containing the newly created customer.
+ * @returns {Response} 400 - Validation error if required fields are missing/invalid.
+ * @returns {Response} 500 - Internal server error.
  */
-router.post("/", async (req, res) => {
-	try {
-		const { email, password, first_name, last_name, phone_number } =
-			req.body;
-		if (!email || !password) {
-			logger.error(
-				"Customer creation failed: Email and password are required."
+router.post(
+	"/",
+	validateRequest(createCustomerSchema, "body"),
+	async (req, res) => {
+		try {
+			const { email, password, first_name, last_name, phone_number } =
+				req.body;
+			// Hash the password using bcrypt.
+			const passwordHash = await bcrypt.hash(password, 10);
+			const result = await pool.query(
+				`INSERT INTO customers (email, password_hash, first_name, last_name, phone_number)
+				 VALUES ($1, $2, $3, $4, $5)
+				 RETURNING id, email, first_name, last_name, phone_number, created_at, updated_at`,
+				[email, passwordHash, first_name, last_name, phone_number]
 			);
-			return res.error("Email and password are required.", 400);
-		}
-
-		// Check if a customer with the given email already exists.
-		const exists = await pool.query(
-			"SELECT id FROM customers WHERE email = $1",
-			[email]
-		);
-		if (exists.rows.length > 0) {
-			logger.error(
-				`Customer creation failed: Email ${email} is already in use.`
+			logger.info(`Customer created successfully with email: ${email}`);
+			res.success(
+				{ customer: result.rows[0] },
+				"Customer created successfully",
+				201
 			);
-			return res.error("Email already in use.", 409);
+		} catch (error) {
+			logger.error("Error creating customer.", { error: error.message });
+			res.error("Internal server error", 500);
 		}
-
-		// Hash the password.
-		const hashedPassword = await bcrypt.hash(password, 10);
-		const query = `
-      INSERT INTO customers (email, password_hash, first_name, last_name, phone_number)
-      VALUES ($1, $2, $3, $4, $5)
-      RETURNING id, email, first_name, last_name, phone_number, created_at, updated_at
-    `;
-		const result = await pool.query(query, [
-			email,
-			hashedPassword,
-			first_name,
-			last_name,
-			phone_number,
-		]);
-		logger.info(`Customer created successfully: ${email}`);
-		res.success(
-			{ customer: result.rows[0] },
-			"Customer created successfully"
-		);
-	} catch (error) {
-		logger.error("Error creating customer.", { error: error.message });
-		res.error("Internal server error", 500);
 	}
-});
+);
 
 /**
  * @route GET /v1/customers/:id
@@ -136,67 +120,55 @@ router.get("/:id", async (req, res) => {
  * @route PUT /v1/customers/:id
  * @description Update an existing customer's details.
  * @access Protected
- * @param {string} req.params.id - The ID of the customer to update.
- * @param {Object} req.body - The updated customer details.
- * @param {string} req.body.email - The customer's updated email (required).
- * @param {string} [req.body.first_name] - The customer's updated first name.
- * @param {string} [req.body.last_name] - The customer's updated last name.
- * @param {string} [req.body.phone_number] - The customer's updated phone number.
- * @returns {Response} 200 - Returns a JSON object containing the updated customer details.
- * @returns {Response} 400 - Returns an error if email is missing.
- * @returns {Response} 404 - Returns an error if the customer is not found.
- * @returns {Response} 500 - Returns an error message for internal server error.
+ * @param {Object} req.body - The request body.
+ * @param {string} req.body.email - The customer's email (required).
+ * @param {string} [req.body.first_name] - The customer's first name.
+ * @param {string} [req.body.last_name] - The customer's last name.
+ * @param {string} [req.body.phone_number] - The customer's phone number.
+ * @returns {Response} 200 - JSON object containing the updated customer.
+ * @returns {Response} 400 - Validation error if required fields are missing/invalid.
+ * @returns {Response} 404 - Customer not found.
+ * @returns {Response} 500 - Internal server error.
  */
-router.put("/:id", async (req, res) => {
-	try {
-		const { id } = req.params;
-		const { email, first_name, last_name, phone_number } = req.body;
-		if (!email) {
-			logger.error("Customer update failed: Email is required.");
-			return res.error("Email is required.", 400);
+router.put(
+	"/:id",
+	validateRequest(updateCustomerSchema, "body"),
+	async (req, res) => {
+		try {
+			const { id } = req.params;
+			const { email, first_name, last_name, phone_number } = req.body;
+			const result = await pool.query(
+				`UPDATE customers 
+				 SET email = $1, first_name = $2, last_name = $3, phone_number = $4, updated_at = NOW()
+				 WHERE id = $5
+				 RETURNING id, email, first_name, last_name, phone_number, created_at, updated_at`,
+				[email, first_name, last_name, phone_number, id]
+			);
+			if (result.rows.length === 0) {
+				logger.error(`Customer with ID ${id} not found for update.`);
+				return res.error("Customer not found.", 404);
+			}
+			logger.info(`Customer with ID ${id} updated successfully.`);
+			res.success(
+				{ customer: result.rows[0] },
+				"Customer updated successfully"
+			);
+		} catch (error) {
+			logger.error(`Error updating customer with ID ${req.params.id}.`, {
+				error: error.message,
+			});
+			res.error("Internal server error", 500);
 		}
-		const query = `
-      UPDATE customers
-      SET email = $1,
-          first_name = $2,
-          last_name = $3,
-          phone_number = $4,
-          updated_at = NOW()
-      WHERE id = $5
-      RETURNING id, email, first_name, last_name, phone_number, created_at, updated_at
-    `;
-		const result = await pool.query(query, [
-			email,
-			first_name,
-			last_name,
-			phone_number,
-			id,
-		]);
-		if (result.rows.length === 0) {
-			logger.error(`Customer with ID ${id} not found for update.`);
-			return res.error("Customer not found.", 404);
-		}
-		logger.info(`Customer with ID ${id} updated successfully.`);
-		res.success(
-			{ customer: result.rows[0] },
-			"Customer updated successfully"
-		);
-	} catch (error) {
-		logger.error(`Error updating customer with ID ${req.params.id}.`, {
-			error: error.message,
-		});
-		res.error("Internal server error", 500);
 	}
-});
+);
 
 /**
  * @route DELETE /v1/customers/:id
  * @description Delete a customer by ID.
  * @access Protected
- * @param {string} req.params.id - The ID of the customer to delete.
- * @returns {Response} 200 - Returns a JSON object indicating successful deletion.
- * @returns {Response} 404 - Returns an error if the customer is not found.
- * @returns {Response} 500 - Returns an error message for internal server error.
+ * @returns {Response} 200 - JSON object indicating successful deletion.
+ * @returns {Response} 404 - Customer not found.
+ * @returns {Response} 500 - Internal server error.
  */
 router.delete("/:id", async (req, res) => {
 	try {
