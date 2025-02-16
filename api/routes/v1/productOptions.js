@@ -4,6 +4,13 @@ import express from "express";
 import { pool } from "../../db.js";
 import { logger } from "../../logger.js";
 import { verifyJWT } from "../../middleware/auth.js";
+import validateRequest from "../../middleware/validateRequest.js";
+
+import {
+	createProductOptionSchema,
+	updateProductOptionSchema,
+	productOptionIdSchema,
+} from "../../validators/productOptions.js";
 
 const router = express.Router();
 
@@ -42,34 +49,33 @@ router.get("/", async (req, res) => {
  * @param {Object} req.body - The product option details.
  * @param {string} req.body.option_name - The name of the option (required).
  * @returns {Response} 201 - JSON object containing the newly created product option.
- * @returns {Response} 400 - Bad request if 'option_name' is missing.
+ * @returns {Response} 422 - Validation error if 'option_name' is missing.
  * @returns {Response} 500 - Internal server error.
  */
-router.post("/", async (req, res) => {
-	try {
-		const { option_name } = req.body;
-		if (!option_name) {
-			logger.error(
-				'Product option creation failed: "option_name" is required.'
+router.post(
+	"/",
+	validateRequest(createProductOptionSchema),
+	async (req, res) => {
+		try {
+			const { option_name } = req.body;
+			const result = await pool.query(
+				"INSERT INTO product_options (option_name) VALUES ($1) RETURNING *",
+				[option_name]
 			);
-			return res.error('"option_name" is required.', 400);
+			logger.info(`Product option created successfully: ${option_name}`);
+			res.success(
+				{ option: result.rows[0] },
+				"Product option created successfully",
+				201
+			);
+		} catch (error) {
+			logger.error("Error creating product option.", {
+				error: error.message,
+			});
+			res.error("Internal server error", 500);
 		}
-		const result = await pool.query(
-			"INSERT INTO product_options (option_name) VALUES ($1) RETURNING *",
-			[option_name]
-		);
-		logger.info(`Product option created successfully: ${option_name}`);
-		res.success(
-			{ option: result.rows[0] },
-			"Product option created successfully"
-		);
-	} catch (error) {
-		logger.error("Error creating product option.", {
-			error: error.message,
-		});
-		res.error("Internal server error", 500);
 	}
-});
+);
 
 /**
  * @route GET /v1/product-options/:id
@@ -78,32 +84,37 @@ router.post("/", async (req, res) => {
  * @param {string} req.params.id - The ID of the product option.
  * @returns {Response} 200 - JSON object containing the product option details.
  * @returns {Response} 404 - Not found if the product option does not exist.
+ * @returns {Response} 422 - Validation error if ID is invalid.
  * @returns {Response} 500 - Internal server error.
  */
-router.get("/:id", async (req, res) => {
-	try {
-		const { id } = req.params;
-		const result = await pool.query(
-			"SELECT * FROM product_options WHERE id = $1",
-			[id]
-		);
-		if (result.rows.length === 0) {
-			logger.error(`Product option with ID ${id} not found.`);
-			return res.error("Product option not found.", 404);
+router.get(
+	"/:id",
+	validateRequest(productOptionIdSchema, "params"),
+	async (req, res) => {
+		try {
+			const { id } = req.params;
+			const result = await pool.query(
+				"SELECT * FROM product_options WHERE id = $1",
+				[id]
+			);
+			if (result.rows.length === 0) {
+				logger.error(`Product option with ID ${id} not found.`);
+				return res.error("Product option not found.", 404);
+			}
+			logger.info(`Retrieved product option with ID ${id}.`);
+			res.success(
+				{ option: result.rows[0] },
+				"Product option retrieved successfully"
+			);
+		} catch (error) {
+			logger.error(
+				`Error retrieving product option with ID ${req.params.id}.`,
+				{ error: error.message }
+			);
+			res.error("Internal server error", 500);
 		}
-		logger.info(`Retrieved product option with ID ${id}.`);
-		res.success(
-			{ option: result.rows[0] },
-			"Product option retrieved successfully"
-		);
-	} catch (error) {
-		logger.error(
-			`Error retrieving product option with ID ${req.params.id}.`,
-			{ error: error.message }
-		);
-		res.error("Internal server error", 500);
 	}
-});
+);
 
 /**
  * @route PUT /v1/product-options/:id
@@ -113,41 +124,42 @@ router.get("/:id", async (req, res) => {
  * @param {Object} req.body - The updated product option details.
  * @param {string} req.body.option_name - The updated option name (required).
  * @returns {Response} 200 - JSON object containing the updated product option.
- * @returns {Response} 400 - Bad request if 'option_name' is missing.
+ * @returns {Response} 422 - Validation error if 'option_name' is missing or ID is invalid.
  * @returns {Response} 404 - Not found if the product option does not exist.
  * @returns {Response} 500 - Internal server error.
  */
-router.put("/:id", async (req, res) => {
-	try {
-		const { id } = req.params;
-		const { option_name } = req.body;
-		if (!option_name) {
-			logger.error(
-				'Update product option failed: "option_name" is required.'
+router.put(
+	"/:id",
+	validateRequest(productOptionIdSchema, "params"),
+	validateRequest(updateProductOptionSchema),
+	async (req, res) => {
+		try {
+			const { id } = req.params;
+			const { option_name } = req.body;
+			const result = await pool.query(
+				"UPDATE product_options SET option_name = $1, updated_at = NOW() WHERE id = $2 RETURNING *",
+				[option_name, id]
 			);
-			return res.error('"option_name" is required.', 400);
+			if (result.rows.length === 0) {
+				logger.error(
+					`Product option with ID ${id} not found for update.`
+				);
+				return res.error("Product option not found.", 404);
+			}
+			logger.info(`Product option with ID ${id} updated successfully.`);
+			res.success(
+				{ option: result.rows[0] },
+				"Product option updated successfully"
+			);
+		} catch (error) {
+			logger.error(
+				`Error updating product option with ID ${req.params.id}.`,
+				{ error: error.message }
+			);
+			res.error("Internal server error", 500);
 		}
-		const result = await pool.query(
-			"UPDATE product_options SET option_name = $1, updated_at = NOW() WHERE id = $2 RETURNING *",
-			[option_name, id]
-		);
-		if (result.rows.length === 0) {
-			logger.error(`Product option with ID ${id} not found for update.`);
-			return res.error("Product option not found.", 404);
-		}
-		logger.info(`Product option with ID ${id} updated successfully.`);
-		res.success(
-			{ option: result.rows[0] },
-			"Product option updated successfully"
-		);
-	} catch (error) {
-		logger.error(
-			`Error updating product option with ID ${req.params.id}.`,
-			{ error: error.message }
-		);
-		res.error("Internal server error", 500);
 	}
-});
+);
 
 /**
  * @route DELETE /v1/product-options/:id
@@ -155,32 +167,37 @@ router.put("/:id", async (req, res) => {
  * @access Protected
  * @param {string} req.params.id - The ID of the product option to delete.
  * @returns {Response} 200 - JSON object indicating successful deletion.
+ * @returns {Response} 422 - Validation error if ID is invalid.
  * @returns {Response} 404 - Not found if the product option does not exist.
  * @returns {Response} 500 - Internal server error.
  */
-router.delete("/:id", async (req, res) => {
-	try {
-		const { id } = req.params;
-		const result = await pool.query(
-			"DELETE FROM product_options WHERE id = $1 RETURNING id",
-			[id]
-		);
-		if (result.rows.length === 0) {
-			logger.error(
-				`Product option with ID ${id} not found for deletion.`
+router.delete(
+	"/:id",
+	validateRequest(productOptionIdSchema, "params"),
+	async (req, res) => {
+		try {
+			const { id } = req.params;
+			const result = await pool.query(
+				"DELETE FROM product_options WHERE id = $1 RETURNING id",
+				[id]
 			);
-			return res.error("Product option not found.", 404);
+			if (result.rows.length === 0) {
+				logger.error(
+					`Product option with ID ${id} not found for deletion.`
+				);
+				return res.error("Product option not found.", 404);
+			}
+			logger.info(`Product option with ID ${id} deleted successfully.`);
+			res.success(null, "Product option deleted successfully");
+		} catch (error) {
+			logger.error(
+				`Error deleting product option with ID ${req.params.id}.`,
+				{ error: error.message }
+			);
+			res.error("Internal server error", 500);
 		}
-		logger.info(`Product option with ID ${id} deleted successfully.`);
-		res.success(null, "Product option deleted successfully");
-	} catch (error) {
-		logger.error(
-			`Error deleting product option with ID ${req.params.id}.`,
-			{ error: error.message }
-		);
-		res.error("Internal server error", 500);
 	}
-});
+);
 
 /**
  * @route GET /v1/product-options/:optionId/variants

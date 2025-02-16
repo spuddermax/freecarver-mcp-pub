@@ -64,10 +64,19 @@ describe("Product Options Routes", () => {
 				.post("/v1/product_options")
 				.set("Authorization", `Bearer ${authToken}`)
 				.send({ option_name: "Color" });
-			expect(res.statusCode).toEqual(200);
+			expect(res.statusCode).toEqual(201);
 			expect(res.body.data.option).toBeDefined();
 			expect(res.body.data.option.option_name).toEqual("Color");
 			optionId = res.body.data.option.id;
+		});
+
+		it("should return 422 if required field is missing when creating a product option", async () => {
+			const res = await request(app)
+				.post("/v1/product_options")
+				.set("Authorization", `Bearer ${authToken}`)
+				.send({}); // Missing option_name
+			expect(res.statusCode).toEqual(422);
+			expect(res.body.message).toBeDefined();
 		});
 
 		it("should retrieve a list of product options", async () => {
@@ -97,6 +106,15 @@ describe("Product Options Routes", () => {
 			expect(res.statusCode).toEqual(200);
 			expect(res.body.data.option).toBeDefined();
 			expect(res.body.data.option.option_name).toEqual("Shade");
+		});
+
+		it("should return 422 if required field is missing when updating a product option", async () => {
+			const res = await request(app)
+				.put(`/v1/product_options/${optionId}`)
+				.set("Authorization", `Bearer ${authToken}`)
+				.send({}); // Missing option_name
+			expect(res.statusCode).toEqual(422);
+			expect(res.body.message).toBeDefined();
 		});
 	});
 

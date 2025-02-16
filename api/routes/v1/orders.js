@@ -4,6 +4,16 @@ import express from "express";
 import { pool } from "../../db.js";
 import { logger } from "../../logger.js";
 import { verifyJWT } from "../../middleware/auth.js";
+import validateRequest from "../../middleware/validateRequest.js";
+
+import {
+	createOrderSchema,
+	updateOrderSchema,
+	orderIdSchema,
+	orderParamSchema,
+	createOrderItemSchema,
+	orderItemIdSchema,
+} from "../../validators/orders.js";
 
 const router = express.Router();
 
@@ -44,7 +54,7 @@ router.get("/", async (req, res) => {
  * @returns {Response} 400 - Returns an error if customer_id or order_total is missing.
  * @returns {Response} 500 - Returns an error message for an internal server error.
  */
-router.post("/", async (req, res) => {
+router.post("/", validateRequest(createOrderSchema), async (req, res) => {
 	try {
 		const {
 			customer_id,
@@ -55,12 +65,8 @@ router.post("/", async (req, res) => {
 			refund_status,
 			refund_reason,
 		} = req.body;
-		if (!customer_id || order_total === undefined) {
-			logger.error(
-				"Order creation failed: customer_id and order_total are required."
-			);
-			return res.error("customer_id and order_total are required.", 400);
-		}
+
+		// No manual check required since validation now handles required fields.
 		const query = `
       INSERT INTO orders (customer_id, status, order_total, refund_total, refund_date, refund_status, refund_reason)
       VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -77,7 +83,11 @@ router.post("/", async (req, res) => {
 		];
 		const result = await pool.query(query, values);
 		logger.info(`Order created successfully with ID ${result.rows[0].id}.`);
-		res.success({ order: result.rows[0] }, "Order created successfully");
+		res.success(
+			{ order: result.rows[0] },
+			"Order created successfully",
+			201
+		);
 	} catch (error) {
 		logger.error("Error creating order.", { error: error.message });
 		res.error("Internal server error", 500);
@@ -93,25 +103,33 @@ router.post("/", async (req, res) => {
  * @returns {Response} 404 - Returns an error if the order is not found.
  * @returns {Response} 500 - Returns an error message for an internal server error.
  */
-router.get("/:id", async (req, res) => {
-	try {
-		const { id } = req.params;
-		const result = await pool.query("SELECT * FROM orders WHERE id = $1", [
-			id,
-		]);
-		if (result.rows.length === 0) {
-			logger.error(`Order with ID ${id} not found.`);
-			return res.error("Order not found.", 404);
+router.get(
+	"/:id",
+	validateRequest(orderIdSchema, "params"),
+	async (req, res) => {
+		try {
+			const { id } = req.params;
+			const result = await pool.query(
+				"SELECT * FROM orders WHERE id = $1",
+				[id]
+			);
+			if (result.rows.length === 0) {
+				logger.error(`Order with ID ${id} not found.`);
+				return res.error("Order not found.", 404);
+			}
+			logger.info(`Retrieved order with ID ${id}.`);
+			res.success(
+				{ order: result.rows[0] },
+				"Order retrieved successfully"
+			);
+		} catch (error) {
+			logger.error(`Error retrieving order with ID ${req.params.id}.`, {
+				error: error.message,
+			});
+			res.error("Internal server error", 500);
 		}
-		logger.info(`Retrieved order with ID ${id}.`);
-		res.success({ order: result.rows[0] }, "Order retrieved successfully");
-	} catch (error) {
-		logger.error(`Error retrieving order with ID ${req.params.id}.`, {
-			error: error.message,
-		});
-		res.error("Internal server error", 500);
 	}
-});
+);
 
 /**
  * @route PUT /v1/orders/:id
@@ -130,19 +148,23 @@ router.get("/:id", async (req, res) => {
  * @returns {Response} 404 - Returns an error if the order is not found.
  * @returns {Response} 500 - Returns an error message for an internal server error.
  */
-router.put("/:id", async (req, res) => {
-	try {
-		const { id } = req.params;
-		const {
-			customer_id,
-			status,
-			order_total,
-			refund_total,
-			refund_date,
-			refund_status,
-			refund_reason,
-		} = req.body;
-		const query = `
+router.put(
+	"/:id",
+	validateRequest(orderIdSchema, "params"),
+	validateRequest(updateOrderSchema),
+	async (req, res) => {
+		try {
+			const { id } = req.params;
+			const {
+				customer_id,
+				status,
+				order_total,
+				refund_total,
+				refund_date,
+				refund_status,
+				refund_reason,
+			} = req.body;
+			const query = `
       UPDATE orders
       SET customer_id = $1,
           status = $2,
@@ -155,30 +177,34 @@ router.put("/:id", async (req, res) => {
       WHERE id = $8
       RETURNING *;
     `;
-		const values = [
-			customer_id,
-			status,
-			order_total,
-			refund_total,
-			refund_date,
-			refund_status,
-			refund_reason,
-			id,
-		];
-		const result = await pool.query(query, values);
-		if (result.rows.length === 0) {
-			logger.error(`Order with ID ${id} not found for update.`);
-			return res.error("Order not found.", 404);
+			const values = [
+				customer_id,
+				status,
+				order_total,
+				refund_total,
+				refund_date,
+				refund_status,
+				refund_reason,
+				id,
+			];
+			const result = await pool.query(query, values);
+			if (result.rows.length === 0) {
+				logger.error(`Order with ID ${id} not found for update.`);
+				return res.error("Order not found.", 404);
+			}
+			logger.info(`Order with ID ${id} updated successfully.`);
+			res.success(
+				{ order: result.rows[0] },
+				"Order updated successfully"
+			);
+		} catch (error) {
+			logger.error(`Error updating order with ID ${req.params.id}.`, {
+				error: error.message,
+			});
+			res.error("Internal server error", 500);
 		}
-		logger.info(`Order with ID ${id} updated successfully.`);
-		res.success({ order: result.rows[0] }, "Order updated successfully");
-	} catch (error) {
-		logger.error(`Error updating order with ID ${req.params.id}.`, {
-			error: error.message,
-		});
-		res.error("Internal server error", 500);
 	}
-});
+);
 
 /**
  * @route DELETE /v1/orders/:id
@@ -189,26 +215,30 @@ router.put("/:id", async (req, res) => {
  * @returns {Response} 404 - Returns an error if the order is not found.
  * @returns {Response} 500 - Returns an error message for an internal server error.
  */
-router.delete("/:id", async (req, res) => {
-	try {
-		const { id } = req.params;
-		const result = await pool.query(
-			"DELETE FROM orders WHERE id = $1 RETURNING id",
-			[id]
-		);
-		if (result.rows.length === 0) {
-			logger.error(`Order with ID ${id} not found for deletion.`);
-			return res.error("Order not found.", 404);
+router.delete(
+	"/:id",
+	validateRequest(orderIdSchema, "params"),
+	async (req, res) => {
+		try {
+			const { id } = req.params;
+			const result = await pool.query(
+				"DELETE FROM orders WHERE id = $1 RETURNING id",
+				[id]
+			);
+			if (result.rows.length === 0) {
+				logger.error(`Order with ID ${id} not found for deletion.`);
+				return res.error("Order not found.", 404);
+			}
+			logger.info(`Order with ID ${id} deleted successfully.`);
+			res.success(null, "Order deleted successfully");
+		} catch (error) {
+			logger.error(`Error deleting order with ID ${req.params.id}.`, {
+				error: error.message,
+			});
+			res.error("Internal server error", 500);
 		}
-		logger.info(`Order with ID ${id} deleted successfully.`);
-		res.success(null, "Order deleted successfully");
-	} catch (error) {
-		logger.error(`Error deleting order with ID ${req.params.id}.`, {
-			error: error.message,
-		});
-		res.error("Internal server error", 500);
 	}
-});
+);
 
 /**
  * @route GET /v1/orders/:orderId/items
@@ -219,6 +249,15 @@ router.delete("/:id", async (req, res) => {
  * @returns {Response} 500 - Returns an error message for an internal server error.
  */
 const itemsRouter = express.Router({ mergeParams: true });
+
+// Validate the orderId parameter for all nested order items routes.
+itemsRouter.use(validateRequest(orderParamSchema, "params"));
+
+/**
+ * @route GET /v1/orders/:orderId/items
+ * @description Retrieve order items for a given order.
+ * @access Protected
+ */
 itemsRouter.get("/", async (req, res) => {
 	try {
 		const { orderId } = req.params;
@@ -253,39 +292,37 @@ itemsRouter.get("/", async (req, res) => {
  * @returns {Response} 400 - Returns an error if required fields are missing.
  * @returns {Response} 500 - Returns an error message for an internal server error.
  */
-itemsRouter.post("/", async (req, res) => {
-	try {
-		const { orderId } = req.params;
-		const { product_id, quantity, price } = req.body;
-		if (!product_id || quantity === undefined || price === undefined) {
-			logger.error(
-				"Order item creation failed: product_id, quantity, and price are required."
-			);
-			return res.error(
-				"product_id, quantity, and price are required.",
-				400
-			);
-		}
-		const query = `
+itemsRouter.post(
+	"/",
+	validateRequest(createOrderItemSchema),
+	async (req, res) => {
+		try {
+			const { orderId } = req.params;
+			const { product_id, quantity, price } = req.body;
+			const query = `
       INSERT INTO order_items (order_id, product_id, quantity, price)
       VALUES ($1, $2, $3, $4)
       RETURNING *;
     `;
-		const values = [orderId, product_id, quantity, price];
-		const result = await pool.query(query, values);
-		logger.info(`Order item created successfully for order ID ${orderId}.`);
-		res.success(
-			{ item: result.rows[0] },
-			"Order item created successfully"
-		);
-	} catch (error) {
-		logger.error(
-			`Error creating order item for order ID ${req.params.orderId}.`,
-			{ error: error.message }
-		);
-		res.error("Internal server error", 500);
+			const values = [orderId, product_id, quantity, price];
+			const result = await pool.query(query, values);
+			logger.info(
+				`Order item created successfully for order ID ${orderId}.`
+			);
+			res.success(
+				{ item: result.rows[0] },
+				"Order item created successfully",
+				201
+			);
+		} catch (error) {
+			logger.error(
+				`Error creating order item for order ID ${req.params.orderId}.`,
+				{ error: error.message }
+			);
+			res.error("Internal server error", 500);
+		}
 	}
-});
+);
 
 /**
  * @route GET /v1/orders/:orderId/items/:itemId

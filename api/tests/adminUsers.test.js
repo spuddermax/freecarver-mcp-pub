@@ -83,10 +83,30 @@ describe("Admin Users Routes", () => {
 					mfa_enabled: false,
 					mfa_method: null,
 				});
-			expect(res.statusCode).toEqual(200);
+			expect(res.statusCode).toEqual(201);
 			expect(res.body.data.admin).toBeDefined();
 			expect(res.body.data.admin.email).toEqual("newadmin@example.com");
 			newAdminId = res.body.data.admin.id; // Save the ID for subsequent tests
+		});
+
+		it("should return 422 if required fields are missing when creating an admin user", async () => {
+			// Omit the password field to trigger the required-field validation.
+			const res = await request(app)
+				.post("/v1/adminUsers")
+				.set("Authorization", `Bearer ${authToken}`)
+				.send({
+					email: "invalidadmin@example.com",
+					first_name: "Fail",
+					last_name: "Admin",
+					phone_number: "555-1111",
+					role_id: 1,
+					timezone: "UTC",
+					mfa_enabled: true,
+					mfa_method: "sms",
+				});
+			expect(res.statusCode).toEqual(422);
+			// Optionally, if your validation middleware returns error details, you could check them:
+			// expect(res.body.error).toContain("password");
 		});
 	});
 
@@ -106,46 +126,6 @@ describe("Admin Users Routes", () => {
 				.set("Authorization", `Bearer ${authToken}`);
 			expect(res.statusCode).toEqual(404);
 			expect(res.body.message).toEqual("Admin user not found.");
-		});
-	});
-
-	describe("PUT /v1/adminUsers/:id", () => {
-		it("should update an existing admin user's details", async () => {
-			const res = await request(app)
-				.put(`/v1/adminUsers/${newAdminId}`)
-				.set("Authorization", `Bearer ${authToken}`)
-				.send({
-					email: "updatedadmin@example.com",
-					first_name: "Updated",
-					last_name: "Admin",
-					phone_number: "555-4321",
-					timezone: "UTC",
-					mfa_enabled: true,
-					mfa_method: "sms",
-				});
-			expect(res.statusCode).toEqual(200);
-			expect(res.body.data.admin).toBeDefined();
-			expect(res.body.data.admin.email).toEqual(
-				"updatedadmin@example.com"
-			);
-		});
-	});
-
-	describe("DELETE /v1/adminUsers/:id", () => {
-		it("should delete an admin user", async () => {
-			const res = await request(app)
-				.delete(`/v1/adminUsers/${newAdminId}`)
-				.set("Authorization", `Bearer ${authToken}`);
-			expect(res.statusCode).toEqual(200);
-			expect(res.body.message).toEqual(
-				"Admin user deleted successfully."
-			);
-
-			// Verify deletion: GET should return 404 for the deleted user
-			const getRes = await request(app)
-				.get(`/v1/adminUsers/${newAdminId}`)
-				.set("Authorization", `Bearer ${authToken}`);
-			expect(getRes.statusCode).toEqual(404);
 		});
 	});
 
@@ -176,6 +156,62 @@ describe("Admin Users Routes", () => {
 				.send({ password: "password" });
 			expect(res.statusCode).toEqual(401);
 			expect(res.body.message).toEqual("Invalid user.");
+		});
+	});
+
+	describe("PUT /v1/adminUsers/:id", () => {
+		it("should update an existing admin user's details", async () => {
+			const res = await request(app)
+				.put(`/v1/adminUsers/${newAdminId}`)
+				.set("Authorization", `Bearer ${authToken}`)
+				.send({
+					email: "updatedadmin@example.com",
+					first_name: "Updated",
+					last_name: "Admin",
+					phone_number: "555-4321",
+					timezone: "UTC",
+					mfa_enabled: true,
+					mfa_method: "sms",
+				});
+			expect(res.statusCode).toEqual(200);
+			expect(res.body.data.admin).toBeDefined();
+			expect(res.body.data.admin.email).toEqual(
+				"updatedadmin@example.com"
+			);
+		});
+
+		it("should update admin user password if provided", async () => {
+			const res = await request(app)
+				.put(`/v1/adminUsers/${authAdmin.id}`)
+				.set("Authorization", `Bearer ${authToken}`)
+				.send({
+					password: "newsecurepassword",
+					email: authAdmin.email,
+					first_name: "Auth",
+					last_name: "User",
+					phone_number: authAdmin.phone_number,
+					timezone: "UTC",
+					mfa_enabled: false,
+					mfa_method: null,
+				});
+			expect(res.statusCode).toEqual(200);
+			expect(res.body.data.admin).toBeDefined();
+		});
+	});
+
+	describe("DELETE /v1/adminUsers/:id", () => {
+		it("should delete an admin user", async () => {
+			const res = await request(app)
+				.delete(`/v1/adminUsers/${newAdminId}`)
+				.set("Authorization", `Bearer ${authToken}`);
+			expect(res.statusCode).toEqual(200);
+			expect(res.body.message).toEqual("Admin user deleted successfully");
+
+			// Verify deletion: GET should return 404 for the deleted user.
+			const getRes = await request(app)
+				.get(`/v1/adminUsers/${newAdminId}`)
+				.set("Authorization", `Bearer ${authToken}`);
+			expect(getRes.statusCode).toEqual(404);
 		});
 	});
 });

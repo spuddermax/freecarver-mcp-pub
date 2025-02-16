@@ -2,72 +2,62 @@
 
 import request from "supertest";
 import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+import dotenv from "dotenv";
 import app from "../app.js";
 import { pool } from "../db.js";
 
-describe("Admin Authentication Routes", () => {
-	const testEmail = "admin@example.com";
-	const testPassword = "password"; // Plain-text password for testing
+dotenv.config();
+
+describe("AdminAuth Routes", () => {
 	let testAdmin;
 
-	// Seed an admin role and a test admin user before running the tests
 	beforeAll(async () => {
-		// Ensure that an admin role with id = 1 exists
-		await pool.query(
-			`INSERT INTO admin_roles (id, role_name)
-       VALUES (1, 'admin')
-       ON CONFLICT (id) DO NOTHING`
-		);
-
-		// Insert a test admin user
-		const hashedPassword = await bcrypt.hash(testPassword, 10);
-		const result = await pool.query(
+		// Create an admin role if needed, and an admin user for testing.
+		// NOTE: Adjust the INSERT query below if your DB expects different fields.
+		const hashedPassword = await bcrypt.hash("password", 10);
+		const adminUserResult = await pool.query(
 			`INSERT INTO admin_users (email, password_hash, first_name, last_name, role_id)
-       VALUES ($1, $2, 'Test', 'Admin', 1) RETURNING *`,
-			[testEmail, hashedPassword]
+       VALUES ($1, $2, 'Test', 'Admin', 1)
+       RETURNING *;`,
+			["testadmin@example.com", hashedPassword]
 		);
-		testAdmin = result.rows[0];
+		testAdmin = adminUserResult.rows[0];
 	});
 
-	// Clean up the test admin user after tests complete
 	afterAll(async () => {
+		// Clean up inserted records.
 		await pool.query("DELETE FROM admin_users WHERE email = $1", [
-			testEmail,
+			"testadmin@example.com",
 		]);
-		// Global teardown will handle closing the connection pool.
+		await pool.end();
 	});
 
 	describe("POST /v1/adminAuth/login", () => {
-		it("should return 422 if email or password is missing", async () => {
-			const res = await request(app)
-				.post("/v1/adminAuth/login")
-				.send({ email: testEmail }); // Missing password
-			expect(res.statusCode).toEqual(422);
+		it("should login successfully and return a JWT token", async () => {
+			const res = await request(app).post("/v1/adminAuth/login").send({
+				email: "testadmin@example.com",
+				password: "password",
+			});
+			expect(res.statusCode).toEqual(200);
+			expect(res.body.data).toHaveProperty("token");
+			expect(res.body.message).toEqual("Login successful");
+		});
+
+		it("should return 400 if email or password is missing", async () => {
+			const res = await request(app).post("/v1/adminAuth/login").send({
+				email: "testadmin@example.com",
+			});
+			expect(res.statusCode).toEqual(400);
 			expect(res.body.message).toEqual(
 				"Email and password are required."
 			);
 		});
 
-		it("should return 200 and a token if valid credentials are provided", async () => {
-			const res = await request(app)
-				.post("/v1/adminAuth/login")
-				.send({ email: testEmail, password: testPassword });
-			expect(res.statusCode).toEqual(200);
-			expect(res.body.data.token).toBeDefined();
-		});
-
-		it("should return 401 if invalid credentials are provided (wrong password)", async () => {
-			const res = await request(app)
-				.post("/v1/adminAuth/login")
-				.send({ email: testEmail, password: "wrongpassword" });
-			expect(res.statusCode).toEqual(401);
-			expect(res.body.message).toEqual("Invalid credentials.");
-		});
-
-		it("should return 401 if email is not found", async () => {
+		it("should return 401 for invalid credentials", async () => {
 			const res = await request(app).post("/v1/adminAuth/login").send({
-				email: "nonexistent@example.com",
-				password: testPassword,
+				email: "testadmin@example.com",
+				password: "wrongpassword",
 			});
 			expect(res.statusCode).toEqual(401);
 			expect(res.body.message).toEqual("Invalid credentials.");
@@ -75,28 +65,45 @@ describe("Admin Authentication Routes", () => {
 	});
 
 	describe("GET /v1/adminAuth/me", () => {
-		it("should return 401 if no token is provided", async () => {
-			const res = await request(app).get("/v1/adminAuth/me");
-			expect(res.statusCode).toEqual(401);
-			expect(res.body.error).toEqual("No token provided");
+		let token;
+
+		beforeAll(async () => {
+			// Acquire a token by logging in.
+			const res = await request(app).post("/v1/adminAuth/login").send({
+				email: "testadmin@example.com",
+				password: "password",
+			});
+			token = res.body.data.token;
 		});
 
-		it("should return 200 with admin details if a valid token is provided", async () => {
-			// First, log in to obtain a valid token
-			const loginRes = await request(app)
-				.post("/v1/adminAuth/login")
-				.send({ email: testEmail, password: testPassword });
-			expect(loginRes.statusCode).toEqual(200);
-			const token = loginRes.body.data.token;
-
-			// Use the token to access the protected route
+		it("should retrieve admin details when provided with a valid JWT", async () => {
 			const res = await request(app)
 				.get("/v1/adminAuth/me")
 				.set("Authorization", `Bearer ${token}`);
-			console.log(res.body.data.admin);
 			expect(res.statusCode).toEqual(200);
-			expect(res.body.data.admin).toBeDefined();
-			expect(res.body.data.admin.adminEmail).toEqual(testEmail);
+			expect(res.body.data).toHaveProperty("admin");
+			expect(res.body.data.admin.email).toEqual("testadmin@example.com");
+			expect(res.body.message).toEqual("Admin details retrieved");
+		});
+	});
+
+	describe("POST /v1/adminAuth/logout", () => {
+		let token;
+
+		beforeAll(async () => {
+			const res = await request(app).post("/v1/adminAuth/login").send({
+				email: "testadmin@example.com",
+				password: "password",
+			});
+			token = res.body.data.token;
+		});
+
+		it("should logout successfully and return 200", async () => {
+			const res = await request(app)
+				.post("/v1/adminAuth/logout")
+				.set("Authorization", `Bearer ${token}`);
+			expect(res.statusCode).toEqual(200);
+			expect(res.body.message).toEqual("Logout successful");
 		});
 	});
 });

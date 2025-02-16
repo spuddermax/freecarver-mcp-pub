@@ -80,7 +80,7 @@ describe("Inventory Routes", () => {
 					location_identifier: "LOC-001",
 					description: "Test Location",
 				});
-			expect(res.statusCode).toEqual(200);
+			expect(res.statusCode).toEqual(201);
 			expect(res.body.data.location).toBeDefined();
 			expect(res.body.data.location.location_identifier).toEqual(
 				"LOC-001"
@@ -159,7 +159,7 @@ describe("Inventory Routes", () => {
 					location_id: locationId,
 					quantity: 100,
 				});
-			expect(res.statusCode).toEqual(200);
+			expect(res.statusCode).toEqual(201);
 			expect(res.body.data.product).toBeDefined();
 			expect(res.body.data.product.product_id).toEqual(productId);
 			expect(res.body.data.product.location_id).toEqual(locationId);

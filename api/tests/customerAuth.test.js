@@ -55,10 +55,12 @@ describe("Customer Authentication Routes", () => {
 		});
 
 		it("should return 401 if email is not found", async () => {
-			const res = await request(app).post("/v1/customerAuth/login").send({
-				email: "nonexistent@example.com",
-				password: testPassword,
-			});
+			const res = await request(app)
+				.post("/v1/customerAuth/login")
+				.send({
+					email: "nonexistent@example.com",
+					password: testPassword,
+				});
 			expect(res.statusCode).toEqual(401);
 			expect(res.body.message).toEqual("Invalid credentials.");
 		});

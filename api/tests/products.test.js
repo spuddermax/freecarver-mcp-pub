@@ -62,42 +62,77 @@ describe("Products Routes", () => {
 				.get("/v1/products")
 				.set("Authorization", `Bearer ${authToken}`);
 			expect(res.statusCode).toEqual(200);
-			// Check that products is an array and that total is defined and a number.
-			expect(Array.isArray(res.body.data.products)).toBe(true);
-			expect(res.body.data.total).toBeDefined();
-			expect(typeof res.body.data.total).toEqual("number");
+			expect(res.body.data).toHaveProperty("total");
+			expect(res.body.data).toHaveProperty("products");
+		});
+
+		it("should return a validation error for an invalid query parameter", async () => {
+			// "page" must be a number
+			const res = await request(app)
+				.get("/v1/products?page=abc")
+				.set("Authorization", `Bearer ${authToken}`);
+			expect(res.statusCode).toEqual(422);
+			expect(res.body.errors).toBeDefined();
+			expect(Array.isArray(res.body.errors)).toBe(true);
+			const hasPageError = res.body.errors.some(
+				(err) => err.field === "page"
+			);
+			expect(hasPageError).toBe(true);
 		});
 	});
 
 	describe("POST /v1/products", () => {
 		it("should create a new product", async () => {
-			const productData = {
+			const newProduct = {
 				name: "Test Product",
-				description: "A product for testing",
+				description: "A great product",
 				price: 19.99,
 				sale_price: 14.99,
-				sale_start: "2025-03-01T00:00:00Z",
-				sale_end: "2025-03-10T00:00:00Z",
+				sale_start: "2025-01-01T00:00:00Z",
+				sale_end: "2025-01-10T00:00:00Z",
 				product_media: JSON.stringify([
-					{ url: "http://example.com/image.png", title: "Image" },
+					{
+						url: "http://example.com/image.png",
+						title: "Example Image",
+					},
 				]),
 			};
 
 			const res = await request(app)
 				.post("/v1/products")
 				.set("Authorization", `Bearer ${authToken}`)
-				.send(productData);
-			// Expect a status code of 200.
-			expect(res.statusCode).toEqual(200);
-			// Verify that the response contains a product in the data property.
+				.send(newProduct);
+			// Successful creation returns 201 with the product data.
+			expect(res.statusCode).toEqual(201);
 			expect(res.body.data.product).toBeDefined();
 			expect(res.body.data.product.name).toEqual("Test Product");
 			productId = res.body.data.product.id;
 		});
+
+		it("should return a validation error when required fields are missing", async () => {
+			const invalidProduct = {
+				description: "Missing name and price fields",
+			};
+			const res = await request(app)
+				.post("/v1/products")
+				.set("Authorization", `Bearer ${authToken}`)
+				.send(invalidProduct);
+			expect(res.statusCode).toEqual(422);
+			expect(res.body.errors).toBeDefined();
+			expect(Array.isArray(res.body.errors)).toBe(true);
+			const hasNameError = res.body.errors.some(
+				(err) => err.field === "name"
+			);
+			const hasPriceError = res.body.errors.some(
+				(err) => err.field === "price"
+			);
+			expect(hasNameError).toBe(true);
+			expect(hasPriceError).toBe(true);
+		});
 	});
 
 	describe("GET /v1/products/:id", () => {
-		it("should retrieve product details", async () => {
+		it("should retrieve an existing product", async () => {
 			const res = await request(app)
 				.get(`/v1/products/${productId}`)
 				.set("Authorization", `Bearer ${authToken}`);
@@ -106,12 +141,23 @@ describe("Products Routes", () => {
 			expect(res.body.data.product.id).toEqual(productId);
 		});
 
+		it("should return a validation error for a non-numeric product id", async () => {
+			const res = await request(app)
+				.get("/v1/products/invalid-id")
+				.set("Authorization", `Bearer ${authToken}`);
+			expect(res.statusCode).toEqual(422);
+			expect(res.body.errors).toBeDefined();
+			const hasIdError = res.body.errors.some(
+				(err) => err.field === "id"
+			);
+			expect(hasIdError).toBe(true);
+		});
+
 		it("should return 404 for a non-existent product", async () => {
 			const res = await request(app)
 				.get("/v1/products/999999")
 				.set("Authorization", `Bearer ${authToken}`);
 			expect(res.statusCode).toEqual(404);
-			// Check the error message.
 			expect(res.body.message).toEqual("Product not found.");
 		});
 	});
@@ -141,6 +187,63 @@ describe("Products Routes", () => {
 			expect(res.body.data.product).toBeDefined();
 			expect(res.body.data.product.name).toEqual("Updated Product");
 		});
+
+		it("should return a validation error when updating with an invalid id", async () => {
+			const updatedData = {
+				name: "Invalid Update",
+				description: "Invalid update",
+				price: 29.99,
+				sale_price: 24.99,
+				sale_start: "2025-04-01T00:00:00Z",
+				sale_end: "2025-04-10T00:00:00Z",
+				product_media: JSON.stringify([
+					{
+						url: "http://example.com/newimage.png",
+						title: "New Image",
+					},
+				]),
+			};
+
+			const res = await request(app)
+				.put("/v1/products/invalid-id")
+				.set("Authorization", `Bearer ${authToken}`)
+				.send(updatedData);
+			expect(res.statusCode).toEqual(422);
+			expect(res.body.errors).toBeDefined();
+			const hasIdError = res.body.errors.some(
+				(err) => err.field === "id"
+			);
+			expect(hasIdError).toBe(true);
+		});
+
+		it("should return a validation error when updating with invalid payload", async () => {
+			// Send a payload with an invalid data type for price (non-convertible string)
+			const badData = {
+				name: "Bad Product",
+				description: "Bad description",
+				price: "invalid", // invalid: not a convertible number
+				sale_price: 24.99,
+				sale_start: "2025-04-01T00:00:00Z",
+				sale_end: "2025-04-10T00:00:00Z",
+				product_media: JSON.stringify([
+					{
+						url: "http://example.com/newimage.png",
+						title: "New Image",
+					},
+				]),
+			};
+
+			const res = await request(app)
+				.put(`/v1/products/${productId}`)
+				.set("Authorization", `Bearer ${authToken}`)
+				.send(badData);
+			expect(res.statusCode).toEqual(422);
+			expect(res.body.errors).toBeDefined();
+			const hasPriceError = res.body.errors.some(
+				(err) => err.field === "price"
+			);
+			expect(hasPriceError).toBe(true);
+		});
 	});
 
 	describe("DELETE /v1/products/:id", () => {
@@ -149,14 +252,25 @@ describe("Products Routes", () => {
 				.delete(`/v1/products/${productId}`)
 				.set("Authorization", `Bearer ${authToken}`);
 			expect(res.statusCode).toEqual(200);
-			// Check that the response message is correct.
 			expect(res.body.message).toEqual("Product deleted successfully");
 
-			// Verify deletion by attempting to retrieve the deleted product.
+			// Confirm deletion by attempting to retrieve the deleted product.
 			const getRes = await request(app)
 				.get(`/v1/products/${productId}`)
 				.set("Authorization", `Bearer ${authToken}`);
 			expect(getRes.statusCode).toEqual(404);
+		});
+
+		it("should return a validation error when deleting with an invalid id", async () => {
+			const res = await request(app)
+				.delete("/v1/products/invalid-id")
+				.set("Authorization", `Bearer ${authToken}`);
+			expect(res.statusCode).toEqual(422);
+			expect(res.body.errors).toBeDefined();
+			const hasIdError = res.body.errors.some(
+				(err) => err.field === "id"
+			);
+			expect(hasIdError).toBe(true);
 		});
 	});
 });

@@ -7,6 +7,8 @@ import dotenv from "dotenv";
 import { pool } from "../../db.js";
 import { logger } from "../../logger.js";
 import { verifyJWT } from "../../middleware/auth.js";
+import validateRequest from "../../middleware/validateRequest.js";
+import { customerAuthLoginSchema } from "../../validators/customerAuth.js";
 
 dotenv.config();
 
@@ -20,55 +22,55 @@ const router = express.Router();
  * @param {string} req.body.email - The customer's email address.
  * @param {string} req.body.password - The customer's password.
  * @returns {Response} 200 - Returns a JSON object containing the JWT token.
- * @returns {Response} 400 - Returns a validation error if email or password is missing.
+ * @returns {Response} 422 - Returns a validation error if email or password is missing/invalid.
  * @returns {Response} 401 - Returns an error if credentials are invalid.
  * @returns {Response} 500 - Returns an error message for an internal server error.
  */
-router.post("/login", async (req, res) => {
-	try {
-		const { email, password } = req.body;
-		if (!email || !password) {
-			logger.error(
-				"Customer login failed: Email and password are required."
+router.post(
+	"/login",
+	validateRequest(
+		customerAuthLoginSchema,
+		"body",
+		"Email and password are required."
+	),
+	async (req, res) => {
+		try {
+			const { email, password } = req.body;
+			const result = await pool.query(
+				"SELECT * FROM customers WHERE email = $1",
+				[email]
 			);
-			return res.validationError(
-				{
-					email: "Email is required",
-					password: "Password is required",
-				},
-				"Email and password are required."
+			if (result.rows.length === 0) {
+				logger.error(
+					`Customer login failed: Email not found (${email}).`
+				);
+				return res.error("Invalid credentials.", 401);
+			}
+			const customer = result.rows[0];
+			const isPasswordValid = await bcrypt.compare(
+				password,
+				customer.password_hash
 			);
+			if (!isPasswordValid) {
+				logger.error(
+					`Customer login failed: Invalid password for email (${email}).`
+				);
+				return res.error("Invalid credentials.", 401);
+			}
+			const tokenPayload = { id: customer.id, email: customer.email };
+			const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, {
+				expiresIn: "1h",
+			});
+			logger.info(`Customer logged in successfully: ${email}`);
+			res.success({ token }, "Login successful");
+		} catch (error) {
+			logger.error("Error during customer login", {
+				error: error.message,
+			});
+			res.error("Internal server error", 500);
 		}
-		const result = await pool.query(
-			"SELECT * FROM customers WHERE email = $1",
-			[email]
-		);
-		if (result.rows.length === 0) {
-			logger.error(`Customer login failed: Email not found (${email}).`);
-			return res.error("Invalid credentials.", 401);
-		}
-		const customer = result.rows[0];
-		const isPasswordValid = await bcrypt.compare(
-			password,
-			customer.password_hash
-		);
-		if (!isPasswordValid) {
-			logger.error(
-				`Customer login failed: Invalid password for email (${email}).`
-			);
-			return res.error("Invalid credentials.", 401);
-		}
-		const tokenPayload = { id: customer.id, email: customer.email };
-		const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, {
-			expiresIn: "1h",
-		});
-		logger.info(`Customer logged in successfully: ${email}`);
-		res.success({ token }, "Login successful");
-	} catch (error) {
-		logger.error("Error during customer login", { error: error.message });
-		res.error("Internal server error", 500);
 	}
-});
+);
 
 /**
  * @route GET /v1/customerAuth/me
@@ -79,7 +81,6 @@ router.post("/login", async (req, res) => {
  * @returns {Response} 500 - Returns an error message for an internal server error.
  */
 router.get("/me", verifyJWT, (req, res) => {
-	//Customer Authentication Routes › GET /v1/customerAuth/me › should return 401 if no verifyJWT
 	if (!req.admin) {
 		logger.error("No token provided");
 		return res.error("No token provided", 401);

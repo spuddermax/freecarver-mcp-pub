@@ -1,3 +1,5 @@
+// /api/validators/customers.js
+
 import Joi from "joi";
 
 export const createCustomerSchema = Joi.object({
@@ -13,4 +15,9 @@ export const updateCustomerSchema = Joi.object({
 	first_name: Joi.string().optional(),
 	last_name: Joi.string().optional(),
 	phone_number: Joi.string().optional(),
+});
+
+// New schema to validate the :id parameter for customer routes.
+export const customerIdSchema = Joi.object({
+	id: Joi.number().required(),
 });

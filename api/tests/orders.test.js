@@ -95,11 +95,19 @@ describe("Orders Routes", () => {
 				.post("/v1/orders")
 				.set("Authorization", `Bearer ${authToken}`)
 				.send(payload);
-			// Standardized to expect 200 and the order inside the data property.
-			expect(res.statusCode).toEqual(200);
+			expect(res.statusCode).toEqual(201);
 			expect(res.body.data.order).toBeDefined();
 			expect(res.body.data.order.customer_id).toEqual(customerId);
 			orderId = res.body.data.order.id;
+		});
+
+		it("should return 422 if required fields are missing when creating an order", async () => {
+			const res = await request(app)
+				.post("/v1/orders")
+				.set("Authorization", `Bearer ${authToken}`)
+				.send({ status: "pending" }); // Missing customer_id and order_total
+			expect(res.statusCode).toEqual(422);
+			expect(res.body.message).toBeDefined();
 		});
 
 		it("should retrieve a list of orders", async () => {
@@ -139,9 +147,58 @@ describe("Orders Routes", () => {
 			expect(res.body.data.order).toBeDefined();
 			expect(res.body.data.order.status).toEqual("completed");
 		});
+
+		it("should return 422 if required fields are missing when updating an order", async () => {
+			const res = await request(app)
+				.put(`/v1/orders/${orderId}`)
+				.set("Authorization", `Bearer ${authToken}`)
+				.send({ status: "completed" }); // Missing customer_id and order_total
+			expect(res.statusCode).toEqual(422);
+			expect(res.body.message).toBeDefined();
+		});
+
+		it("should delete an order", async () => {
+			const res = await request(app)
+				.delete(`/v1/orders/${orderId}`)
+				.set("Authorization", `Bearer ${authToken}`);
+			expect(res.statusCode).toEqual(200);
+			expect(res.body.message).toEqual("Order deleted successfully");
+			// Verify deletion by attempting to fetch the deleted order.
+			const getRes = await request(app)
+				.get(`/v1/orders/${orderId}`)
+				.set("Authorization", `Bearer ${authToken}`);
+			expect(getRes.statusCode).toEqual(404);
+		});
 	});
 
 	describe("Order Items Endpoints", () => {
+		// Create a fresh order for order item tests
+		beforeAll(async () => {
+			const orderPayload = {
+				customer_id: customerId,
+				status: "pending",
+				order_total: 100.0,
+				refund_total: null,
+				refund_date: null,
+				refund_status: "none",
+				refund_reason: null,
+			};
+			const res = await request(app)
+				.post("/v1/orders")
+				.set("Authorization", `Bearer ${authToken}`)
+				.send(orderPayload);
+			orderId = res.body.data.order.id;
+		});
+
+		afterAll(async () => {
+			// Clean up any order items created during these tests.
+			await pool.query("DELETE FROM order_items WHERE order_id = $1", [
+				orderId,
+			]);
+			// Do not delete the order until order item tests complete (or delete it here if needed)
+			await pool.query("DELETE FROM orders WHERE id = $1", [orderId]);
+		});
+
 		it("should create a new order item", async () => {
 			const payload = {
 				product_id: productId,
@@ -152,10 +209,19 @@ describe("Orders Routes", () => {
 				.post(`/v1/orders/${orderId}/items`)
 				.set("Authorization", `Bearer ${authToken}`)
 				.send(payload);
-			expect(res.statusCode).toEqual(200);
+			expect(res.statusCode).toEqual(201);
 			expect(res.body.data.item).toBeDefined();
 			expect(res.body.data.item.product_id).toEqual(productId);
 			orderItemId = res.body.data.item.id;
+		});
+
+		it("should return 422 if required fields are missing when creating an order item", async () => {
+			const res = await request(app)
+				.post(`/v1/orders/${orderId}/items`)
+				.set("Authorization", `Bearer ${authToken}`)
+				.send({ quantity: 2, price: 19.99 }); // Missing product_id
+			expect(res.statusCode).toEqual(422);
+			expect(res.body.message).toBeDefined();
 		});
 
 		it("should retrieve all order items for the order", async () => {
@@ -198,24 +264,9 @@ describe("Orders Routes", () => {
 				.set("Authorization", `Bearer ${authToken}`);
 			expect(res.statusCode).toEqual(200);
 			expect(res.body.message).toEqual("Order item deleted successfully");
-			// Verify deletion.
+			// Verify deletion by attempting to fetch the deleted item.
 			const getRes = await request(app)
 				.get(`/v1/orders/${orderId}/items/${orderItemId}`)
-				.set("Authorization", `Bearer ${authToken}`);
-			expect(getRes.statusCode).toEqual(404);
-		});
-	});
-
-	describe("DELETE /v1/orders/:id", () => {
-		it("should delete an order", async () => {
-			const res = await request(app)
-				.delete(`/v1/orders/${orderId}`)
-				.set("Authorization", `Bearer ${authToken}`);
-			expect(res.statusCode).toEqual(200);
-			expect(res.body.message).toEqual("Order deleted successfully");
-			// Verify deletion by attempting to fetch the deleted order.
-			const getRes = await request(app)
-				.get(`/v1/orders/${orderId}`)
 				.set("Authorization", `Bearer ${authToken}`);
 			expect(getRes.statusCode).toEqual(404);
 		});

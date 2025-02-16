@@ -69,19 +69,22 @@ describe("Product Categories Routes", () => {
 				.post("/v1/product_categories")
 				.set("Authorization", `Bearer ${authToken}`)
 				.send(payload);
-			expect(res.statusCode).toEqual(200);
+			// Successful creation now returns status 201.
+			expect(res.statusCode).toEqual(201);
 			expect(res.body.data.category).toBeDefined();
 			expect(res.body.data.category.name).toEqual("Test Category");
 			categoryId = res.body.data.category.id;
 		});
 
-		it("should return 400 if 'name' is missing", async () => {
+		it("should return 422 if 'name' is missing", async () => {
 			const res = await request(app)
 				.post("/v1/product_categories")
 				.set("Authorization", `Bearer ${authToken}`)
 				.send({ description: "Missing name field" });
-			expect(res.statusCode).toEqual(400);
-			expect(res.body.message).toEqual("'name' is required.");
+			// Validation errors now return 422.
+			expect(res.statusCode).toEqual(422);
+			// The validation middleware returns "Validation failed" as the message.
+			expect(res.body.message).toEqual("Validation failed");
 		});
 	});
 
@@ -134,13 +137,14 @@ describe("Product Categories Routes", () => {
 			expect(res.body.data.category.name).toEqual("Updated Category");
 		});
 
-		it("should return 400 if 'name' is missing during update", async () => {
+		it("should return 422 if 'name' is missing during update", async () => {
 			const res = await request(app)
 				.put(`/v1/product_categories/${categoryId}`)
 				.set("Authorization", `Bearer ${authToken}`)
 				.send({ description: "No name provided" });
-			expect(res.statusCode).toEqual(400);
-			expect(res.body.message).toEqual("'name' is required.");
+			// Validation error returns a 422 status.
+			expect(res.statusCode).toEqual(422);
+			expect(res.body.message).toEqual("Validation failed");
 		});
 	});
 

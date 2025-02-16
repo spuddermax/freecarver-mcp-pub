@@ -4,6 +4,14 @@ import express from "express";
 import { pool } from "../../db.js";
 import { logger } from "../../logger.js";
 import { verifyJWT } from "../../middleware/auth.js";
+import validateRequest from "../../middleware/validateRequest.js";
+import {
+	createInventoryLocationSchema,
+	updateInventoryLocationSchema,
+	inventoryLocationIdSchema,
+	createOrUpdateInventoryProductSchema,
+	inventoryProductIdSchema,
+} from "../../validators/inventory.js";
 
 const router = express.Router();
 
@@ -25,7 +33,8 @@ router.get("/locations", async (req, res) => {
 		logger.info("Retrieved inventory locations list.");
 		res.success(
 			{ locations: result.rows },
-			"Inventory locations retrieved successfully"
+			"Inventory locations retrieved successfully",
+			200
 		);
 	} catch (error) {
 		logger.error("Error retrieving inventory locations.", {
@@ -46,36 +55,35 @@ router.get("/locations", async (req, res) => {
  * @returns {Response} 400 - Returns an error if the location_identifier is missing.
  * @returns {Response} 500 - Returns an error message for an internal server error.
  */
-router.post("/locations", async (req, res) => {
-	try {
-		const { location_identifier, description } = req.body;
-		if (!location_identifier) {
-			logger.error(
-				"Inventory location creation failed: 'location_identifier' is required."
-			);
-			return res.error("'location_identifier' is required.", 400);
-		}
-		const query = `
+router.post(
+	"/locations",
+	validateRequest(createInventoryLocationSchema),
+	async (req, res) => {
+		try {
+			const { location_identifier, description } = req.body;
+			const query = `
       INSERT INTO inventory_locations (location_identifier, description)
       VALUES ($1, $2)
       RETURNING *;
     `;
-		const values = [location_identifier, description || null];
-		const result = await pool.query(query, values);
-		logger.info(
-			`Inventory location created successfully: ${location_identifier}`
-		);
-		res.success(
-			{ location: result.rows[0] },
-			"Inventory location created successfully"
-		);
-	} catch (error) {
-		logger.error("Error creating inventory location.", {
-			error: error.message,
-		});
-		res.error("Internal server error", 500);
+			const values = [location_identifier, description || null];
+			const result = await pool.query(query, values);
+			logger.info(
+				`Inventory location created successfully: ${location_identifier}`
+			);
+			res.success(
+				{ location: result.rows[0] },
+				"Inventory location created successfully",
+				201
+			);
+		} catch (error) {
+			logger.error("Error creating inventory location.", {
+				error: error.message,
+			});
+			res.error("Internal server error", 500);
+		}
 	}
-});
+);
 
 /**
  * @route GET /v1/inventory/locations/:id
@@ -86,30 +94,35 @@ router.post("/locations", async (req, res) => {
  * @returns {Response} 404 - Returns an error if the inventory location is not found.
  * @returns {Response} 500 - Returns an error message for an internal server error.
  */
-router.get("/locations/:id", async (req, res) => {
-	try {
-		const { id } = req.params;
-		const result = await pool.query(
-			"SELECT * FROM inventory_locations WHERE id = $1",
-			[id]
-		);
-		if (result.rows.length === 0) {
-			logger.error(`Inventory location with ID ${id} not found.`);
-			return res.error("Inventory location not found.", 404);
+router.get(
+	"/locations/:id",
+	validateRequest(inventoryLocationIdSchema, "params"),
+	async (req, res) => {
+		try {
+			const { id } = req.params;
+			const result = await pool.query(
+				"SELECT * FROM inventory_locations WHERE id = $1",
+				[id]
+			);
+			if (result.rows.length === 0) {
+				logger.error(`Inventory location with ID ${id} not found.`);
+				return res.error("Inventory location not found.", 404);
+			}
+			logger.info(`Retrieved inventory location with ID ${id}.`);
+			res.success(
+				{ location: result.rows[0] },
+				"Inventory location retrieved successfully",
+				200
+			);
+		} catch (error) {
+			logger.error(
+				`Error retrieving inventory location with ID ${req.params.id}.`,
+				{ error: error.message }
+			);
+			res.error("Internal server error", 500);
 		}
-		logger.info(`Retrieved inventory location with ID ${id}.`);
-		res.success(
-			{ location: result.rows[0] },
-			"Inventory location retrieved successfully"
-		);
-	} catch (error) {
-		logger.error(
-			`Error retrieving inventory location with ID ${req.params.id}.`,
-			{ error: error.message }
-		);
-		res.error("Internal server error", 500);
 	}
-});
+);
 
 /**
  * @route PUT /v1/inventory/locations/:id
@@ -124,17 +137,15 @@ router.get("/locations/:id", async (req, res) => {
  * @returns {Response} 404 - Returns an error if the inventory location is not found.
  * @returns {Response} 500 - Returns an error message for an internal server error.
  */
-router.put("/locations/:id", async (req, res) => {
-	try {
-		const { id } = req.params;
-		const { location_identifier, description } = req.body;
-		if (!location_identifier) {
-			logger.error(
-				"Inventory location update failed: 'location_identifier' is required."
-			);
-			return res.error("'location_identifier' is required.", 400);
-		}
-		const query = `
+router.put(
+	"/locations/:id",
+	validateRequest(inventoryLocationIdSchema, "params"),
+	validateRequest(updateInventoryLocationSchema),
+	async (req, res) => {
+		try {
+			const { id } = req.params;
+			const { location_identifier, description } = req.body;
+			const query = `
       UPDATE inventory_locations
       SET location_identifier = $1,
           description = $2,
@@ -142,27 +153,31 @@ router.put("/locations/:id", async (req, res) => {
       WHERE id = $3
       RETURNING *;
     `;
-		const values = [location_identifier, description || null, id];
-		const result = await pool.query(query, values);
-		if (result.rows.length === 0) {
-			logger.error(
-				`Inventory location with ID ${id} not found for update.`
+			const values = [location_identifier, description || null, id];
+			const result = await pool.query(query, values);
+			if (result.rows.length === 0) {
+				logger.error(
+					`Inventory location with ID ${id} not found for update.`
+				);
+				return res.error("Inventory location not found.", 404);
+			}
+			logger.info(
+				`Inventory location with ID ${id} updated successfully.`
 			);
-			return res.error("Inventory location not found.", 404);
+			res.success(
+				{ location: result.rows[0] },
+				"Inventory location updated successfully",
+				200
+			);
+		} catch (error) {
+			logger.error(
+				`Error updating inventory location with ID ${req.params.id}.`,
+				{ error: error.message }
+			);
+			res.error("Internal server error", 500);
 		}
-		logger.info(`Inventory location with ID ${id} updated successfully.`);
-		res.success(
-			{ location: result.rows[0] },
-			"Inventory location updated successfully"
-		);
-	} catch (error) {
-		logger.error(
-			`Error updating inventory location with ID ${req.params.id}.`,
-			{ error: error.message }
-		);
-		res.error("Internal server error", 500);
 	}
-});
+);
 
 /**
  * @route DELETE /v1/inventory/locations/:id
@@ -173,29 +188,35 @@ router.put("/locations/:id", async (req, res) => {
  * @returns {Response} 404 - Returns an error if the inventory location is not found.
  * @returns {Response} 500 - Returns an error message for an internal server error.
  */
-router.delete("/locations/:id", async (req, res) => {
-	try {
-		const { id } = req.params;
-		const result = await pool.query(
-			"DELETE FROM inventory_locations WHERE id = $1 RETURNING id",
-			[id]
-		);
-		if (result.rows.length === 0) {
-			logger.error(
-				`Inventory location with ID ${id} not found for deletion.`
+router.delete(
+	"/locations/:id",
+	validateRequest(inventoryLocationIdSchema, "params"),
+	async (req, res) => {
+		try {
+			const { id } = req.params;
+			const result = await pool.query(
+				"DELETE FROM inventory_locations WHERE id = $1 RETURNING id",
+				[id]
 			);
-			return res.error("Inventory location not found.", 404);
+			if (result.rows.length === 0) {
+				logger.error(
+					`Inventory location with ID ${id} not found for deletion.`
+				);
+				return res.error("Inventory location not found.", 404);
+			}
+			logger.info(
+				`Inventory location with ID ${id} deleted successfully.`
+			);
+			res.success(null, "Inventory location deleted successfully", 200);
+		} catch (error) {
+			logger.error(
+				`Error deleting inventory location with ID ${req.params.id}.`,
+				{ error: error.message }
+			);
+			res.error("Internal server error", 500);
 		}
-		logger.info(`Inventory location with ID ${id} deleted successfully.`);
-		res.success(null, "Inventory location deleted successfully");
-	} catch (error) {
-		logger.error(
-			`Error deleting inventory location with ID ${req.params.id}.`,
-			{ error: error.message }
-		);
-		res.error("Internal server error", 500);
 	}
-});
+);
 
 /**
  * @route GET /v1/inventory/products
@@ -212,7 +233,8 @@ router.get("/products", async (req, res) => {
 		logger.info("Retrieved inventory products list.");
 		res.success(
 			{ products: result.rows },
-			"Inventory products retrieved successfully"
+			"Inventory products retrieved successfully",
+			200
 		);
 	} catch (error) {
 		logger.error("Error retrieving inventory products.", {
@@ -234,57 +256,53 @@ router.get("/products", async (req, res) => {
  * @returns {Response} 400 - Returns an error if product_id, location_id, or quantity is missing.
  * @returns {Response} 500 - Returns an error message for an internal server error.
  */
-router.post("/products", async (req, res) => {
-	try {
-		const { product_id, location_id, quantity } = req.body;
-		if (!product_id || !location_id || quantity === undefined) {
-			logger.error(
-				"Inventory product creation failed: product_id, location_id, and quantity are required."
+router.post(
+	"/products",
+	validateRequest(createOrUpdateInventoryProductSchema),
+	async (req, res) => {
+		try {
+			const { product_id, location_id, quantity } = req.body;
+			// Check if an inventory record already exists for this product and location.
+			const checkResult = await pool.query(
+				"SELECT * FROM inventory_products WHERE product_id = $1 AND location_id = $2",
+				[product_id, location_id]
 			);
-			return res.error(
-				"product_id, location_id, and quantity are required.",
-				400
-			);
-		}
-		// Check if an inventory record already exists for this product and location.
-		const checkResult = await pool.query(
-			"SELECT * FROM inventory_products WHERE product_id = $1 AND location_id = $2",
-			[product_id, location_id]
-		);
-		let result;
-		if (checkResult.rows.length > 0) {
-			// Update existing record.
-			result = await pool.query(
-				`UPDATE inventory_products
+			let result;
+			if (checkResult.rows.length > 0) {
+				// Update existing record.
+				result = await pool.query(
+					`UPDATE inventory_products
          SET quantity = $1,
              updated_at = NOW()
          WHERE product_id = $2 AND location_id = $3
          RETURNING *;`,
-				[quantity, product_id, location_id]
-			);
-		} else {
-			// Insert a new record.
-			result = await pool.query(
-				`INSERT INTO inventory_products (product_id, location_id, quantity)
+					[quantity, product_id, location_id]
+				);
+			} else {
+				// Insert a new record.
+				result = await pool.query(
+					`INSERT INTO inventory_products (product_id, location_id, quantity)
          VALUES ($1, $2, $3)
          RETURNING *;`,
-				[product_id, location_id, quantity]
+					[product_id, location_id, quantity]
+				);
+			}
+			logger.info(
+				`Inventory product record processed for product_id ${product_id} at location_id ${location_id}.`
 			);
+			res.success(
+				{ product: result.rows[0] },
+				"Inventory product record processed successfully",
+				201
+			);
+		} catch (error) {
+			logger.error("Error processing inventory product record.", {
+				error: error.message,
+			});
+			res.error("Internal server error", 500);
 		}
-		logger.info(
-			`Inventory product record processed for product_id ${product_id} at location_id ${location_id}.`
-		);
-		res.success(
-			{ product: result.rows[0] },
-			"Inventory product record processed successfully"
-		);
-	} catch (error) {
-		logger.error("Error processing inventory product record.", {
-			error: error.message,
-		});
-		res.error("Internal server error", 500);
 	}
-});
+);
 
 /**
  * @route GET /v1/inventory/products/:id
@@ -295,30 +313,37 @@ router.post("/products", async (req, res) => {
  * @returns {Response} 404 - Returns an error if the inventory product record is not found.
  * @returns {Response} 500 - Returns an error message for an internal server error.
  */
-router.get("/products/:id", async (req, res) => {
-	try {
-		const { id } = req.params;
-		const result = await pool.query(
-			"SELECT * FROM inventory_products WHERE id = $1",
-			[id]
-		);
-		if (result.rows.length === 0) {
-			logger.error(`Inventory product record with ID ${id} not found.`);
-			return res.error("Inventory product record not found.", 404);
+router.get(
+	"/products/:id",
+	validateRequest(inventoryProductIdSchema, "params"),
+	async (req, res) => {
+		try {
+			const { id } = req.params;
+			const result = await pool.query(
+				"SELECT * FROM inventory_products WHERE id = $1",
+				[id]
+			);
+			if (result.rows.length === 0) {
+				logger.error(
+					`Inventory product record with ID ${id} not found.`
+				);
+				return res.error("Inventory product record not found.", 404);
+			}
+			logger.info(`Retrieved inventory product record with ID ${id}.`);
+			res.success(
+				{ product: result.rows[0] },
+				"Inventory product record retrieved successfully",
+				200
+			);
+		} catch (error) {
+			logger.error(
+				`Error retrieving inventory product record with ID ${req.params.id}.`,
+				{ error: error.message }
+			);
+			res.error("Internal server error", 500);
 		}
-		logger.info(`Retrieved inventory product record with ID ${id}.`);
-		res.success(
-			{ product: result.rows[0] },
-			"Inventory product record retrieved successfully"
-		);
-	} catch (error) {
-		logger.error(
-			`Error retrieving inventory product record with ID ${req.params.id}.`,
-			{ error: error.message }
-		);
-		res.error("Internal server error", 500);
 	}
-});
+);
 
 /**
  * @route PUT /v1/inventory/products/:id
@@ -334,20 +359,15 @@ router.get("/products/:id", async (req, res) => {
  * @returns {Response} 404 - Returns an error if the inventory product record is not found.
  * @returns {Response} 500 - Returns an error message for an internal server error.
  */
-router.put("/products/:id", async (req, res) => {
-	try {
-		const { id } = req.params;
-		const { product_id, location_id, quantity } = req.body;
-		if (!product_id || !location_id || quantity === undefined) {
-			logger.error(
-				"Inventory product update failed: product_id, location_id, and quantity are required."
-			);
-			return res.error(
-				"product_id, location_id, and quantity are required.",
-				400
-			);
-		}
-		const query = `
+router.put(
+	"/products/:id",
+	validateRequest(inventoryProductIdSchema, "params"),
+	validateRequest(createOrUpdateInventoryProductSchema),
+	async (req, res) => {
+		try {
+			const { id } = req.params;
+			const { product_id, location_id, quantity } = req.body;
+			const query = `
       UPDATE inventory_products
       SET product_id = $1,
           location_id = $2,
@@ -356,29 +376,31 @@ router.put("/products/:id", async (req, res) => {
       WHERE id = $4
       RETURNING *;
     `;
-		const values = [product_id, location_id, quantity, id];
-		const result = await pool.query(query, values);
-		if (result.rows.length === 0) {
-			logger.error(
-				`Inventory product record with ID ${id} not found for update.`
+			const values = [product_id, location_id, quantity, id];
+			const result = await pool.query(query, values);
+			if (result.rows.length === 0) {
+				logger.error(
+					`Inventory product record with ID ${id} not found for update.`
+				);
+				return res.error("Inventory product record not found.", 404);
+			}
+			logger.info(
+				`Inventory product record with ID ${id} updated successfully.`
 			);
-			return res.error("Inventory product record not found.", 404);
+			res.success(
+				{ product: result.rows[0] },
+				"Inventory product record updated successfully",
+				200
+			);
+		} catch (error) {
+			logger.error(
+				`Error updating inventory product record with ID ${req.params.id}.`,
+				{ error: error.message }
+			);
+			res.error("Internal server error", 500);
 		}
-		logger.info(
-			`Inventory product record with ID ${id} updated successfully.`
-		);
-		res.success(
-			{ product: result.rows[0] },
-			"Inventory product record updated successfully"
-		);
-	} catch (error) {
-		logger.error(
-			`Error updating inventory product record with ID ${req.params.id}.`,
-			{ error: error.message }
-		);
-		res.error("Internal server error", 500);
 	}
-});
+);
 
 /**
  * @route DELETE /v1/inventory/products/:id
@@ -389,30 +411,38 @@ router.put("/products/:id", async (req, res) => {
  * @returns {Response} 404 - Returns an error if the inventory product record is not found.
  * @returns {Response} 500 - Returns an error message for an internal server error.
  */
-router.delete("/products/:id", async (req, res) => {
-	try {
-		const { id } = req.params;
-		const result = await pool.query(
-			"DELETE FROM inventory_products WHERE id = $1 RETURNING id",
-			[id]
-		);
-		if (result.rows.length === 0) {
-			logger.error(
-				`Inventory product record with ID ${id} not found for deletion.`
+router.delete(
+	"/products/:id",
+	validateRequest(inventoryProductIdSchema, "params"),
+	async (req, res) => {
+		try {
+			const { id } = req.params;
+			const result = await pool.query(
+				"DELETE FROM inventory_products WHERE id = $1 RETURNING id",
+				[id]
 			);
-			return res.error("Inventory product record not found.", 404);
+			if (result.rows.length === 0) {
+				logger.error(
+					`Inventory product record with ID ${id} not found for deletion.`
+				);
+				return res.error("Inventory product record not found.", 404);
+			}
+			logger.info(
+				`Inventory product record with ID ${id} deleted successfully.`
+			);
+			res.success(
+				null,
+				"Inventory product record deleted successfully",
+				200
+			);
+		} catch (error) {
+			logger.error(
+				`Error deleting inventory product record with ID ${req.params.id}.`,
+				{ error: error.message }
+			);
+			res.error("Internal server error", 500);
 		}
-		logger.info(
-			`Inventory product record with ID ${id} deleted successfully.`
-		);
-		res.success(null, "Inventory product record deleted successfully");
-	} catch (error) {
-		logger.error(
-			`Error deleting inventory product record with ID ${req.params.id}.`,
-			{ error: error.message }
-		);
-		res.error("Internal server error", 500);
 	}
-});
+);
 
 export default router;

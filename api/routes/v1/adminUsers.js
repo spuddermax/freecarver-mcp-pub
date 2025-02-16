@@ -5,6 +5,12 @@ import bcrypt from "bcrypt";
 import { pool } from "../../db.js";
 import { logger } from "../../logger.js";
 import { verifyJWT } from "../../middleware/auth.js";
+import validateRequest from "../../middleware/validateRequest.js";
+import {
+	createAdminUserSchema,
+	updateAdminUserSchema,
+	adminUserIdSchema,
+} from "../../validators/adminUsers.js";
 
 const router = express.Router();
 
@@ -26,7 +32,8 @@ router.get("/", async (req, res) => {
 		logger.info("Retrieved admin users list");
 		res.success(
 			{ admins: result.rows },
-			"Admin users retrieved successfully"
+			"Admin users retrieved successfully",
+			200
 		);
 	} catch (error) {
 		logger.error("Error retrieving admin users", { error: error.message });
@@ -43,27 +50,34 @@ router.get("/", async (req, res) => {
  * @returns {Response} 404 - Returns an error message if the admin user is not found.
  * @returns {Response} 500 - Returns an error message for internal server error.
  */
-router.get("/:id", async (req, res) => {
-	try {
-		const { id } = req.params;
-		const result = await pool.query(
-			"SELECT id, email, first_name, last_name, phone_number, avatar_url, timezone, role_id, mfa_enabled, mfa_method, created_at, updated_at FROM admin_users WHERE id = $1",
-			[id]
-		);
-		if (result.rows.length === 0) {
-			logger.error(`Admin user with ID ${id} not found.`);
-			return res.error("Admin user not found.", 404);
+router.get(
+	"/:id",
+	validateRequest(adminUserIdSchema, "params"),
+	async (req, res) => {
+		try {
+			const { id } = req.params;
+			const result = await pool.query(
+				"SELECT id, email, first_name, last_name, phone_number, avatar_url, timezone, role_id, mfa_enabled, mfa_method, created_at, updated_at FROM admin_users WHERE id = $1",
+				[id]
+			);
+			if (result.rows.length === 0) {
+				logger.error(`Admin user with ID ${id} not found.`);
+				return res.error("Admin user not found.", 404);
+			}
+			logger.info(`Retrieved admin user with ID ${id}`);
+			res.success(
+				{ admin: result.rows[0] },
+				"Admin user retrieved successfully",
+				200
+			);
+		} catch (error) {
+			logger.error("Error retrieving admin user", {
+				error: error.message,
+			});
+			res.error("Internal server error", 500);
 		}
-		logger.info(`Retrieved admin user with ID ${id}`);
-		res.success(
-			{ admin: result.rows[0] },
-			"Admin user retrieved successfully"
-		);
-	} catch (error) {
-		logger.error("Error retrieving admin user", { error: error.message });
-		res.error("Internal server error", 500);
 	}
-});
+);
 
 /**
  * @route POST /v1/adminUsers
@@ -84,54 +98,14 @@ router.get("/:id", async (req, res) => {
  * @returns {Response} 409 - Returns an error if the email is already in use.
  * @returns {Response} 500 - Returns an error message for internal server error.
  */
-router.post("/", async (req, res) => {
-	try {
-		const {
-			email,
-			password,
-			first_name,
-			last_name,
-			phone_number,
-			role_id,
-			timezone,
-			mfa_enabled,
-			mfa_method,
-		} = req.body;
-		if (!email || !password) {
-			logger.error(
-				"Admin user creation failed: Email and password are required."
-			);
-			return res.validationError(
-				{
-					email: "Email is required",
-					password: "Password is required",
-				},
-				"Email and password are required."
-			);
-		}
-
-		// Check if the email is already in use
-		const existing = await pool.query(
-			"SELECT id FROM admin_users WHERE email = $1",
-			[email]
-		);
-		if (existing.rows.length > 0) {
-			logger.error(
-				`Admin user creation failed: Email ${email} is already in use.`
-			);
-			return res.error("Email already in use.", 409);
-		}
-
-		// Hash the password before storing it
-		const password_hash = await bcrypt.hash(password, 10);
-
-		const result = await pool.query(
-			`INSERT INTO admin_users (email, password_hash, first_name, last_name, phone_number, role_id, timezone, mfa_enabled, mfa_method)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-       RETURNING id, email, first_name, last_name, phone_number, avatar_url, timezone, role_id, mfa_enabled, mfa_method, created_at, updated_at`,
-			[
+router.post(
+	"/",
+	validateRequest(createAdminUserSchema, "body"),
+	async (req, res) => {
+		try {
+			const {
 				email,
-				password_hash,
+				password,
 				first_name,
 				last_name,
 				phone_number,
@@ -139,18 +113,53 @@ router.post("/", async (req, res) => {
 				timezone,
 				mfa_enabled,
 				mfa_method,
-			]
-		);
-		logger.info(`Admin user created successfully: ${email}`);
-		res.success(
-			{ admin: result.rows[0] },
-			"Admin user created successfully"
-		);
-	} catch (error) {
-		logger.error("Error creating admin user", { error: error.message });
-		res.error("Internal server error", 500);
+			} = req.body;
+			// Email and password are now validated by the middleware.
+
+			// Check if the email is already in use
+			const existing = await pool.query(
+				"SELECT id FROM admin_users WHERE email = $1",
+				[email]
+			);
+			if (existing.rows.length > 0) {
+				logger.error(
+					`Admin user creation failed: Email ${email} is already in use.`
+				);
+				return res.error("Email already in use.", 409);
+			}
+
+			// Hash the password before storing it
+			const password_hash = await bcrypt.hash(password, 10);
+
+			const result = await pool.query(
+				`INSERT INTO admin_users (email, password_hash, first_name, last_name, phone_number, role_id, timezone, mfa_enabled, mfa_method)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+       RETURNING id, email, first_name, last_name, phone_number, avatar_url, timezone, role_id, mfa_enabled, mfa_method, created_at, updated_at`,
+				[
+					email,
+					password_hash,
+					first_name,
+					last_name,
+					phone_number,
+					role_id,
+					timezone,
+					mfa_enabled,
+					mfa_method,
+				]
+			);
+			logger.info(`Admin user created successfully: ${email}`);
+
+			res.success(
+				{ admin: result.rows[0] },
+				"Admin user created successfully",
+				201
+			);
+		} catch (error) {
+			logger.error("Error creating admin user", { error: error.message });
+			res.error("Internal server error", 500);
+		}
 	}
-});
+);
 
 /**
  * @route PUT /v1/adminUsers/:id
@@ -171,79 +180,84 @@ router.post("/", async (req, res) => {
  * @returns {Response} 404 - Returns an error if the admin user is not found.
  * @returns {Response} 500 - Returns an error message for internal server error.
  */
-router.put("/:id", async (req, res) => {
-	try {
-		const { id } = req.params;
-		if (!id) {
-			return res.error("User ID is required.", 400);
-		}
+router.put(
+	"/:id",
+	validateRequest(adminUserIdSchema, "params"),
+	validateRequest(updateAdminUserSchema, "body"),
+	async (req, res) => {
+		try {
+			const { id } = req.params;
+			const {
+				email,
+				first_name,
+				last_name,
+				phone_number,
+				timezone,
+				mfa_enabled,
+				mfa_method,
+				password,
+			} = req.body;
 
-		const {
-			email,
-			first_name,
-			last_name,
-			phone_number,
-			timezone,
-			mfa_enabled,
-			mfa_method,
-			password,
-		} = req.body;
+			// Build an object with only the fields provided
+			const updateFields = {};
+			if (email) updateFields.email = email;
+			if (first_name) updateFields.first_name = first_name;
+			if (last_name) updateFields.last_name = last_name;
+			if (phone_number) updateFields.phone_number = phone_number;
+			if (timezone) updateFields.timezone = timezone;
+			if (mfa_enabled !== undefined)
+				updateFields.mfa_enabled = mfa_enabled;
+			if (mfa_method) updateFields.mfa_method = mfa_method;
+			if (password)
+				updateFields.password_hash = await bcrypt.hash(password, 10);
 
-		// Build an object with only the fields provided
-		const updateFields = {};
-		if (email) updateFields.email = email;
-		if (first_name) updateFields.first_name = first_name;
-		if (last_name) updateFields.last_name = last_name;
-		if (phone_number) updateFields.phone_number = phone_number;
-		if (timezone) updateFields.timezone = timezone;
-		if (mfa_enabled !== undefined) updateFields.mfa_enabled = mfa_enabled;
-		if (mfa_method) updateFields.mfa_method = mfa_method;
-		if (password)
-			updateFields.password_hash = await bcrypt.hash(password, 10);
+			// If no valid fields are provided, return an error.
+			const keys = Object.keys(updateFields);
+			if (keys.length === 0) {
+				logger.error("No valid fields to update for admin user", {
+					id,
+				});
+				return res.validationError(
+					{ error: "No valid fields to update." },
+					"No valid fields to update."
+				);
+			}
 
-		// If no valid fields are provided, return an error.
-		const keys = Object.keys(updateFields);
-		if (keys.length === 0) {
-			logger.error("No valid fields to update for admin user", { id });
-			return res.validationError(
-				{ error: "No valid fields to update." },
-				"No valid fields to update."
-			);
-		}
+			// Build dynamic SET clause and values array
+			const setClause = keys
+				.map((field, index) => `${field} = $${index + 1}`)
+				.join(", ");
+			const values = keys.map((key) => updateFields[key]);
+			// Append the user id as the last parameter
+			values.push(id);
 
-		// Build dynamic SET clause and values array
-		const setClause = keys
-			.map((field, index) => `${field} = $${index + 1}`)
-			.join(", ");
-		const values = keys.map((key) => updateFields[key]);
-		// Append the user id as the last parameter
-		values.push(id);
-
-		// Include updated_at in the query and use the proper placeholder for the id
-		const queryText = `
+			// Include updated_at in the query
+			const queryText = `
       UPDATE admin_users
       SET ${setClause}, updated_at = NOW()
       WHERE id = $${values.length}
       RETURNING id, email, first_name, last_name, phone_number, avatar_url, timezone, role_id, mfa_enabled, mfa_method, created_at, updated_at
     `;
 
-		const result = await pool.query(queryText, values);
+			const result = await pool.query(queryText, values);
 
-		if (result.rows.length === 0) {
-			logger.error(`Admin user with ID ${id} not found for update.`);
-			return res.error("Admin user not found.", 404);
+			if (result.rows.length === 0) {
+				logger.error(`Admin user with ID ${id} not found for update.`);
+				return res.error("Admin user not found.", 404);
+			}
+
+			logger.info(`Admin user with ID ${id} updated successfully.`);
+			res.success(
+				{ admin: result.rows[0] },
+				"Admin user updated successfully",
+				200
+			);
+		} catch (error) {
+			logger.error("Error updating admin user", { error: error.message });
+			res.error("Internal server error", 500);
 		}
-
-		logger.info(`Admin user with ID ${id} updated successfully.`);
-		res.success(
-			{ admin: result.rows[0] },
-			"Admin user updated successfully"
-		);
-	} catch (error) {
-		logger.error("Error updating admin user", { error: error.message });
-		res.error("Internal server error", 500);
 	}
-});
+);
 
 /**
  * @route DELETE /v1/adminUsers/:id
@@ -254,24 +268,30 @@ router.put("/:id", async (req, res) => {
  * @returns {Response} 404 - Returns an error if the admin user is not found.
  * @returns {Response} 500 - Returns an error message for internal server error.
  */
-router.delete("/:id", async (req, res) => {
-	try {
-		const { id } = req.params;
-		const result = await pool.query(
-			"DELETE FROM admin_users WHERE id = $1 RETURNING id",
-			[id]
-		);
-		if (result.rows.length === 0) {
-			logger.error(`Admin user with ID ${id} not found for deletion.`);
-			return res.error("Admin user not found.", 404);
+router.delete(
+	"/:id",
+	validateRequest(adminUserIdSchema, "params"),
+	async (req, res) => {
+		try {
+			const { id } = req.params;
+			const result = await pool.query(
+				"DELETE FROM admin_users WHERE id = $1 RETURNING id",
+				[id]
+			);
+			if (result.rows.length === 0) {
+				logger.error(
+					`Admin user with ID ${id} not found for deletion.`
+				);
+				return res.error("Admin user not found.", 404);
+			}
+			logger.info(`Admin user with ID ${id} deleted successfully.`);
+			res.success(null, "Admin user deleted successfully", 200);
+		} catch (error) {
+			logger.error("Error deleting admin user", { error: error.message });
+			res.error("Internal server error", 500);
 		}
-		logger.info(`Admin user with ID ${id} deleted successfully.`);
-		res.success(null, "Admin user deleted successfully.");
-	} catch (error) {
-		logger.error("Error deleting admin user", { error: error.message });
-		res.error("Internal server error", 500);
 	}
-});
+);
 
 /**
  * @route POST /v1/adminUsers/:id/validatePassword
@@ -308,7 +328,8 @@ router.post("/:id/validatePassword", async (req, res) => {
 		logger.info(`Admin user with ID ${id} validated successfully.`);
 		res.success(
 			{ result: true, message: "Valid password." },
-			"Valid password."
+			"Valid password.",
+			200
 		);
 	} catch (error) {
 		logger.error("Error validating admin user password", {

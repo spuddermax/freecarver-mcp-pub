@@ -105,20 +105,21 @@ describe("Product Option SKUs Routes", () => {
 				.post("/v1/product_option_skus")
 				.set("Authorization", `Bearer ${authToken}`)
 				.send(payload);
-			// Expect status code 200
-			expect(res.statusCode).toEqual(200);
+			// Updated status code to 201 (Created)
+			expect(res.statusCode).toEqual(201);
 			// Verify the SKU is wrapped in the data property.
 			expect(res.body.data.sku).toBeDefined();
 			expect(res.body.data.sku.sku).toEqual("SKU12345");
 			skuId = res.body.data.sku.id;
 		});
 
-		it("should return 400 if required fields are missing", async () => {
+		it("should return 422 if required fields are missing", async () => {
 			const res = await request(app)
 				.post("/v1/product_option_skus")
 				.set("Authorization", `Bearer ${authToken}`)
-				.send({ product_id: productId }); // missing option_id, variant_id, sku
-			expect(res.statusCode).toEqual(400);
+				.send({ product_id: productId }); // missing option_id, variant_id, sku, etc.
+			// Updated expected status code for validation error: 422
+			expect(res.statusCode).toEqual(422);
 			// Check error response using the message property.
 			expect(res.body.message).toBeDefined();
 		});
@@ -180,12 +181,13 @@ describe("Product Option SKUs Routes", () => {
 			expect(res.body.data.sku.sku).toEqual("SKU67890");
 		});
 
-		it("should return 400 if required fields are missing", async () => {
+		it("should return 422 if required fields are missing when updating", async () => {
 			const res = await request(app)
 				.put(`/v1/product_option_skus/${skuId}`)
 				.set("Authorization", `Bearer ${authToken}`)
 				.send({ sku: "Incomplete" });
-			expect(res.statusCode).toEqual(400);
+			// Updated expected status code for validation error: 422
+			expect(res.statusCode).toEqual(422);
 			expect(res.body.message).toBeDefined();
 		});
 	});
@@ -196,7 +198,7 @@ describe("Product Option SKUs Routes", () => {
 				.delete(`/v1/product_option_skus/${skuId}`)
 				.set("Authorization", `Bearer ${authToken}`);
 			expect(res.statusCode).toEqual(200);
-			// Verify the delete response message (without trailing punctuation).
+			// Verify the delete response message.
 			expect(res.body.message).toEqual(
 				"Product option SKU deleted successfully"
 			);

@@ -1,3 +1,5 @@
+// /api/validators/products.js
+
 import Joi from "joi";
 
 // Schema for listing products (query parameters)

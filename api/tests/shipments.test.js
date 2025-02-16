@@ -122,7 +122,7 @@ describe("Shipments Routes", () => {
 				.post("/v1/shipments")
 				.set("Authorization", `Bearer ${authToken}`)
 				.send(payload);
-			expect(res.statusCode).toEqual(200);
+			expect(res.statusCode).toEqual(201);
 			expect(res.body.data.shipment).toBeDefined();
 			expect(res.body.data.shipment.order_id).toEqual(orderId);
 			shipmentId = res.body.data.shipment.id;
@@ -202,7 +202,7 @@ describe("Shipments Routes", () => {
 				.post(`/v1/shipments/${shipmentId}/items`)
 				.set("Authorization", `Bearer ${authToken}`)
 				.send(payload);
-			expect(res.statusCode).toEqual(200);
+			expect(res.statusCode).toEqual(201);
 			expect(res.body.data.item).toBeDefined();
 			expect(res.body.data.item.order_item_id).toEqual(orderItemId);
 			shipmentItemId = res.body.data.item.id;

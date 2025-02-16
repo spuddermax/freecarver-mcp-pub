@@ -4,6 +4,17 @@ import express from "express";
 import { pool } from "../../db.js";
 import { logger } from "../../logger.js";
 import { verifyJWT } from "../../middleware/auth.js";
+import validateRequest from "../../middleware/validateRequest.js";
+
+import {
+	createShipmentSchema,
+	updateShipmentSchema,
+	shipmentIdSchema,
+	shipmentParamSchema,
+	createShipmentItemSchema,
+	updateShipmentItemSchema,
+	shipmentItemIdSchema,
+} from "../../validators/shipments.js";
 
 const router = express.Router();
 
@@ -23,7 +34,8 @@ router.get("/", async (req, res) => {
 		logger.info("Retrieved shipments list.");
 		res.success(
 			{ shipments: result.rows },
-			"Shipments retrieved successfully"
+			"Shipments retrieved successfully",
+			200
 		);
 	} catch (error) {
 		logger.error("Error retrieving shipments.", { error: error.message });
@@ -45,7 +57,7 @@ router.get("/", async (req, res) => {
  * @returns {Response} 400 - Bad request if required fields are missing.
  * @returns {Response} 500 - Internal server error.
  */
-router.post("/", async (req, res) => {
+router.post("/", validateRequest(createShipmentSchema), async (req, res) => {
 	try {
 		const {
 			order_id,
@@ -54,19 +66,6 @@ router.post("/", async (req, res) => {
 			shipping_carrier,
 			status,
 		} = req.body;
-		if (
-			!order_id ||
-			!shipment_date ||
-			!tracking_number ||
-			!shipping_carrier ||
-			!status
-		) {
-			logger.error("Shipment creation failed: Missing required fields.");
-			return res.error(
-				"order_id, shipment_date, tracking_number, shipping_carrier, and status are required.",
-				400
-			);
-		}
 		const query = `
       INSERT INTO shipments (order_id, shipment_date, tracking_number, shipping_carrier, status)
       VALUES ($1, $2, $3, $4, $5)
@@ -85,7 +84,8 @@ router.post("/", async (req, res) => {
 		);
 		res.success(
 			{ shipment: result.rows[0] },
-			"Shipment created successfully"
+			"Shipment created successfully",
+			201
 		);
 	} catch (error) {
 		logger.error("Error creating shipment.", { error: error.message });
@@ -102,29 +102,37 @@ router.post("/", async (req, res) => {
  * @returns {Response} 404 - Not found if the shipment does not exist.
  * @returns {Response} 500 - Internal server error.
  */
-router.get("/:id", async (req, res) => {
-	try {
-		const { id } = req.params;
-		const result = await pool.query(
-			"SELECT * FROM shipments WHERE id = $1",
-			[id]
-		);
-		if (result.rows.length === 0) {
-			logger.error(`Shipment with ID ${id} not found.`);
-			return res.error("Shipment not found.", 404);
+router.get(
+	"/:id",
+	validateRequest(shipmentIdSchema, "params"),
+	async (req, res) => {
+		try {
+			const { id } = req.params;
+			const result = await pool.query(
+				"SELECT * FROM shipments WHERE id = $1",
+				[id]
+			);
+			if (result.rows.length === 0) {
+				logger.error(`Shipment with ID ${id} not found.`);
+				return res.error("Shipment not found.", 404);
+			}
+			logger.info(`Retrieved shipment with ID ${id}.`);
+			res.success(
+				{ shipment: result.rows[0] },
+				"Shipment retrieved successfully",
+				200
+			);
+		} catch (error) {
+			logger.error(
+				`Error retrieving shipment with ID ${req.params.id}.`,
+				{
+					error: error.message,
+				}
+			);
+			res.error("Internal server error", 500);
 		}
-		logger.info(`Retrieved shipment with ID ${id}.`);
-		res.success(
-			{ shipment: result.rows[0] },
-			"Shipment retrieved successfully"
-		);
-	} catch (error) {
-		logger.error(`Error retrieving shipment with ID ${req.params.id}.`, {
-			error: error.message,
-		});
-		res.error("Internal server error", 500);
 	}
-});
+);
 
 /**
  * @route PUT /v1/shipments/:id
@@ -141,17 +149,21 @@ router.get("/:id", async (req, res) => {
  * @returns {Response} 404 - Not found if the shipment does not exist.
  * @returns {Response} 500 - Internal server error.
  */
-router.put("/:id", async (req, res) => {
-	try {
-		const { id } = req.params;
-		const {
-			order_id,
-			shipment_date,
-			tracking_number,
-			shipping_carrier,
-			status,
-		} = req.body;
-		const query = `
+router.put(
+	"/:id",
+	validateRequest(shipmentIdSchema, "params"),
+	validateRequest(updateShipmentSchema),
+	async (req, res) => {
+		try {
+			const { id } = req.params;
+			const {
+				order_id,
+				shipment_date,
+				tracking_number,
+				shipping_carrier,
+				status,
+			} = req.body;
+			const query = `
       UPDATE shipments
       SET order_id = $1,
           shipment_date = $2,
@@ -162,31 +174,33 @@ router.put("/:id", async (req, res) => {
       WHERE id = $6
       RETURNING *;
     `;
-		const values = [
-			order_id,
-			shipment_date,
-			tracking_number,
-			shipping_carrier,
-			status,
-			id,
-		];
-		const result = await pool.query(query, values);
-		if (result.rows.length === 0) {
-			logger.error(`Shipment with ID ${id} not found for update.`);
-			return res.error("Shipment not found.", 404);
+			const values = [
+				order_id,
+				shipment_date,
+				tracking_number,
+				shipping_carrier,
+				status,
+				id,
+			];
+			const result = await pool.query(query, values);
+			if (result.rows.length === 0) {
+				logger.error(`Shipment with ID ${id} not found for update.`);
+				return res.error("Shipment not found.", 404);
+			}
+			logger.info(`Shipment with ID ${id} updated successfully.`);
+			res.success(
+				{ shipment: result.rows[0] },
+				"Shipment updated successfully",
+				200
+			);
+		} catch (error) {
+			logger.error(`Error updating shipment with ID ${req.params.id}.`, {
+				error: error.message,
+			});
+			res.error("Internal server error", 500);
 		}
-		logger.info(`Shipment with ID ${id} updated successfully.`);
-		res.success(
-			{ shipment: result.rows[0] },
-			"Shipment updated successfully"
-		);
-	} catch (error) {
-		logger.error(`Error updating shipment with ID ${req.params.id}.`, {
-			error: error.message,
-		});
-		res.error("Internal server error", 500);
 	}
-});
+);
 
 /**
  * @route DELETE /v1/shipments/:id
@@ -197,26 +211,30 @@ router.put("/:id", async (req, res) => {
  * @returns {Response} 404 - Not found if the shipment does not exist.
  * @returns {Response} 500 - Internal server error.
  */
-router.delete("/:id", async (req, res) => {
-	try {
-		const { id } = req.params;
-		const result = await pool.query(
-			"DELETE FROM shipments WHERE id = $1 RETURNING id",
-			[id]
-		);
-		if (result.rows.length === 0) {
-			logger.error(`Shipment with ID ${id} not found for deletion.`);
-			return res.error("Shipment not found.", 404);
+router.delete(
+	"/:id",
+	validateRequest(shipmentIdSchema, "params"),
+	async (req, res) => {
+		try {
+			const { id } = req.params;
+			const result = await pool.query(
+				"DELETE FROM shipments WHERE id = $1 RETURNING id",
+				[id]
+			);
+			if (result.rows.length === 0) {
+				logger.error(`Shipment with ID ${id} not found for deletion.`);
+				return res.error("Shipment not found.", 404);
+			}
+			logger.info(`Shipment with ID ${id} deleted successfully.`);
+			res.success(null, "Shipment deleted successfully", 200);
+		} catch (error) {
+			logger.error(`Error deleting shipment with ID ${req.params.id}.`, {
+				error: error.message,
+			});
+			res.error("Internal server error", 500);
 		}
-		logger.info(`Shipment with ID ${id} deleted successfully.`);
-		res.success(null, "Shipment deleted successfully");
-	} catch (error) {
-		logger.error(`Error deleting shipment with ID ${req.params.id}.`, {
-			error: error.message,
-		});
-		res.error("Internal server error", 500);
 	}
-});
+);
 
 /**
  * @route GET /v1/shipments/:shipmentId/items
@@ -227,6 +245,15 @@ router.delete("/:id", async (req, res) => {
  * @returns {Response} 500 - Internal server error.
  */
 const itemsRouter = express.Router({ mergeParams: true });
+
+// Validate that the shipmentId param exists on all nested routes.
+itemsRouter.use(validateRequest(shipmentParamSchema, "params"));
+
+/**
+ * @route GET /v1/shipments/:shipmentId/items
+ * @description Retrieve all shipment items for a given shipment.
+ * @access Protected
+ */
 itemsRouter.get("/", async (req, res) => {
 	try {
 		const { shipmentId } = req.params;
@@ -237,7 +264,8 @@ itemsRouter.get("/", async (req, res) => {
 		logger.info(`Retrieved shipment items for shipment ID ${shipmentId}.`);
 		res.success(
 			{ items: result.rows },
-			"Shipment items retrieved successfully"
+			"Shipment items retrieved successfully",
+			200
 		);
 	} catch (error) {
 		logger.error(
@@ -260,41 +288,37 @@ itemsRouter.get("/", async (req, res) => {
  * @returns {Response} 400 - Bad request if required fields are missing.
  * @returns {Response} 500 - Internal server error.
  */
-itemsRouter.post("/", async (req, res) => {
-	try {
-		const { shipmentId } = req.params;
-		const { order_item_id, quantity_shipped } = req.body;
-		if (!order_item_id || quantity_shipped === undefined) {
-			logger.error(
-				"Shipment item creation failed: order_item_id and quantity_shipped are required."
-			);
-			return res.error(
-				"order_item_id and quantity_shipped are required.",
-				400
-			);
-		}
-		const query = `
+itemsRouter.post(
+	"/",
+	validateRequest(createShipmentItemSchema),
+	async (req, res) => {
+		try {
+			const { shipmentId } = req.params;
+			const { order_item_id, quantity_shipped } = req.body;
+			const query = `
       INSERT INTO shipment_items (shipment_id, order_item_id, quantity_shipped)
       VALUES ($1, $2, $3)
       RETURNING *;
     `;
-		const values = [shipmentId, order_item_id, quantity_shipped];
-		const result = await pool.query(query, values);
-		logger.info(
-			`Shipment item created successfully for shipment ID ${shipmentId}.`
-		);
-		res.success(
-			{ item: result.rows[0] },
-			"Shipment item created successfully"
-		);
-	} catch (error) {
-		logger.error(
-			`Error creating shipment item for shipment ID ${req.params.shipmentId}.`,
-			{ error: error.message }
-		);
-		res.error("Internal server error", 500);
+			const values = [shipmentId, order_item_id, quantity_shipped];
+			const result = await pool.query(query, values);
+			logger.info(
+				`Shipment item created successfully for shipment ID ${shipmentId}.`
+			);
+			res.success(
+				{ item: result.rows[0] },
+				"Shipment item created successfully",
+				201
+			);
+		} catch (error) {
+			logger.error(
+				`Error creating shipment item for shipment ID ${req.params.shipmentId}.`,
+				{ error: error.message }
+			);
+			res.error("Internal server error", 500);
+		}
 	}
-});
+);
 
 /**
  * @route GET /v1/shipments/:shipmentId/items/:itemId
@@ -306,34 +330,39 @@ itemsRouter.post("/", async (req, res) => {
  * @returns {Response} 404 - Not found if the shipment item does not exist.
  * @returns {Response} 500 - Internal server error.
  */
-itemsRouter.get("/:itemId", async (req, res) => {
-	try {
-		const { shipmentId, itemId } = req.params;
-		const result = await pool.query(
-			"SELECT * FROM shipment_items WHERE shipment_id = $1 AND id = $2",
-			[shipmentId, itemId]
-		);
-		if (result.rows.length === 0) {
-			logger.error(
-				`Shipment item with ID ${itemId} for shipment ID ${shipmentId} not found.`
+itemsRouter.get(
+	"/:itemId",
+	validateRequest(shipmentItemIdSchema, "params"),
+	async (req, res) => {
+		try {
+			const { shipmentId, itemId } = req.params;
+			const result = await pool.query(
+				"SELECT * FROM shipment_items WHERE shipment_id = $1 AND id = $2",
+				[shipmentId, itemId]
 			);
-			return res.error("Shipment item not found.", 404);
+			if (result.rows.length === 0) {
+				logger.error(
+					`Shipment item with ID ${itemId} for shipment ID ${shipmentId} not found.`
+				);
+				return res.error("Shipment item not found.", 404);
+			}
+			logger.info(
+				`Retrieved shipment item with ID ${itemId} for shipment ID ${shipmentId}.`
+			);
+			res.success(
+				{ item: result.rows[0] },
+				"Shipment item retrieved successfully",
+				200
+			);
+		} catch (error) {
+			logger.error(
+				`Error retrieving shipment item with ID ${req.params.itemId} for shipment ID ${req.params.shipmentId}.`,
+				{ error: error.message }
+			);
+			res.error("Internal server error", 500);
 		}
-		logger.info(
-			`Retrieved shipment item with ID ${itemId} for shipment ID ${shipmentId}.`
-		);
-		res.success(
-			{ item: result.rows[0] },
-			"Shipment item retrieved successfully"
-		);
-	} catch (error) {
-		logger.error(
-			`Error retrieving shipment item with ID ${req.params.itemId} for shipment ID ${req.params.shipmentId}.`,
-			{ error: error.message }
-		);
-		res.error("Internal server error", 500);
 	}
-});
+);
 
 /**
  * @route PUT /v1/shipments/:shipmentId/items/:itemId
@@ -349,20 +378,15 @@ itemsRouter.get("/:itemId", async (req, res) => {
  * @returns {Response} 404 - Not found if the shipment item does not exist.
  * @returns {Response} 500 - Internal server error.
  */
-itemsRouter.put("/:itemId", async (req, res) => {
-	try {
-		const { shipmentId, itemId } = req.params;
-		const { order_item_id, quantity_shipped } = req.body;
-		if (!order_item_id || quantity_shipped === undefined) {
-			logger.error(
-				"Shipment item update failed: order_item_id and quantity_shipped are required."
-			);
-			return res.error(
-				"order_item_id and quantity_shipped are required.",
-				400
-			);
-		}
-		const query = `
+itemsRouter.put(
+	"/:itemId",
+	validateRequest(shipmentItemIdSchema, "params"),
+	validateRequest(updateShipmentItemSchema),
+	async (req, res) => {
+		try {
+			const { shipmentId, itemId } = req.params;
+			const { order_item_id, quantity_shipped } = req.body;
+			const query = `
       UPDATE shipment_items
       SET order_item_id = $1,
           quantity_shipped = $2,
@@ -370,29 +394,36 @@ itemsRouter.put("/:itemId", async (req, res) => {
       WHERE shipment_id = $3 AND id = $4
       RETURNING *;
     `;
-		const values = [order_item_id, quantity_shipped, shipmentId, itemId];
-		const result = await pool.query(query, values);
-		if (result.rows.length === 0) {
-			logger.error(
-				`Shipment item with ID ${itemId} for shipment ID ${shipmentId} not found for update.`
+			const values = [
+				order_item_id,
+				quantity_shipped,
+				shipmentId,
+				itemId,
+			];
+			const result = await pool.query(query, values);
+			if (result.rows.length === 0) {
+				logger.error(
+					`Shipment item with ID ${itemId} for shipment ID ${shipmentId} not found for update.`
+				);
+				return res.error("Shipment item not found.", 404);
+			}
+			logger.info(
+				`Shipment item with ID ${itemId} for shipment ID ${shipmentId} updated successfully.`
 			);
-			return res.error("Shipment item not found.", 404);
+			res.success(
+				{ item: result.rows[0] },
+				"Shipment item updated successfully",
+				200
+			);
+		} catch (error) {
+			logger.error(
+				`Error updating shipment item with ID ${req.params.itemId} for shipment ID ${req.params.shipmentId}.`,
+				{ error: error.message }
+			);
+			res.error("Internal server error", 500);
 		}
-		logger.info(
-			`Shipment item with ID ${itemId} for shipment ID ${shipmentId} updated successfully.`
-		);
-		res.success(
-			{ item: result.rows[0] },
-			"Shipment item updated successfully"
-		);
-	} catch (error) {
-		logger.error(
-			`Error updating shipment item with ID ${req.params.itemId} for shipment ID ${req.params.shipmentId}.`,
-			{ error: error.message }
-		);
-		res.error("Internal server error", 500);
 	}
-});
+);
 
 /**
  * @route DELETE /v1/shipments/:shipmentId/items/:itemId
@@ -404,31 +435,35 @@ itemsRouter.put("/:itemId", async (req, res) => {
  * @returns {Response} 404 - Not found if the shipment item does not exist.
  * @returns {Response} 500 - Internal server error.
  */
-itemsRouter.delete("/:itemId", async (req, res) => {
-	try {
-		const { shipmentId, itemId } = req.params;
-		const result = await pool.query(
-			"DELETE FROM shipment_items WHERE shipment_id = $1 AND id = $2 RETURNING id",
-			[shipmentId, itemId]
-		);
-		if (result.rows.length === 0) {
-			logger.error(
-				`Shipment item with ID ${itemId} for shipment ID ${shipmentId} not found for deletion.`
+itemsRouter.delete(
+	"/:itemId",
+	validateRequest(shipmentItemIdSchema, "params"),
+	async (req, res) => {
+		try {
+			const { shipmentId, itemId } = req.params;
+			const result = await pool.query(
+				"DELETE FROM shipment_items WHERE shipment_id = $1 AND id = $2 RETURNING id",
+				[shipmentId, itemId]
 			);
-			return res.error("Shipment item not found.", 404);
+			if (result.rows.length === 0) {
+				logger.error(
+					`Shipment item with ID ${itemId} for shipment ID ${shipmentId} not found for deletion.`
+				);
+				return res.error("Shipment item not found.", 404);
+			}
+			logger.info(
+				`Shipment item with ID ${itemId} for shipment ID ${shipmentId} deleted successfully.`
+			);
+			res.success(null, "Shipment item deleted successfully", 200);
+		} catch (error) {
+			logger.error(
+				`Error deleting shipment item with ID ${req.params.itemId} for shipment ID ${req.params.shipmentId}.`,
+				{ error: error.message }
+			);
+			res.error("Internal server error", 500);
 		}
-		logger.info(
-			`Shipment item with ID ${itemId} for shipment ID ${shipmentId} deleted successfully.`
-		);
-		res.success(null, "Shipment item deleted successfully");
-	} catch (error) {
-		logger.error(
-			`Error deleting shipment item with ID ${req.params.itemId} for shipment ID ${req.params.shipmentId}.`,
-			{ error: error.message }
-		);
-		res.error("Internal server error", 500);
 	}
-});
+);
 
 // Mount the itemsRouter under the path /:shipmentId/items
 router.use("/:shipmentId/items", itemsRouter);

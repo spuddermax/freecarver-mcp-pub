@@ -9,6 +9,7 @@ import validateRequest from "../../middleware/validateRequest.js";
 import {
 	createCustomerSchema,
 	updateCustomerSchema,
+	customerIdSchema,
 } from "../../validators/customers.js";
 
 const router = express.Router();
@@ -31,7 +32,8 @@ router.get("/", async (req, res) => {
 		logger.info("Retrieved customers list.");
 		res.success(
 			{ customers: result.rows },
-			"Customers retrieved successfully"
+			"Customers retrieved successfully",
+			200
 		);
 	} catch (error) {
 		logger.error("Error retrieving customers list.", {
@@ -92,29 +94,37 @@ router.post(
  * @returns {Response} 404 - Returns an error if the customer is not found.
  * @returns {Response} 500 - Returns an error message for internal server error.
  */
-router.get("/:id", async (req, res) => {
-	try {
-		const { id } = req.params;
-		const result = await pool.query(
-			"SELECT id, email, first_name, last_name, phone_number, created_at, updated_at FROM customers WHERE id = $1",
-			[id]
-		);
-		if (result.rows.length === 0) {
-			logger.error(`Customer with ID ${id} not found.`);
-			return res.error("Customer not found.", 404);
+router.get(
+	"/:id",
+	validateRequest(customerIdSchema, "params"),
+	async (req, res) => {
+		try {
+			const { id } = req.params;
+			const result = await pool.query(
+				"SELECT id, email, first_name, last_name, phone_number, created_at, updated_at FROM customers WHERE id = $1",
+				[id]
+			);
+			if (result.rows.length === 0) {
+				logger.error(`Customer with ID ${id} not found.`);
+				return res.error("Customer not found.", 404);
+			}
+			logger.info(`Retrieved customer with ID ${id}.`);
+			res.success(
+				{ customer: result.rows[0] },
+				"Customer retrieved successfully",
+				200
+			);
+		} catch (error) {
+			logger.error(
+				`Error retrieving customer with ID ${req.params.id}.`,
+				{
+					error: error.message,
+				}
+			);
+			res.error("Internal server error", 500);
 		}
-		logger.info(`Retrieved customer with ID ${id}.`);
-		res.success(
-			{ customer: result.rows[0] },
-			"Customer retrieved successfully"
-		);
-	} catch (error) {
-		logger.error(`Error retrieving customer with ID ${req.params.id}.`, {
-			error: error.message,
-		});
-		res.error("Internal server error", 500);
 	}
-});
+);
 
 /**
  * @route PUT /v1/customers/:id
@@ -132,6 +142,7 @@ router.get("/:id", async (req, res) => {
  */
 router.put(
 	"/:id",
+	validateRequest(customerIdSchema, "params"),
 	validateRequest(updateCustomerSchema, "body"),
 	async (req, res) => {
 		try {
@@ -151,7 +162,8 @@ router.put(
 			logger.info(`Customer with ID ${id} updated successfully.`);
 			res.success(
 				{ customer: result.rows[0] },
-				"Customer updated successfully"
+				"Customer updated successfully",
+				200
 			);
 		} catch (error) {
 			logger.error(`Error updating customer with ID ${req.params.id}.`, {
@@ -170,25 +182,29 @@ router.put(
  * @returns {Response} 404 - Customer not found.
  * @returns {Response} 500 - Internal server error.
  */
-router.delete("/:id", async (req, res) => {
-	try {
-		const { id } = req.params;
-		const result = await pool.query(
-			"DELETE FROM customers WHERE id = $1 RETURNING id",
-			[id]
-		);
-		if (result.rows.length === 0) {
-			logger.error(`Customer with ID ${id} not found for deletion.`);
-			return res.error("Customer not found.", 404);
+router.delete(
+	"/:id",
+	validateRequest(customerIdSchema, "params"),
+	async (req, res) => {
+		try {
+			const { id } = req.params;
+			const result = await pool.query(
+				"DELETE FROM customers WHERE id = $1 RETURNING id",
+				[id]
+			);
+			if (result.rows.length === 0) {
+				logger.error(`Customer with ID ${id} not found for deletion.`);
+				return res.error("Customer not found.", 404);
+			}
+			logger.info(`Customer with ID ${id} deleted successfully.`);
+			res.success(null, "Customer deleted successfully", 200);
+		} catch (error) {
+			logger.error(`Error deleting customer with ID ${req.params.id}.`, {
+				error: error.message,
+			});
+			res.error("Internal server error", 500);
 		}
-		logger.info(`Customer with ID ${id} deleted successfully.`);
-		res.success(null, "Customer deleted successfully");
-	} catch (error) {
-		logger.error(`Error deleting customer with ID ${req.params.id}.`, {
-			error: error.message,
-		});
-		res.error("Internal server error", 500);
 	}
-});
+);
 
 export default router;
