@@ -9,30 +9,7 @@ import {
 	DollarSign,
 } from "lucide-react";
 import Layout from "../components/Layout";
-
-const recentOrders = [
-	{
-		id: "#12345",
-		customer: "John Doe",
-		product: "Nike Air Max",
-		status: "Delivered",
-		amount: "$129.99",
-	},
-	{
-		id: "#12346",
-		customer: "Jane Smith",
-		product: "Adidas Ultra Boost",
-		status: "Processing",
-		amount: "$159.99",
-	},
-	{
-		id: "#12347",
-		customer: "Mike Johnson",
-		product: "Puma RS-X",
-		status: "Pending",
-		amount: "$89.99",
-	},
-];
+import RecentOrders from "../components/RecentOrders";
 
 const stats = [
 	{
@@ -87,69 +64,8 @@ export default function Dashboard() {
 
 				{/* Main Content */}
 				<div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
-					{/* Recent Orders */}
-					<div className="lg:col-span-2 bg-white dark:bg-gray-800 shadow rounded-lg">
-						<div className="p-6">
-							<h3 className="text-lg font-medium text-gray-900 dark:text-white">
-								Recent Orders
-							</h3>
-							<div className="mt-6">
-								<table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-									<thead>
-										<tr>
-											<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-												Order ID
-											</th>
-											<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-												Customer
-											</th>
-											<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-												Product
-											</th>
-											<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-												Status
-											</th>
-											<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-												Amount
-											</th>
-										</tr>
-									</thead>
-									<tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-										{recentOrders.map((order, index) => (
-											<tr key={index}>
-												<td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-													{order.id}
-												</td>
-												<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-													{order.customer}
-												</td>
-												<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-													{order.product}
-												</td>
-												<td className="px-6 py-4 whitespace-nowrap">
-													<span
-														className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full
-                            ${
-								order.status === "Delivered"
-									? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-									: order.status === "Processing"
-									? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
-									: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
-							}`}
-													>
-														{order.status}
-													</span>
-												</td>
-												<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-													{order.amount}
-												</td>
-											</tr>
-										))}
-									</tbody>
-								</table>
-							</div>
-						</div>
-					</div>
+					{/* Recent Orders Section */}
+					<RecentOrders />
 
 					{/* Quick Actions */}
 					<div className="bg-white dark:bg-gray-800 shadow rounded-lg">

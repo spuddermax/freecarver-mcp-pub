@@ -271,4 +271,99 @@ describe("Orders Routes", () => {
 			expect(getRes.statusCode).toEqual(404);
 		});
 	});
+
+	// New tests to verify pagination and ordering functionality.
+	describe("Orders Pagination and Ordering", () => {
+		let orderId1, orderId2;
+		const orderPayload1 = {
+			customer_id: customerId,
+			status: "pending",
+			order_total: 50.0,
+			refund_total: null,
+			refund_date: null,
+			refund_status: "none",
+			refund_reason: null,
+		};
+		const orderPayload2 = {
+			customer_id: customerId,
+			status: "pending",
+			order_total: 100.0,
+			refund_total: null,
+			refund_date: null,
+			refund_status: "none",
+			refund_reason: null,
+		};
+
+		beforeAll(async () => {
+			// Create two orders with different order_total values.
+			let res = await request(app)
+				.post("/v1/orders")
+				.set("Authorization", `Bearer ${authToken}`)
+				.send(orderPayload1);
+			orderId1 = res.body.data.order.id;
+
+			res = await request(app)
+				.post("/v1/orders")
+				.set("Authorization", `Bearer ${authToken}`)
+				.send(orderPayload2);
+			orderId2 = res.body.data.order.id;
+		});
+
+		afterAll(async () => {
+			// Clean up the orders created for pagination tests.
+			if (orderId1) {
+				await pool.query("DELETE FROM orders WHERE id = $1", [
+					orderId1,
+				]);
+			}
+			if (orderId2) {
+				await pool.query("DELETE FROM orders WHERE id = $1", [
+					orderId2,
+				]);
+			}
+		});
+
+		it("should retrieve paginated orders with ordering by order_total descending", async () => {
+			// With limit = 1, page = 1 and ordering by order_total descending,
+			// the returned order should be the one with order_total 100.0.
+			const res = await request(app)
+				.get("/v1/orders?page=1&limit=1&orderBy=order_total&order=desc")
+				.set("Authorization", `Bearer ${authToken}`);
+			expect(res.statusCode).toEqual(200);
+			const { total, orders, page, limit } = res.body.data;
+			expect(typeof total).toBe("number");
+			expect(page).toEqual(1);
+			expect(limit).toEqual(1);
+			expect(Array.isArray(orders)).toBe(true);
+			expect(orders.length).toEqual(1);
+			expect(orders[0].order_total).toEqual(100.0);
+		});
+
+		it("should retrieve paginated orders with ordering by order_total ascending", async () => {
+			// With limit = 1, page = 1 and ordering by order_total ascending,
+			// the returned order should be the one with order_total 50.0.
+			const res = await request(app)
+				.get("/v1/orders?page=1&limit=1&orderBy=order_total&order=asc")
+				.set("Authorization", `Bearer ${authToken}`);
+			expect(res.statusCode).toEqual(200);
+			const { total, orders, page, limit } = res.body.data;
+			expect(typeof total).toBe("number");
+			expect(page).toEqual(1);
+			expect(limit).toEqual(1);
+			expect(Array.isArray(orders)).toBe(true);
+			expect(orders.length).toEqual(1);
+			expect(orders[0].order_total).toEqual(50.0);
+		});
+
+		it("should return an empty orders array for a page with no records", async () => {
+			// Requesting a page number beyond the available number of orders should return an empty array.
+			const res = await request(app)
+				.get("/v1/orders?page=100&limit=10")
+				.set("Authorization", `Bearer ${authToken}`);
+			expect(res.statusCode).toEqual(200);
+			const { orders } = res.body.data;
+			expect(Array.isArray(orders)).toBe(true);
+			expect(orders.length).toEqual(0);
+		});
+	});
 });

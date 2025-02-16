@@ -22,16 +22,58 @@ router.use(verifyJWT);
 
 /**
  * @route GET /v1/orders
- * @description Retrieve a list of all orders.
+ * @description Retrieve a list of orders with optional pagination and ordering.
+ * The endpoint supports the following query parameters:
+ *   @param {number} [page=1] - The page number (default: 1).
+ *   @param {number} [limit=20] - The number of orders per page (default: 20).
+ *   @param {string} [orderBy=id] - The column to order by. Allowed columns:
+ *         [id, customer_id, order_total, created_at, updated_at] (default: id).
+ *   @param {string} [order=asc] - The order direction: "asc" (ascending) or "desc" (descending) (default: asc).
  * @access Protected
- * @returns {Response} 200 - Returns a JSON object containing an array of orders.
+ * @returns {Response} 200 - Returns a JSON object with the total number of orders, paginated orders, current page, and limit.
  * @returns {Response} 500 - Returns an error message for an internal server error.
  */
 router.get("/", async (req, res) => {
 	try {
-		const result = await pool.query("SELECT * FROM orders ORDER BY id");
-		logger.info("Retrieved orders list.");
-		res.success({ orders: result.rows }, "Orders retrieved successfully");
+		// Extract pagination and ordering query parameters, or use defaults.
+		const page = parseInt(req.query.page, 10) || 1;
+		const limit = parseInt(req.query.limit, 10) || 20;
+		const offset = (page - 1) * limit;
+
+		// Define allowed columns for ordering.
+		const allowedOrderColumns = [
+			"id",
+			"customer_id",
+			"order_total",
+			"created_at",
+			"updated_at",
+		];
+		const orderBy = allowedOrderColumns.includes(req.query.orderBy)
+			? req.query.orderBy
+			: "id";
+		const orderDirection =
+			req.query.order && req.query.order.toLowerCase() === "desc"
+				? "DESC"
+				: "ASC";
+
+		// Get total number of orders.
+		const countResult = await pool.query("SELECT COUNT(*) FROM orders");
+		const total = parseInt(countResult.rows[0].count, 10);
+
+		// Fetch paginated orders.
+		const queryText = `SELECT * FROM orders ORDER BY ${orderBy} ${orderDirection} LIMIT $1 OFFSET $2`;
+		const result = await pool.query(queryText, [limit, offset]);
+
+		logger.info("Retrieved orders list with pagination.", {
+			page,
+			limit,
+			orderBy,
+			orderDirection,
+		});
+		res.success(
+			{ total, orders: result.rows, page, limit },
+			"Orders retrieved successfully"
+		);
 	} catch (error) {
 		logger.error("Error retrieving orders.", { error: error.message });
 		res.error("Internal server error", 500);
