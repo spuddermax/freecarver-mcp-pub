@@ -57,13 +57,15 @@ describe("Products Routes", () => {
 	});
 
 	describe("GET /v1/products", () => {
-		it("should retrieve a list of products", async () => {
+		it("should retrieve a list of products with total count", async () => {
 			const res = await request(app)
 				.get("/v1/products")
 				.set("Authorization", `Bearer ${authToken}`);
 			expect(res.statusCode).toEqual(200);
-			// Check for products array wrapped in the data property.
+			// Check that products is an array and that total is defined and a number.
 			expect(Array.isArray(res.body.data.products)).toBe(true);
+			expect(res.body.data.total).toBeDefined();
+			expect(typeof res.body.data.total).toEqual("number");
 		});
 	});
 
@@ -85,9 +87,9 @@ describe("Products Routes", () => {
 				.post("/v1/products")
 				.set("Authorization", `Bearer ${authToken}`)
 				.send(productData);
-			// Expect status code 200
+			// Expect a status code of 200.
 			expect(res.statusCode).toEqual(200);
-			// Verify the product is wrapped in the data property.
+			// Verify that the response contains a product in the data property.
 			expect(res.body.data.product).toBeDefined();
 			expect(res.body.data.product.name).toEqual("Test Product");
 			productId = res.body.data.product.id;
@@ -109,7 +111,7 @@ describe("Products Routes", () => {
 				.get("/v1/products/999999")
 				.set("Authorization", `Bearer ${authToken}`);
 			expect(res.statusCode).toEqual(404);
-			// Check error message on the message property.
+			// Check the error message.
 			expect(res.body.message).toEqual("Product not found.");
 		});
 	});
@@ -147,10 +149,10 @@ describe("Products Routes", () => {
 				.delete(`/v1/products/${productId}`)
 				.set("Authorization", `Bearer ${authToken}`);
 			expect(res.statusCode).toEqual(200);
-			// Check the response message (without trailing punctuation)
+			// Check that the response message is correct.
 			expect(res.body.message).toEqual("Product deleted successfully");
 
-			// Verify deletion by trying to retrieve the deleted product.
+			// Verify deletion by attempting to retrieve the deleted product.
 			const getRes = await request(app)
 				.get(`/v1/products/${productId}`)
 				.set("Authorization", `Bearer ${authToken}`);

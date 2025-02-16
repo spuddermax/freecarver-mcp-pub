@@ -32,6 +32,7 @@ export default function Products() {
 	} | null>(null);
 	// Pagination state
 	const [currentPage, setCurrentPage] = useState<number>(1);
+	const [totalPages, setTotalPages] = useState<number>(1);
 	const limit = 20; // Always fetch 20 products per page
 
 	useEffect(() => {
@@ -66,6 +67,10 @@ export default function Products() {
 				throw new Error(errorData.error || "Failed to fetch products");
 			}
 			const data = await response.json();
+			// Assume API returns a total count for products as "data.data.total"
+			const total = data.data.total || 0;
+			const computedTotalPages = total > 0 ? Math.ceil(total / limit) : 1;
+			setTotalPages(computedTotalPages);
 			// Map the products using the formatter.
 			const formattedProducts = data.data.products.map((product: any) =>
 				formatProduct(product)
@@ -173,7 +178,8 @@ export default function Products() {
 						<Pagination
 							currentPage={currentPage}
 							onPageChange={setCurrentPage}
-							canPaginateNext={products.length === limit}
+							canPaginateNext={currentPage < totalPages}
+							totalPages={totalPages}
 						/>
 
 						<div className="overflow-x-auto">
@@ -261,7 +267,8 @@ export default function Products() {
 						<Pagination
 							currentPage={currentPage}
 							onPageChange={setCurrentPage}
-							canPaginateNext={products.length === limit}
+							canPaginateNext={currentPage < totalPages}
+							totalPages={totalPages}
 						/>
 					</div>
 				</div>

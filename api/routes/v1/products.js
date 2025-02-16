@@ -19,7 +19,7 @@ router.use(verifyJWT);
  *           [id, name, price, sale_price, created_at, updated_at] (default: name).
  *   @param {string} [order=asc] - The order direction: "asc" (ascending) or "desc" (descending) (default: asc).
  * @access Protected
- * @returns {Response} 200 - JSON object containing an array of products.
+ * @returns {Response} 200 - JSON object containing the total number of products and an array of products.
  * @returns {Response} 500 - Internal server error.
  */
 router.get("/", async (req, res) => {
@@ -46,6 +46,11 @@ router.get("/", async (req, res) => {
 				? "DESC"
 				: "ASC";
 
+		// Query the total number of products
+		const countResult = await pool.query("SELECT COUNT(*) FROM products");
+		const total = parseInt(countResult.rows[0].count, 10);
+
+		// Paginated query
 		const query = `SELECT * FROM products ORDER BY ${orderBy} ${orderDirection} LIMIT $1 OFFSET $2`;
 		const result = await pool.query(query, [limit, offset]);
 
@@ -56,7 +61,7 @@ router.get("/", async (req, res) => {
 			orderDirection,
 		});
 		res.success(
-			{ products: result.rows },
+			{ total, products: result.rows },
 			"Products retrieved successfully"
 		);
 	} catch (error) {
