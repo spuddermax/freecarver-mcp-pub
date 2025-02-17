@@ -9,7 +9,6 @@ import {
 import Layout from "../components/Layout";
 import { Toast } from "../components/Toast";
 import { Pagination } from "../components/Pagination";
-import { fetchProducts } from "../lib/api_client/products";
 import { formatProduct } from "../utils/formatters";
 
 interface ProductData {
@@ -101,6 +100,10 @@ export default function Products() {
 				icon: PackageIcon,
 				iconColor: "text-yellow-500 dark:text-yellow-400",
 			}}
+			breadcrumbs={[
+				{ label: "Dashboard", link: "/dashboard" },
+				{ label: "Manage Products" },
+			]}
 		>
 			{message && (
 				<Toast
