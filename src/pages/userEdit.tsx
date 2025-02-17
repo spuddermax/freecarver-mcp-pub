@@ -103,6 +103,11 @@ export default function UserEdit() {
 				icon: UserIcon,
 				iconColor: "text-green-500 dark:text-green-400",
 			}}
+			breadcrumbs={[
+				{ label: "Dashboard", link: "/dashboard" },
+				{ label: "Manage Users", link: "/users" },
+				{ label: "User Editor" },
+			]}
 		>
 			{message && (
 				<Toast

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { Bell, User, LayoutDashboard } from "lucide-react";
 import { MCPIcon } from "./MCPIcon";
 import { useTheme } from "../lib/theme";
@@ -14,12 +14,22 @@ interface PageInfo {
 	iconColor: string;
 }
 
+interface BreadcrumbItem {
+	label: string;
+	link?: string; // if undefined, it will render as plain text
+}
+
 interface LayoutProps {
 	children: React.ReactNode;
 	pageInfo?: PageInfo;
+	breadcrumbs?: BreadcrumbItem[];
 }
 
-export default function Layout({ children, pageInfo }: LayoutProps) {
+export default function Layout({
+	children,
+	pageInfo,
+	breadcrumbs,
+}: LayoutProps) {
 	const navigate = useNavigate();
 	const location = useLocation();
 	const [notifications] = useState(3);
@@ -198,7 +208,7 @@ export default function Layout({ children, pageInfo }: LayoutProps) {
 								</div>
 							</div>
 						</div>
-						<div className="h-12 flex items-center border-t dark:border-gray-700">
+						<div className="px-4 py-2 border-t dark:border-gray-700">
 							<div className="flex items-center space-x-2">
 								{Icon && (
 									<Icon className={`h-5 w-5 ${iconColor}`} />
@@ -207,6 +217,46 @@ export default function Layout({ children, pageInfo }: LayoutProps) {
 									{title}
 								</h2>
 							</div>
+							{breadcrumbs && breadcrumbs.length > 0 && (
+								<nav aria-label="Breadcrumb" className="mt-2">
+									<ol className="flex items-center space-x-1 text-sm text-gray-600">
+										{breadcrumbs.map((item, index) => (
+											<li
+												key={index}
+												className="flex items-center"
+											>
+												{item.link ? (
+													<Link
+														to={item.link}
+														className="text-blue-600 hover:underline"
+													>
+														{item.label}
+													</Link>
+												) : (
+													<span>{item.label}</span>
+												)}
+												{index <
+													breadcrumbs.length - 1 && (
+													<svg
+														className="w-3 h-3 mx-2 text-gray-400"
+														fill="none"
+														stroke="currentColor"
+														viewBox="0 0 24 24"
+														xmlns="http://www.w3.org/2000/svg"
+													>
+														<path
+															strokeLinecap="round"
+															strokeLinejoin="round"
+															strokeWidth="2"
+															d="M9 5l7 7-7 7"
+														></path>
+													</svg>
+												)}
+											</li>
+										))}
+									</ol>
+								</nav>
+							)}
 						</div>
 					</div>
 				</div>

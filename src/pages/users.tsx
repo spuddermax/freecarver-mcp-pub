@@ -98,6 +98,10 @@ export default function Users() {
 				icon: UserIcon,
 				iconColor: "text-green-500 dark:text-green-400",
 			}}
+			breadcrumbs={[
+				{ label: "Dashboard", link: "/dashboard" },
+				{ label: "Manage Users" },
+			]}
 		>
 			{message && (
 				<Toast

@@ -1,6 +1,7 @@
 import "react";
 import { useNavigate } from "react-router-dom";
 import {
+	HomeIcon,
 	ShoppingBag,
 	Users,
 	Settings,
@@ -27,7 +28,13 @@ export default function Dashboard() {
 	const navigate = useNavigate();
 
 	return (
-		<Layout>
+		<Layout
+			pageInfo={{
+				title: "Dashboard",
+				icon: HomeIcon,
+				iconColor: "text-green-500 dark:text-green-400",
+			}}
+		>
 			<div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
 				{/* Stats Grid */}
 				<div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
