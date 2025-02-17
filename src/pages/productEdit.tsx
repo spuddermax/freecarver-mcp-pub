@@ -1,4 +1,4 @@
-import React, { useState, useEffect, ChangeEvent, FormEvent } from "react";
+import { useState, useEffect, ChangeEvent, FormEvent } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Package as PackageIcon } from "lucide-react";
 import Layout from "../components/Layout";
@@ -170,27 +170,6 @@ export default function ProductEdit() {
 		} finally {
 			setIsSaving(false);
 		}
-	};
-
-	// Update a media item field
-	const updateMediaItem = (
-		index: number,
-		key: keyof ProductMediaItem,
-		value: any
-	) => {
-		setMediaItems((prev) => {
-			const updated = [...prev];
-			updated[index] = { ...updated[index], [key]: value };
-			// When setting default true, ensure all others become false.
-			if (key === "default" && value === true) {
-				return updated.map((item, idx) =>
-					idx === index
-						? { ...item, default: true }
-						: { ...item, default: false }
-				);
-			}
-			return updated;
-		});
 	};
 
 	// Render loading or form view.

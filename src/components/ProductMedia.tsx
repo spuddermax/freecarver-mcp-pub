@@ -1,4 +1,5 @@
 import React from "react";
+import { Image as ImageIcon, Trash2, Plus } from "lucide-react";
 
 export interface ProductMediaItem {
 	media_id: string;
@@ -43,12 +44,25 @@ export function ProductMedia({ mediaItems, setMediaItems }: ProductMediaProps) {
 				<label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
 					Product Media (Manage images/videos)
 				</label>
-				<div className="space-y-4 mt-1">
+				{/* Grid layout for media items */}
+				<div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-1">
 					{mediaItems.map((item, index) => (
 						<div
 							key={item.media_id}
 							className="border border-gray-300 dark:border-gray-600 rounded-md p-3"
 						>
+							{/* Media Preview */}
+							<div className="flex justify-center items-center bg-gray-100 dark:bg-gray-700 rounded mb-2 h-32 w-full">
+								{item.url.trim() ? (
+									<img
+										src={item.url}
+										alt="Media Preview"
+										className="max-h-full max-w-full object-contain rounded"
+									/>
+								) : (
+									<ImageIcon className="h-8 w-8 text-gray-400" />
+								)}
+							</div>
 							{/* URL Field */}
 							<div>
 								<label
@@ -126,13 +140,17 @@ export function ProductMedia({ mediaItems, setMediaItems }: ProductMediaProps) {
 											)
 										)
 									}
-									className="text-red-500 text-xs"
+									className="inline-flex items-center px-3 py-1 border border-transparent rounded-md shadow-sm text-xs font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
 								>
-									Delete Media
+									<Trash2 className="h-4 w-4 mr-1" />
+									Delete
 								</button>
 							</div>
 						</div>
 					))}
+				</div>
+				{/* "Add Media" button moved outside of the grid, centered at the bottom */}
+				<div className="mt-4 flex justify-center">
 					<button
 						type="button"
 						onClick={() => {
@@ -144,8 +162,9 @@ export function ProductMedia({ mediaItems, setMediaItems }: ProductMediaProps) {
 							};
 							setMediaItems((prev) => [...prev, newItem]);
 						}}
-						className="mt-2 inline-flex items-center px-2 py-1 border border-transparent rounded-md shadow-sm text-xs font-medium text-white bg-blue-600 hover:bg-blue-700"
+						className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
 					>
+						<Plus className="h-4 w-4 mr-1" />
 						Add Media
 					</button>
 				</div>
