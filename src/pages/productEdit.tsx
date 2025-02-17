@@ -16,6 +16,7 @@ import { ProductMedia } from "../components/ProductMedia";
 // Define the full product data interface.
 interface ProductData {
 	targetId: string;
+	sku: string;
 	name: string;
 	description: string;
 	price: number;
@@ -46,6 +47,7 @@ export default function ProductEdit() {
 	const [isSaving, setIsSaving] = useState<boolean>(false);
 	const [productData, setProductData] = useState<ProductData>({
 		targetId: "",
+		sku: "",
 		name: "",
 		description: "",
 		price: 0,
@@ -206,7 +208,12 @@ export default function ProductEdit() {
 									onSubmit={handleSubmit}
 									className="space-y-6"
 								>
+									<div className="mb-2 text-xs text-gray-500 dark:text-gray-400">
+										Product ID: {targetId}
+									</div>
+
 									<ProductDetails
+										productSKU={productData.sku}
 										name={productData.name}
 										description={productData.description}
 										onInputChange={handleInputChange}

@@ -28,6 +28,7 @@ export function formatUser(user: any): any {
 export function formatProduct(product: any): any {
 	return {
 		id: product.id,
+		sku: product.sku,
 		name: product.name,
 		description: product.description,
 		price: product.price,

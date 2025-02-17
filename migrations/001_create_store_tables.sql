@@ -58,6 +58,7 @@ CREATE TABLE IF NOT EXISTS
 CREATE TABLE IF NOT EXISTS
     products (
         id SERIAL PRIMARY KEY,
+        sku TEXT NOT NULL UNIQUE,
         name TEXT NOT NULL,
         description TEXT,
         price NUMERIC(10, 2), -- Allow null if pricing is defined at variant level
