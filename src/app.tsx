@@ -11,6 +11,7 @@ import Dashboard from "./pages/dashboard";
 import UserEdit from "./pages/userEdit";
 import Users from "./pages/users";
 import Products from "./pages/products";
+import ProductEdit from "./pages/productEdit";
 import { GridContext, useGridProvider } from "./lib/grid";
 import NotFound from "./pages/notFound";
 import { decodeJWT, isUnProtectedRoute } from "./lib/helpers";
@@ -82,6 +83,10 @@ function App() {
 							element={<UserEdit />}
 						/>
 						<Route path="/useredit" element={<UserEdit />} />
+						<Route
+							path="/productedit/:targetId"
+							element={<ProductEdit />}
+						/>
 					</>
 				) : (
 					<>
@@ -95,6 +100,10 @@ function App() {
 						/>
 						<Route
 							path="/products"
+							element={<Navigate to="/login" replace />}
+						/>
+						<Route
+							path="/productedit"
 							element={<Navigate to="/login" replace />}
 						/>
 					</>
