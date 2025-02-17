@@ -4,13 +4,12 @@ import {
 	HomeIcon,
 	ShoppingBag,
 	Users,
-	Settings,
-	Package,
 	TrendingUp,
 	DollarSign,
 } from "lucide-react";
 import Layout from "../components/Layout";
 import RecentOrders from "../components/RecentOrders";
+import { DashboardQuickActions } from "../components/DashboardQuickActions";
 
 const stats = [
 	{
@@ -75,39 +74,7 @@ export default function Dashboard() {
 					<RecentOrders />
 
 					{/* Quick Actions */}
-					<div className="bg-white dark:bg-gray-800 shadow rounded-lg">
-						<div className="p-6">
-							<h3 className="text-lg font-medium text-gray-900 dark:text-white">
-								Quick Actions
-							</h3>
-							<div className="mt-6 space-y-4">
-								{[
-									{
-										icon: Package,
-										label: "Manage Products",
-										onClick: () => navigate("/products"),
-									},
-									{
-										icon: Users,
-										label: "Manage Users",
-										onClick: () => navigate("/users"),
-									},
-									{ icon: Settings, label: "Settings" },
-								].map((action, index) => (
-									<button
-										key={index}
-										onClick={action.onClick}
-										className="w-full flex items-center px-4 py-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
-									>
-										<action.icon className="h-5 w-5 text-gray-600 dark:text-gray-300" />
-										<span className="ml-3 text-sm font-medium text-gray-900 dark:text-white">
-											{action.label}
-										</span>
-									</button>
-								))}
-							</div>
-						</div>
-					</div>
+					<DashboardQuickActions />
 				</div>
 			</div>
 		</Layout>
