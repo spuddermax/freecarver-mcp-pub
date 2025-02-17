@@ -1,5 +1,13 @@
 import React from "react";
-import { Image as ImageIcon, Trash2, Plus } from "lucide-react";
+import {
+	Image as ImageIcon,
+	Trash2,
+	Plus,
+	Code,
+	Link2,
+	Type,
+} from "lucide-react";
+import { Modal } from "../components/Modal";
 
 export interface ProductMediaItem {
 	media_id: string;
@@ -14,6 +22,8 @@ export interface ProductMediaProps {
 }
 
 export function ProductMedia({ mediaItems, setMediaItems }: ProductMediaProps) {
+	const [jsonPreviewOpen, setJsonPreviewOpen] = React.useState(false);
+
 	// Update a specific media item field
 	const updateMediaItem = (
 		index: number,
@@ -63,7 +73,7 @@ export function ProductMedia({ mediaItems, setMediaItems }: ProductMediaProps) {
 									<ImageIcon className="h-8 w-8 text-gray-400" />
 								)}
 							</div>
-							{/* URL Field */}
+							{/* Media URL Field */}
 							<div>
 								<label
 									htmlFor={`media-url-${index}`}
@@ -71,19 +81,24 @@ export function ProductMedia({ mediaItems, setMediaItems }: ProductMediaProps) {
 								>
 									Media URL
 								</label>
-								<input
-									type="text"
-									id={`media-url-${index}`}
-									value={item.url}
-									onChange={(e) =>
-										updateMediaItem(
-											index,
-											"url",
-											e.target.value
-										)
-									}
-									className="block w-full pl-3 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-								/>
+								<div className="mt-1 relative">
+									<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+										<Link2 className="h-5 w-5 text-gray-400" />
+									</div>
+									<input
+										type="text"
+										id={`media-url-${index}`}
+										value={item.url}
+										onChange={(e) =>
+											updateMediaItem(
+												index,
+												"url",
+												e.target.value
+											)
+										}
+										className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+									/>
+								</div>
 							</div>
 							{/* Title Field */}
 							<div className="mt-2">
@@ -93,19 +108,24 @@ export function ProductMedia({ mediaItems, setMediaItems }: ProductMediaProps) {
 								>
 									Title (optional)
 								</label>
-								<input
-									type="text"
-									id={`media-title-${index}`}
-									value={item.title || ""}
-									onChange={(e) =>
-										updateMediaItem(
-											index,
-											"title",
-											e.target.value
-										)
-									}
-									className="block w-full pl-3 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-								/>
+								<div className="mt-1 relative">
+									<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+										<Type className="h-5 w-5 text-gray-400" />
+									</div>
+									<input
+										type="text"
+										id={`media-title-${index}`}
+										value={item.title || ""}
+										onChange={(e) =>
+											updateMediaItem(
+												index,
+												"title",
+												e.target.value
+											)
+										}
+										className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+									/>
+								</div>
 							</div>
 							{/* Default Checkbox */}
 							<div className="mt-2 flex items-center">
@@ -149,8 +169,8 @@ export function ProductMedia({ mediaItems, setMediaItems }: ProductMediaProps) {
 						</div>
 					))}
 				</div>
-				{/* "Add Media" button moved outside of the grid, centered at the bottom */}
-				<div className="mt-4 flex justify-center">
+				{/* "Add Media" and "JSON Edit" buttons */}
+				<div className="mt-4 flex justify-center gap-4">
 					<button
 						type="button"
 						onClick={() => {
@@ -167,7 +187,34 @@ export function ProductMedia({ mediaItems, setMediaItems }: ProductMediaProps) {
 						<Plus className="h-4 w-4 mr-1" />
 						Add Media
 					</button>
+					<button
+						type="button"
+						onClick={() => setJsonPreviewOpen(true)}
+						className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700"
+					>
+						<Code className="h-4 w-4 mr-1" />
+						JSON Edit
+					</button>
 				</div>
+				{/* JSON Preview Modal using the Modal component */}
+				<Modal
+					isOpen={jsonPreviewOpen}
+					onClose={() => setJsonPreviewOpen(false)}
+					title="JSON Preview"
+				>
+					<pre className="whitespace-pre-wrap text-sm text-gray-800 dark:text-gray-100 max-h-80 overflow-auto border border-gray-300 dark:border-gray-600 p-2 rounded">
+						{JSON.stringify(mediaItems, null, 2)}
+					</pre>
+					<div className="mt-4 flex justify-end">
+						<button
+							type="button"
+							onClick={() => setJsonPreviewOpen(false)}
+							className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+						>
+							Close
+						</button>
+					</div>
+				</Modal>
 			</div>
 		</fieldset>
 	);

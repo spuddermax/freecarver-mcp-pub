@@ -1,4 +1,5 @@
 import { ChangeEvent } from "react";
+import { DollarSign, Tag, Calendar } from "lucide-react";
 
 export interface ProductPricingProps {
 	price: number;
@@ -28,30 +29,45 @@ export function ProductPricing({
 					>
 						Price
 					</label>
-					<input
-						type="number"
-						name="price"
-						id="price"
-						value={price}
-						onChange={onInputChange}
-						className="block w-full pl-3 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-					/>
+					<div className="mt-1 relative">
+						<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+							<DollarSign className="h-5 w-5 text-gray-400" />
+						</div>
+
+						<input
+							type="number"
+							name="price"
+							id="price"
+							value={price}
+							onChange={onInputChange}
+							className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+						/>
+					</div>
 				</div>
 				<div>
 					<label
 						htmlFor="salePrice"
 						className="block text-sm font-medium text-gray-700 dark:text-gray-300"
 					>
+						<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+							<Tag className="h-5 w-5 text-gray-400" />
+						</div>
 						Sale Price (optional)
 					</label>
-					<input
-						type="number"
-						name="salePrice"
-						id="salePrice"
-						value={salePrice || ""}
-						onChange={onInputChange}
-						className="block w-full pl-3 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-					/>
+					<div className="mt-1 relative">
+						<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+							<Tag className="h-5 w-5 text-gray-400" />
+						</div>
+
+						<input
+							type="number"
+							name="salePrice"
+							id="salePrice"
+							value={salePrice || ""}
+							onChange={onInputChange}
+							className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+						/>
+					</div>
 				</div>
 			</div>
 			<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 mt-4">
@@ -60,32 +76,50 @@ export function ProductPricing({
 						htmlFor="saleStart"
 						className="block text-sm font-medium text-gray-700 dark:text-gray-300"
 					>
+						<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+							<Calendar className="h-5 w-5 text-gray-400" />
+						</div>
 						Sale Start (optional)
 					</label>
-					<input
-						type="datetime-local"
-						name="saleStart"
-						id="saleStart"
-						value={saleStart || ""}
-						onChange={onInputChange}
-						className="block w-full pl-3 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-					/>
+					<div className="mt-1 relative">
+						<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+							<Calendar className="h-5 w-5 text-gray-400" />
+						</div>
+
+						<input
+							type="datetime-local"
+							name="saleStart"
+							id="saleStart"
+							value={saleStart || ""}
+							onChange={onInputChange}
+							className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+						/>
+					</div>
 				</div>
 				<div>
 					<label
 						htmlFor="saleEnd"
 						className="block text-sm font-medium text-gray-700 dark:text-gray-300"
 					>
+						<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+							<Calendar className="h-5 w-5 text-gray-400" />
+						</div>
 						Sale End (optional)
 					</label>
-					<input
-						type="datetime-local"
-						name="saleEnd"
-						id="saleEnd"
-						value={saleEnd || ""}
-						onChange={onInputChange}
-						className="block w-full pl-3 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-					/>
+					<div className="mt-1 relative">
+						<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+							<Calendar className="h-5 w-5 text-gray-400" />
+						</div>
+
+						<input
+							type="datetime-local"
+							name="saleEnd"
+							id="saleEnd"
+							value={saleEnd || ""}
+							onChange={onInputChange}
+							className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+						/>
+					</div>
 				</div>
 			</div>
 		</fieldset>
