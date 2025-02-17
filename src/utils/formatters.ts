@@ -29,8 +29,40 @@ export function formatProduct(product: any): any {
 	return {
 		id: product.id,
 		name: product.name,
+		description: product.description,
 		price: product.price,
-		imageUrl: product.image_url || null,
+		salePrice: product.sale_price,
+		saleStart: product.sale_start,
+		saleEnd: product.sale_end,
+		productMedia: product.product_media,
 		createdAt: product.created_at,
+	};
+}
+
+/**
+ * Formats a product media object as needed.
+ * @param media - The media object to format.
+ * @returns The formatted media object.
+ */
+export function formatProductMedia(media: any): any {
+	return {
+		id: media.id,
+		url: media.url,
+		title: media.title,
+		default: media.default,
+	};
+}
+
+/**
+ * Formats a product option object as needed.
+ * @param option - The option object to format.
+ * @returns The formatted option object.
+ */
+export function formatProductOption(option: any): any {
+	return {
+		id: option.id,
+		name: option.name,
+		description: option.description,
+		price: option.price,
 	};
 }
