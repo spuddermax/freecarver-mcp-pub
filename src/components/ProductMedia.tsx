@@ -6,6 +6,7 @@ import { Modal } from "../components/Modal";
 import { ProductMediaItem } from "./ProductMediaItem";
 import { ProductMediaJsonEditor } from "./ProductMediaJsonEditor";
 import { updateProduct } from "../lib/api_client/products";
+import Toast from "../components/Toast";
 
 export interface ProductMediaItem {
 	media_id: string;
@@ -26,13 +27,29 @@ export function ProductMedia({
 	productId,
 }: ProductMediaProps) {
 	const [jsonPreviewOpen, setJsonPreviewOpen] = React.useState(false);
-	// State for deletion confirmation: holds the index of media to delete or null if none.
 	const [deleteIndex, setDeleteIndex] = React.useState<number | null>(null);
 	const [jsonText, setJsonText] = React.useState(
 		JSON.stringify(mediaItems, null, 2)
 	);
 
-	// Update a specific media item field
+	// Use state to keep track of the original (saved) media items as a JSON string.
+	const [originalMediaJSON, setOriginalMediaJSON] = React.useState(
+		JSON.stringify(mediaItems)
+	);
+
+	// State for toast messages.
+	const [toast, setToast] = React.useState<{
+		message: string;
+		type: "success" | "error" | "info";
+	} | null>(null);
+
+	React.useEffect(() => {
+		if (jsonPreviewOpen) {
+			setJsonText(JSON.stringify(mediaItems, null, 2));
+		}
+	}, [jsonPreviewOpen, mediaItems]);
+
+	// Update a specific media item field.
 	const updateMediaItem = (
 		index: number,
 		key: keyof ProductMediaItem,
@@ -41,7 +58,6 @@ export function ProductMedia({
 		setMediaItems((prev) => {
 			const updated = [...prev];
 			updated[index] = { ...updated[index], [key]: value };
-			// If setting a media item as default, unset all others.
 			if (key === "default" && value === true) {
 				return updated.map((item, idx) =>
 					idx === index
@@ -53,26 +69,28 @@ export function ProductMedia({
 		});
 	};
 
-	// Saves just the product_media field to the products table using the API client.
+	// Save just the product_media field using the API client.
 	const handleSaveMedia = async () => {
 		try {
 			await updateProduct({ id: productId, product_media: mediaItems });
-			alert("Product media saved successfully.");
+			// Update the original media JSON after saving.
+			setOriginalMediaJSON(JSON.stringify(mediaItems));
+			// Use the Toast component to display success.
+			setToast({
+				message: "Product media saved successfully.",
+				type: "success",
+			});
 		} catch (error: any) {
 			console.error("Error saving product media:", error);
 			alert("Error saving product media: " + error.message);
 		}
 	};
 
-	React.useEffect(() => {
-		if (jsonPreviewOpen) {
-			// Update the JSON text when the modal is opened (or when mediaItems change)
-			setJsonText(JSON.stringify(mediaItems, null, 2));
-		}
-	}, [jsonPreviewOpen, mediaItems]);
+	// Check if media has changed by comparing the JSON strings.
+	const isMediaUnchanged = JSON.stringify(mediaItems) === originalMediaJSON;
 
 	return (
-		<fieldset className="border rounded-lg p-4 border-gray-200 dark:border-gray-700">
+		<fieldset className="border rounded-lg p-4 border-gray-200 dark:border-gray-700 relative">
 			<legend className="text-lg font-medium text-gray-700 dark:text-gray-300 px-2">
 				Product Media
 			</legend>
@@ -80,7 +98,7 @@ export function ProductMedia({
 				<label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
 					Product Media (Manage images/videos)
 				</label>
-				{/* Grid layout for media items */}
+				{/* Media items grid */}
 				<div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-1">
 					{mediaItems.map((item, index) => (
 						<ProductMediaItem
@@ -97,7 +115,7 @@ export function ProductMedia({
 						/>
 					))}
 				</div>
-				{/* "Add Media", "JSON Edit", and "Save Media" buttons */}
+				{/* Buttons */}
 				<div className="mt-4 flex justify-center gap-4">
 					<button
 						type="button"
@@ -126,7 +144,12 @@ export function ProductMedia({
 					<button
 						type="button"
 						onClick={handleSaveMedia}
-						className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+						disabled={isMediaUnchanged}
+						className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+							isMediaUnchanged
+								? "bg-purple-300 cursor-not-allowed"
+								: "bg-purple-600 hover:bg-purple-700"
+						}`}
 					>
 						<Save className="h-4 w-4 mr-1" />
 						Save Media
@@ -169,7 +192,7 @@ export function ProductMedia({
 						</div>
 					</div>
 				</Modal>
-				{/* JSON Preview Modal using the ProductMediaJsonEditor component */}
+				{/* JSON Editor Modal */}
 				<ProductMediaJsonEditor
 					isOpen={jsonPreviewOpen}
 					jsonText={jsonText}
@@ -181,6 +204,13 @@ export function ProductMedia({
 					onClose={() => setJsonPreviewOpen(false)}
 				/>
 			</div>
+			{toast && (
+				<Toast
+					message={toast.message}
+					type={toast.type}
+					onClose={() => setToast(null)}
+				/>
+			)}
 		</fieldset>
 	);
 }
