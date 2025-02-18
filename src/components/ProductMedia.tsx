@@ -107,11 +107,7 @@ export function ProductMedia({
 							onUpdate={(key, value) =>
 								updateMediaItem(index, key, value)
 							}
-							onDelete={() =>
-								setMediaItems((prev) =>
-									prev.filter((_, idx) => idx !== index)
-								)
-							}
+							onDelete={() => setDeleteIndex(index)}
 						/>
 					))}
 				</div>
@@ -162,7 +158,10 @@ export function ProductMedia({
 					title="Confirm Delete"
 				>
 					<div>
-						<p>Are you sure you want to delete this media item?</p>
+						<p>
+							Are you sure you want to delete this media item? You
+							must still save the media to actually remove it.
+						</p>
 						<div className="mt-4 flex justify-end gap-4">
 							<button
 								type="button"
