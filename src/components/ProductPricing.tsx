@@ -2,23 +2,24 @@
 
 import { ChangeEvent, useState, useEffect } from "react";
 import { DollarSign, Tag, Calendar, Save } from "lucide-react";
-
+import { updateProduct } from "../lib/api_client/products";
+import Toast from "../components/Toast";
 export interface ProductPricingProps {
+	productId: string;
 	price: number;
 	salePrice?: number;
 	saleStart?: string;
 	saleEnd?: string;
 	onInputChange: (e: ChangeEvent<HTMLInputElement>) => void;
-	onSavePricing?: () => void;
 }
 
 export function ProductPricing({
+	productId,
 	price,
 	salePrice,
 	saleStart,
 	saleEnd,
 	onInputChange,
-	onSavePricing,
 }: ProductPricingProps) {
 	// Store the original pricing values when the component first mounts.
 	const [originalPricing, setOriginalPricing] = useState({
@@ -27,6 +28,12 @@ export function ProductPricing({
 		saleStart,
 		saleEnd,
 	});
+
+	// Toast state for showing notifications.
+	const [toast, setToast] = useState<{
+		message: string;
+		type: "success" | "error";
+	} | null>(null);
 
 	// Optionally, capture initial pricing only on mount.
 	useEffect(() => {
@@ -41,13 +48,44 @@ export function ProductPricing({
 
 	// Handle saving pricing. If onSavePricing is provided, call it;
 	// otherwise, show an alert. After saving, update originalPricing.
-	const handleSavePricing = () => {
-		if (onSavePricing) {
-			onSavePricing();
-		} else {
-			alert("Save Pricing Clicked");
+
+	const handleSavePricing = async () => {
+		try {
+			// Call your API to update the product details. Do not include empty optional fields.
+			const updateData: {
+				id: string;
+				price: number;
+				sale_price?: number;
+				sale_start?: string;
+				sale_end?: string;
+			} = {
+				id: productId,
+				price,
+			};
+
+			if (salePrice) {
+				updateData.sale_price = salePrice;
+			}
+			if (saleStart) {
+				updateData.sale_start = saleStart;
+			}
+			if (saleEnd) {
+				updateData.sale_end = saleEnd;
+			}
+
+			await updateProduct(updateData);
+			setOriginalPricing({ price, salePrice, saleStart, saleEnd });
+			setToast({
+				message: "Product pricing updated successfully.",
+				type: "success",
+			});
+		} catch (error: any) {
+			console.error("Error updating product pricing", error);
+			setToast({
+				message: "Error updating product pricing: " + error.message,
+				type: "error",
+			});
 		}
-		setOriginalPricing({ price, salePrice, saleStart, saleEnd });
 	};
 
 	return (
@@ -167,6 +205,13 @@ export function ProductPricing({
 					<Save className="h-4 w-4 mr-1" />
 					Save Pricing
 				</button>
+				{toast && (
+					<Toast
+						message={toast.message}
+						type={toast.type}
+						onClose={() => setToast(null)}
+					/>
+				)}
 			</div>
 		</fieldset>
 	);

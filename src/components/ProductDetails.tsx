@@ -1,19 +1,23 @@
 // /src/components/ProductDetails.tsx
 
 import { ChangeEvent, useEffect, useState } from "react";
-import { Box, Barcode, FileText, Save } from "lucide-react";
+import { Box, Barcode, FileText } from "lucide-react";
+import { updateProduct } from "../lib/api_client/products";
+import Toast from "../components/Toast";
 
 export interface ProductDetailsProps {
+	productId: string;
 	productSKU: string;
 	name: string;
 	description: string;
 	onInputChange: (
 		e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
 	) => void;
-	// Optionally, add an onSaveDetails callback here if needed.
+	// Optionally, add a callback prop to show a toast if needed.
 }
 
 export function ProductDetails({
+	productId,
 	productSKU,
 	name,
 	description,
@@ -26,6 +30,12 @@ export function ProductDetails({
 		description,
 	});
 
+	// Toast state for showing notifications.
+	const [toast, setToast] = useState<{
+		message: string;
+		type: "success" | "error";
+	} | null>(null);
+
 	useEffect(() => {
 		setOriginalDetails({ productSKU, name, description });
 		// eslint-disable-next-line react-hooks/exhaustive-deps
@@ -35,10 +45,27 @@ export function ProductDetails({
 		JSON.stringify(originalDetails) ===
 		JSON.stringify({ productSKU, name, description });
 
-	const handleSaveDetails = () => {
-		// Replace this alert with your actual save functionality.
-		alert("Save Details Clicked");
-		setOriginalDetails({ productSKU, name, description });
+	const handleSaveDetails = async () => {
+		try {
+			// Call your API to update the product details.
+			await updateProduct({
+				id: productId,
+				name: name,
+				sku: productSKU,
+				description: description,
+			});
+			setOriginalDetails({ productSKU, name, description });
+			setToast({
+				message: "Product details updated successfully.",
+				type: "success",
+			});
+		} catch (error: any) {
+			console.error("Error updating product details", error);
+			setToast({
+				message: "Error updating product details: " + error.message,
+				type: "error",
+			});
+		}
 	};
 
 	return (
@@ -72,7 +99,7 @@ export function ProductDetails({
 
 					<div>
 						<label
-							htmlFor="name"
+							htmlFor="sku"
 							className="block text-sm font-medium text-gray-700 dark:text-gray-300"
 						>
 							Product SKU
@@ -127,10 +154,16 @@ export function ProductDetails({
 							: "text-white bg-blue-600 hover:bg-blue-700"
 					}`}
 				>
-					<Save className="h-4 w-4 mr-1" />
 					Save Details
 				</button>
 			</div>
+			{toast && (
+				<Toast
+					message={toast.message}
+					type={toast.type}
+					onClose={() => setToast(null)}
+				/>
+			)}
 		</div>
 	);
 }

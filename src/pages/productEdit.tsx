@@ -207,6 +207,7 @@ export default function ProductEdit() {
 										</div>
 
 										<ProductDetails
+											productId={targetId ?? ""}
 											productSKU={productData.sku}
 											name={productData.name}
 											description={
@@ -215,6 +216,7 @@ export default function ProductEdit() {
 											onInputChange={handleInputChange}
 										/>
 										<ProductPricing
+											productId={targetId ?? ""}
 											price={productData.price}
 											salePrice={productData.salePrice}
 											saleStart={productData.saleStart}
