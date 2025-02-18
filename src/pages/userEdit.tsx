@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import Layout from "../components/Header";
+import Layout from "../components/Layout";
 import { Toast } from "../components/Toast";
 import { UserEmail } from "../components/UserEmail";
 import { UserPersonalDetails } from "../components/UserPersonalDetails";

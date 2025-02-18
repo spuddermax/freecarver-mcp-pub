@@ -1,4 +1,4 @@
-import { forwardRef } from "react";
+import React, { forwardRef } from "react";
 import {
 	User as UserIcon,
 	Users as UsersIcon,
@@ -10,11 +10,13 @@ import {
 	LogOut,
 } from "lucide-react";
 
-interface NavMenuProps {
+export interface NavMenuProps {
+	onDashboardClick: () => void;
 	onMySettingsClick: () => void;
+	onUsersClick: () => void;
 	onThemeToggle: () => void;
 	onGridToggle: () => void;
-	onLogout: () => void;
+	onLogout: () => Promise<void> | void;
 	isDark: boolean;
 	showGrid: boolean;
 	animateGrid: boolean;
@@ -23,7 +25,9 @@ interface NavMenuProps {
 const NavMenu = forwardRef<HTMLDivElement, NavMenuProps>(
 	(
 		{
+			onDashboardClick,
 			onMySettingsClick,
+			onUsersClick,
 			onThemeToggle,
 			onGridToggle,
 			onLogout,

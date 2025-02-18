@@ -7,7 +7,7 @@ import {
 	UserPlus as UserPlusIcon,
 	Loader2 as Loader2Icon,
 } from "lucide-react";
-import Layout from "../components/Header";
+import Layout from "../components/Layout";
 import { Toast } from "../components/Toast";
 import { fetchAdminUsers } from "../lib/api_client/adminUsers";
 import { formatUser } from "../utils/formatters";

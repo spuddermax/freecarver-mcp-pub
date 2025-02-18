@@ -126,7 +126,7 @@ export function ProductMediaItem({
 				<button
 					type="button"
 					onClick={onDelete}
-					className="inline-flex items-center px-3 py-1 border border-transparent rounded-md shadow-sm text-xs font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
+					className="inline-flex items-center px-3 py-1 border border-transparent rounded-md shadow-sm text-xs font-medium text-white bg-red-700 hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500"
 				>
 					<Trash2 className="h-4 w-4 mr-1" />
 					Delete

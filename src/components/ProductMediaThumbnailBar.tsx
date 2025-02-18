@@ -1,4 +1,4 @@
-// /src/components/ThumbnailBar.tsx
+// /src/components/ProductMediaThumbnailBar.tsx
 
 import React from "react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
@@ -32,7 +32,7 @@ export const ThumbnailBar: React.FC<ThumbnailBarProps> = ({
 			<Droppable droppableId="thumbnails" direction="horizontal">
 				{(provided: DroppableProvided) => (
 					<div
-						className="flex flex-wrap gap-x-2 gap-y-2 p-2 border-b"
+						className="flex flex-wrap gap-x-2 gap-y-2 p-2"
 						ref={provided.innerRef}
 						{...provided.droppableProps}
 					>
