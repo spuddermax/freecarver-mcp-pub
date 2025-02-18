@@ -1,8 +1,9 @@
 // /src/components/ProductMediaItem.tsx
 
-import "react";
+import { useState } from "react";
 import { Image as ImageIcon, Trash2, Link2, Type } from "lucide-react";
 import { ProductMediaItem as MediaItemType } from "./ProductMedia";
+import { Modal } from "../components/Modal";
 
 export interface ProductMediaItemProps {
 	mediaItem: MediaItemType;
@@ -17,6 +18,8 @@ export function ProductMediaItem({
 	onUpdate,
 	onDelete,
 }: ProductMediaItemProps) {
+	const [isImageModalOpen, setImageModalOpen] = useState(false);
+
 	return (
 		<div className="border border-gray-300 dark:border-gray-600 rounded-md p-3">
 			{/* Media Preview */}
@@ -36,13 +39,30 @@ export function ProductMediaItem({
 						<img
 							src={mediaItem.url}
 							alt="Media Preview"
-							className="max-h-full max-w-full object-contain rounded"
+							className="max-h-full max-w-full object-contain rounded cursor-pointer"
+							onClick={() => setImageModalOpen(true)}
 						/>
 					)
 				) : (
 					<ImageIcon className="h-8 w-8 text-gray-400" />
 				)}
 			</div>
+
+			{/* Modal for larger image preview */}
+			{isImageModalOpen && (
+				<Modal
+					isOpen={isImageModalOpen}
+					onClose={() => setImageModalOpen(false)}
+					title={mediaItem.title || "Image Preview"}
+				>
+					<img
+						src={mediaItem.url}
+						alt={mediaItem.title || "Image Preview"}
+						className="w-full object-contain rounded"
+					/>
+				</Modal>
+			)}
+
 			{/* Media URL Field */}
 			<div>
 				<label
