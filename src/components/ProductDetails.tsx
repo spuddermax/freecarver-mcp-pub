@@ -1,15 +1,16 @@
 // /src/components/ProductDetails.tsx
 
-import { ChangeEvent } from "react";
-import { Box, Barcode, FileText } from "lucide-react";
+import { ChangeEvent, useEffect, useState } from "react";
+import { Box, Barcode, FileText, Save } from "lucide-react";
 
-interface ProductDetailsProps {
+export interface ProductDetailsProps {
 	productSKU: string;
 	name: string;
 	description: string;
 	onInputChange: (
 		e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
 	) => void;
+	// Optionally, add an onSaveDetails callback here if needed.
 }
 
 export function ProductDetails({
@@ -18,6 +19,28 @@ export function ProductDetails({
 	description,
 	onInputChange,
 }: ProductDetailsProps) {
+	// Store the original details on mount.
+	const [originalDetails, setOriginalDetails] = useState({
+		productSKU,
+		name,
+		description,
+	});
+
+	useEffect(() => {
+		setOriginalDetails({ productSKU, name, description });
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, []);
+
+	const detailsUnchanged =
+		JSON.stringify(originalDetails) ===
+		JSON.stringify({ productSKU, name, description });
+
+	const handleSaveDetails = () => {
+		// Replace this alert with your actual save functionality.
+		alert("Save Details Clicked");
+		setOriginalDetails({ productSKU, name, description });
+	};
+
 	return (
 		<div>
 			<fieldset className="border rounded-lg p-4 border-gray-200 dark:border-gray-700">
@@ -92,6 +115,22 @@ export function ProductDetails({
 					</div>
 				</div>
 			</fieldset>
+			{/* Save Details Button */}
+			<div className="mt-4 flex justify-center">
+				<button
+					type="button"
+					onClick={handleSaveDetails}
+					disabled={detailsUnchanged}
+					className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+						detailsUnchanged
+							? "text-gray-500 bg-gray-400 cursor-not-allowed"
+							: "text-white bg-blue-600 hover:bg-blue-700"
+					}`}
+				>
+					<Save className="h-4 w-4 mr-1" />
+					Save Details
+				</button>
+			</div>
 		</div>
 	);
 }

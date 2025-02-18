@@ -175,10 +175,10 @@ export function ProductMedia({
 						ref={saveButtonRef}
 						onClick={handleSaveMedia}
 						disabled={isMediaUnchanged}
-						className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+						className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium focus:outline-none focus:ring-2 focus:ring-purple-500 ${
 							isMediaUnchanged
-								? "bg-purple-300 cursor-not-allowed"
-								: "bg-purple-700 hover:bg-purple-600"
+								? "text-gray-500 bg-gray-400 cursor-not-allowed"
+								: "text-white bg-purple-700 hover:bg-purple-600"
 						}`}
 					>
 						<Save className="h-4 w-4 mr-1" />
