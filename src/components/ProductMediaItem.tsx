@@ -28,8 +28,7 @@ export function ProductMediaItem({
 							src={mediaItem.url}
 							className="max-h-full max-w-full object-contain rounded"
 							title="YouTube video player"
-							frameBorder="0"
-							allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+							allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
 							referrerPolicy="strict-origin-when-cross-origin"
 							allowFullScreen
 						/>
