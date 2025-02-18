@@ -5,5 +5,5 @@
 		"target": "es2022",
 		"lib": ["dom", "es2022", "es2022.intl"]
 	},
-	"include": ["api/**/*", "api/types/**/*"]
+	"include": ["api/**/*", "api/types/**/*", "src/lib/types**/*"]
 }

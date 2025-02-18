@@ -7,6 +7,7 @@ import { ProductMediaItem } from "./ProductMediaItem";
 import { ProductMediaJsonEditor } from "./ProductMediaJsonEditor";
 import { updateProduct } from "../lib/api_client/products";
 import Toast from "../components/Toast";
+import { ThumbnailBar } from "./ThumbnailBar";
 
 export interface ProductMediaItem {
 	media_id: string;
@@ -91,6 +92,13 @@ export function ProductMedia({
 
 	return (
 		<fieldset className="border rounded-lg p-4 border-gray-200 dark:border-gray-700 relative">
+			<div className="mb-4">
+				<ThumbnailBar
+					mediaItems={mediaItems}
+					setMediaItems={setMediaItems}
+				/>
+			</div>
+
 			<legend className="text-lg font-medium text-gray-700 dark:text-gray-300 px-2">
 				Product Media
 			</legend>
