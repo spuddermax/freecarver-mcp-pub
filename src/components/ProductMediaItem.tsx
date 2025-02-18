@@ -22,11 +22,24 @@ export function ProductMediaItem({
 			{/* Media Preview */}
 			<div className="flex justify-center items-center bg-gray-100 dark:bg-gray-700 rounded mb-2 h-32 w-full">
 				{mediaItem.url.trim() ? (
-					<img
-						src={mediaItem.url}
-						alt="Media Preview"
-						className="max-h-full max-w-full object-contain rounded"
-					/>
+					// If a youtube video link, embed it
+					mediaItem.url.includes("youtube.com/embed/") ? (
+						<iframe
+							src={mediaItem.url}
+							className="max-h-full max-w-full object-contain rounded"
+							title="YouTube video player"
+							frameBorder="0"
+							allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+							referrerPolicy="strict-origin-when-cross-origin"
+							allowFullScreen
+						/>
+					) : (
+						<img
+							src={mediaItem.url}
+							alt="Media Preview"
+							className="max-h-full max-w-full object-contain rounded"
+						/>
+					)
 				) : (
 					<ImageIcon className="h-8 w-8 text-gray-400" />
 				)}
@@ -48,7 +61,7 @@ export function ProductMediaItem({
 						id="media-url"
 						value={mediaItem.url}
 						onChange={(e) => onUpdate("url", e.target.value)}
-						className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+						className="block w-full pl-10 pr-3 py-2 border text-gray-700 border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
 					/>
 				</div>
 			</div>
@@ -69,7 +82,7 @@ export function ProductMediaItem({
 						id="media-title"
 						value={mediaItem.title || ""}
 						onChange={(e) => onUpdate("title", e.target.value)}
-						className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+						className="block w-full pl-10 pr-3 py-2 border text-gray-700 border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
 					/>
 				</div>
 			</div>
