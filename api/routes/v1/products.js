@@ -217,30 +217,43 @@ router.put(
 				sale_end,
 				product_media,
 			} = req.body;
-			const query = `
+
+			// Build an object with only the fields provided
+			const updateFields = {};
+			if (name) updateFields.name = name;
+			if (description) updateFields.description = description;
+			// Check for numeric fields using undefined since 0 is valid
+			if (price !== undefined) updateFields.price = price;
+			if (sale_price !== undefined) updateFields.sale_price = sale_price;
+			if (sale_start) updateFields.sale_start = sale_start;
+			if (sale_end) updateFields.sale_end = sale_end;
+			if (product_media) updateFields.product_media = product_media;
+
+			// If no valid fields are provided, return an error.
+			const keys = Object.keys(updateFields);
+			if (keys.length === 0) {
+				logger.error("No valid fields to update for product", { id });
+				return res.validationError(
+					{ error: "No valid fields to update." },
+					"No valid fields to update."
+				);
+			}
+
+			// Build dynamic SET clause and values array
+			const setClause = keys
+				.map((field, index) => `${field} = $${index + 1}`)
+				.join(", ");
+			const values = keys.map((key) => updateFields[key]);
+			// Append the product id as the last parameter
+			values.push(id);
+
+			const queryText = `
       UPDATE products
-      SET name = $1,
-          description = $2,
-          price = $3,
-          sale_price = $4,
-          sale_start = $5,
-          sale_end = $6,
-          product_media = $7,
-          updated_at = NOW()
-      WHERE id = $8
+      SET ${setClause}, updated_at = NOW()
+      WHERE id = $${values.length}
       RETURNING *;
     `;
-			const values = [
-				name,
-				description,
-				price,
-				sale_price,
-				sale_start,
-				sale_end,
-				product_media,
-				id,
-			];
-			const result = await pool.query(query, values);
+			const result = await pool.query(queryText, values);
 			if (result.rows.length === 0) {
 				logger.error(`Product with ID ${id} not found for update.`);
 				return res.error("Product not found.", 404);
