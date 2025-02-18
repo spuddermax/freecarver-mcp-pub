@@ -191,6 +191,7 @@ router.get(
  * @param {string} req.params.id - The ID of the product to update.
  * @param {Object} req.body - The updated product details.
  * @param {string} [req.body.name] - The updated product name.
+ * @param {string} [req.body.sku] - The updated product SKU.
  * @param {string} [req.body.description] - The updated product description.
  * @param {number} [req.body.price] - The updated product price.
  * @param {number} [req.body.sale_price] - The updated sale price.
@@ -239,9 +240,13 @@ router.put(
 				);
 			}
 
-			// Build dynamic SET clause and values array
+			// Build dynamic SET clause and values array using a cast for product_media.
 			const setClause = keys
-				.map((field, index) => `${field} = $${index + 1}`)
+				.map((field, index) =>
+					field === "product_media"
+						? `${field} = $${index + 1}::json`
+						: `${field} = $${index + 1}`
+				)
 				.join(", ");
 			const values = keys.map((key) => updateFields[key]);
 			// Append the product id as the last parameter
@@ -253,6 +258,7 @@ router.put(
       WHERE id = $${values.length}
       RETURNING *;
     `;
+			console.log(queryText, values);
 			const result = await pool.query(queryText, values);
 			if (result.rows.length === 0) {
 				logger.error(`Product with ID ${id} not found for update.`);
@@ -265,10 +271,13 @@ router.put(
 				200
 			);
 		} catch (error) {
-			logger.error(`Error updating product with ID ${req.params.id}.`, {
-				error: error.message,
-			});
-			res.error("Internal server error", 500);
+			logger.error(
+				`Error updating product with ID ${req.params.id}. ${error.message}`,
+				{
+					error: error.message,
+				}
+			);
+			res.error("Internal server error: " + error.message, 500);
 		}
 	}
 );

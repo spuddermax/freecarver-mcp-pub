@@ -1,3 +1,4 @@
+// /src/lib/api_client/products.ts
 /**
  * Fetch all products.
  * @returns A promise that resolves to an array of products.
@@ -84,6 +85,7 @@ export async function createProduct(data: {
  */
 export async function updateProduct(data: {
 	id: string;
+	sku?: string;
 	name?: string;
 	description?: string;
 	price?: number;

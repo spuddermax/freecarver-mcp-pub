@@ -14,6 +14,7 @@ import { formatProduct } from "../utils/formatters";
 import { ProductDetails } from "../components/ProductDetails";
 import { ProductPricing } from "../components/ProductPricing";
 import { ProductMedia } from "../components/ProductMedia";
+import { ProductMediaItem } from "../components/ProductMedia";
 
 // Define the full product data interface.
 interface ProductData {
@@ -26,15 +27,8 @@ interface ProductData {
 	saleStart?: string;
 	saleEnd?: string;
 	// productMedia is stored as a JSON string after combining the mediaItems.
-	productMedia?: string;
+	productMedia?: ProductMediaItem[];
 	createdAt: string;
-}
-
-export interface ProductMediaItem {
-	media_id: string;
-	url: string;
-	title?: string;
-	default?: boolean;
 }
 
 /**
@@ -56,7 +50,7 @@ export default function ProductEdit() {
 		salePrice: undefined,
 		saleStart: "",
 		saleEnd: "",
-		productMedia: "",
+		productMedia: [],
 		createdAt: "",
 	});
 	// Manage the media items interactively.
@@ -89,10 +83,7 @@ export default function ProductEdit() {
 					formattedProduct.productMedia.length > 0
 				) {
 					try {
-						const parsed = JSON.parse(
-							formattedProduct.productMedia
-						);
-						setMediaItems(parsed);
+						setMediaItems(formattedProduct.productMedia);
 					} catch (err) {
 						console.error("Error parsing product media", err);
 						setMediaItems([]);
@@ -231,6 +222,7 @@ export default function ProductEdit() {
 									<ProductMedia
 										mediaItems={mediaItems}
 										setMediaItems={setMediaItems}
+										productId={targetId ?? ""}
 									/>
 									<div className="flex justify-end space-x-4">
 										<button

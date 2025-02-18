@@ -1,10 +1,12 @@
 // /src/components/ProductMedia.tsx
 
 import React from "react";
-import { Trash2, Plus, Code, X } from "lucide-react";
+import { Trash2, Plus, Code, Save, X } from "lucide-react";
 import { Modal } from "../components/Modal";
 import { ProductMediaItem } from "./ProductMediaItem";
 import { ProductMediaJsonEditor } from "./ProductMediaJsonEditor";
+import { updateProduct } from "../lib/api_client/products";
+
 export interface ProductMediaItem {
 	media_id: string;
 	url: string;
@@ -15,9 +17,14 @@ export interface ProductMediaItem {
 export interface ProductMediaProps {
 	mediaItems: ProductMediaItem[];
 	setMediaItems: React.Dispatch<React.SetStateAction<ProductMediaItem[]>>;
+	productId: string;
 }
 
-export function ProductMedia({ mediaItems, setMediaItems }: ProductMediaProps) {
+export function ProductMedia({
+	mediaItems,
+	setMediaItems,
+	productId,
+}: ProductMediaProps) {
 	const [jsonPreviewOpen, setJsonPreviewOpen] = React.useState(false);
 	// State for deletion confirmation: holds the index of media to delete or null if none.
 	const [deleteIndex, setDeleteIndex] = React.useState<number | null>(null);
@@ -46,6 +53,17 @@ export function ProductMedia({ mediaItems, setMediaItems }: ProductMediaProps) {
 		});
 	};
 
+	// Saves just the product_media field to the products table using the API client.
+	const handleSaveMedia = async () => {
+		try {
+			await updateProduct({ id: productId, product_media: mediaItems });
+			alert("Product media saved successfully.");
+		} catch (error: any) {
+			console.error("Error saving product media:", error);
+			alert("Error saving product media: " + error.message);
+		}
+	};
+
 	React.useEffect(() => {
 		if (jsonPreviewOpen) {
 			// Update the JSON text when the modal is opened (or when mediaItems change)
@@ -71,11 +89,15 @@ export function ProductMedia({ mediaItems, setMediaItems }: ProductMediaProps) {
 							onUpdate={(key, value) =>
 								updateMediaItem(index, key, value)
 							}
-							onDelete={() => setDeleteIndex(index)}
+							onDelete={() =>
+								setMediaItems((prev) =>
+									prev.filter((_, idx) => idx !== index)
+								)
+							}
 						/>
 					))}
 				</div>
-				{/* "Add Media" and "JSON Edit" buttons */}
+				{/* "Add Media", "JSON Edit", and "Save Media" buttons */}
 				<div className="mt-4 flex justify-center gap-4">
 					<button
 						type="button"
@@ -100,6 +122,14 @@ export function ProductMedia({ mediaItems, setMediaItems }: ProductMediaProps) {
 					>
 						<Code className="h-4 w-4 mr-1" />
 						JSON Edit
+					</button>
+					<button
+						type="button"
+						onClick={handleSaveMedia}
+						className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+					>
+						<Save className="h-4 w-4 mr-1" />
+						Save Media
 					</button>
 				</div>
 				{/* Delete Confirmation Modal */}
@@ -139,12 +169,15 @@ export function ProductMedia({ mediaItems, setMediaItems }: ProductMediaProps) {
 						</div>
 					</div>
 				</Modal>
-				{/* JSON Preview Modal using the Modal component */}
+				{/* JSON Preview Modal using the ProductMediaJsonEditor component */}
 				<ProductMediaJsonEditor
 					isOpen={jsonPreviewOpen}
 					jsonText={jsonText}
 					onJsonTextChange={setJsonText}
-					onSave={() => setMediaItems(JSON.parse(jsonText))}
+					onSave={(parsedJSON) => {
+						setMediaItems(parsedJSON);
+						setJsonPreviewOpen(false);
+					}}
 					onClose={() => setJsonPreviewOpen(false)}
 				/>
 			</div>

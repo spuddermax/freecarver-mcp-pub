@@ -47,10 +47,9 @@ export function formatProduct(product: any): any {
  */
 export function formatProductMedia(media: any): any {
 	return {
-		id: media.id,
+		media_id: media.id,
 		url: media.url,
 		title: media.title,
-		default: media.default,
 	};
 }
 

@@ -14,12 +14,13 @@ export const productListSchema = Joi.object({
 
 // Schema for creating or updating a product
 export const createOrUpdateProductSchema = Joi.object({
-	name: Joi.string().min(1).max(255).required(),
+	name: Joi.string().min(1).max(255).optional(),
 	description: Joi.string().allow("").optional(),
-	price: Joi.number().precision(2).required(),
+	price: Joi.number().precision(2).optional(),
 	sale_price: Joi.number().precision(2).optional(),
 	sale_start: Joi.date().iso().optional(),
 	sale_end: Joi.date().iso().optional(),
+	sku: Joi.string().optional(),
 	// product_media can be a JSON string, or an array of objects, etc.
 	product_media: Joi.alternatives()
 		.try(Joi.string(), Joi.array().items(Joi.object()))
