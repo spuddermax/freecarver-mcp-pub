@@ -1,3 +1,5 @@
+// /src/components/ProductPricing.tsx
+
 import { ChangeEvent } from "react";
 import { DollarSign, Tag, Calendar } from "lucide-react";
 

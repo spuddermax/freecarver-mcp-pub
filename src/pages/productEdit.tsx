@@ -1,3 +1,5 @@
+// /src/pages/productEdit.tsx
+
 import { useState, useEffect, ChangeEvent, FormEvent } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Package as PackageIcon } from "lucide-react";

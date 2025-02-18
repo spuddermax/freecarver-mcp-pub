@@ -1,3 +1,5 @@
+// /src/components/UserPersonalDetails.tsx
+
 import React, { useState, useEffect } from "react";
 import { User as UserIcon, Phone, Save } from "lucide-react";
 import { updateAdminUser } from "../lib/api_client/adminUsers";
