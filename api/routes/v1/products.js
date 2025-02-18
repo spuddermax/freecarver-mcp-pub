@@ -228,7 +228,8 @@ router.put(
 			if (sale_price !== undefined) updateFields.sale_price = sale_price;
 			if (sale_start) updateFields.sale_start = sale_start;
 			if (sale_end) updateFields.sale_end = sale_end;
-			if (product_media) updateFields.product_media = product_media;
+			if (product_media)
+				updateFields.product_media = JSON.stringify(product_media);
 
 			// If no valid fields are provided, return an error.
 			const keys = Object.keys(updateFields);
