@@ -8,7 +8,7 @@ import {
 	Plus as PlusIcon,
 	Loader2 as Loader2Icon,
 } from "lucide-react";
-import Layout from "../components/Layout";
+import Layout from "../components/Header";
 import { Toast } from "../components/Toast";
 import { Pagination } from "../components/Pagination";
 import { formatProduct } from "../utils/formatters";

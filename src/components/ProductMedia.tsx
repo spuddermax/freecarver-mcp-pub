@@ -93,6 +93,9 @@ export function ProductMedia({
 	return (
 		<fieldset className="border rounded-lg p-4 border-gray-200 dark:border-gray-700 relative">
 			<div className="mb-4">
+				<label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+					Media Order (Drag and drop to reorder)
+				</label>
 				<ThumbnailBar
 					mediaItems={mediaItems}
 					setMediaItems={setMediaItems}
@@ -104,7 +107,7 @@ export function ProductMedia({
 			</legend>
 			<div>
 				<label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-					Product Media (Manage images/videos)
+					Media Items
 				</label>
 				{/* Media items grid */}
 				<div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-1">

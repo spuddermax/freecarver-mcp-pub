@@ -32,7 +32,7 @@ export const ThumbnailBar: React.FC<ThumbnailBarProps> = ({
 			<Droppable droppableId="thumbnails" direction="horizontal">
 				{(provided: DroppableProvided) => (
 					<div
-						className="flex space-x-2 overflow-x-auto p-2 border-b"
+						className="flex flex-wrap gap-x-2 gap-y-2 p-2 border-b"
 						ref={provided.innerRef}
 						{...provided.droppableProps}
 					>
@@ -56,13 +56,13 @@ export const ThumbnailBar: React.FC<ThumbnailBarProps> = ({
 											.toLowerCase()
 											.includes("youtu.be") ? (
 											<div
-												className="flex items-center justify-center w-full h-full bg-gray-200"
+												className="flex items-center justify-center w-full h-full bg-gray-200 dark:bg-gray-700"
 												title={
 													item.title ||
 													"Youtube Thumbnail"
 												}
 											>
-												<Video className="w-6 h-6 text-gray-500" />
+												<Video className="w-6 h-6 text-gray-500 dark:text-gray-300" />
 											</div>
 										) : (
 											<img

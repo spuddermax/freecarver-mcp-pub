@@ -22,7 +22,6 @@ export function ProductMediaJsonEditor({
 	const handleApply = () => {
 		try {
 			const parsedJSON = JSON.parse(jsonText);
-			console.log(parsedJSON);
 			onSave(parsedJSON);
 		} catch (error) {
 			alert("Invalid JSON. Please check your syntax and try again.");

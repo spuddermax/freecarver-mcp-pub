@@ -6,7 +6,7 @@ import {
 	TrendingUp,
 	DollarSign,
 } from "lucide-react";
-import Layout from "../components/Layout";
+import Layout from "../components/Header";
 import RecentOrders from "../components/RecentOrders";
 import { DashboardQuickActions } from "../components/DashboardQuickActions";
 

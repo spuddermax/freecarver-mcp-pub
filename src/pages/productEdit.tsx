@@ -3,7 +3,7 @@
 import { useState, useEffect, ChangeEvent, FormEvent } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Package as PackageIcon } from "lucide-react";
-import Layout from "../components/Layout";
+import Layout from "../components/Header";
 import { Toast } from "../components/Toast";
 import {
 	fetchProduct,
