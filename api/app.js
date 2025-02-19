@@ -5,6 +5,7 @@ import rateLimit from "express-rate-limit";
 import dotenv from "dotenv";
 import cors from "cors";
 import { logRequest } from "./logger.js"; // Corrected import
+import ipWhitelistMiddleware from "./middleware/ipWhitelist.js";
 
 // Import routes
 import adminAuthRoutes from "./routes/v1/adminAuth.js";
@@ -51,11 +52,17 @@ app.use(responseFormatter);
 // Apply the rate limiter to API calls starting with '/v1'
 app.use("/v1", apiLimiter);
 
+// If your API is behind a proxy, enable trust proxy for correct IP extraction.
+app.set("trust proxy", true);
+
 // Log incoming requests with IP address
 app.use((req, res, next) => {
 	req.log("info", `Incoming request: ${req.method} ${req.url}`);
 	next();
 });
+
+// Use the IP whitelist middleware for **all** API routes.
+app.use(ipWhitelistMiddleware);
 
 // Mount the routes with versioning
 app.use("/v1/adminAuth", adminAuthRoutes);
