@@ -174,7 +174,7 @@ export default function ProductEdit() {
 				pageInfo={{
 					title: "Edit Product",
 					icon: PackageIcon,
-					iconColor: "text-yellow-500 dark:text-yellow-400",
+					iconColor: "text-red-600 dark:text-red-600",
 				}}
 				breadcrumbs={[
 					{ label: "Dashboard", link: "/dashboard" },

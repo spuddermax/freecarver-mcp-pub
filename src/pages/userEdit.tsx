@@ -101,7 +101,7 @@ export default function UserEdit() {
 			pageInfo={{
 				title: "User Editor",
 				icon: UserIcon,
-				iconColor: "text-green-500 dark:text-green-400",
+				iconColor: "text-blue-600 dark:text-blue-600",
 			}}
 			breadcrumbs={[
 				{ label: "Dashboard", link: "/dashboard" },

@@ -219,7 +219,7 @@ export default function Layout({
 							</div>
 							{breadcrumbs && breadcrumbs.length > 0 && (
 								<nav aria-label="Breadcrumb" className="mt-2">
-									<ol className="flex items-center space-x-1 text-sm text-gray-600">
+									<ol className="flex items-center space-x-1 text-sm text-gray-600 dark:text-gray-300">
 										{breadcrumbs.map((item, index) => (
 											<li
 												key={index}

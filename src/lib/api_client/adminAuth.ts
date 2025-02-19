@@ -53,3 +53,28 @@ export async function getCurrentAdmin(): Promise<any> {
 
 	return response.json();
 }
+
+/**
+ * Refresh the admin JWT token.
+ * @returns A promise that resolves to the new token.
+ */
+export async function refreshAdminToken(): Promise<any> {
+	const refreshToken = localStorage.getItem("adminRefreshToken");
+	const response = await fetch(
+		import.meta.env.VITE_API_URL + "/v1/adminAuth/refresh",
+		{
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({ refreshToken }),
+		}
+	);
+
+	if (!response.ok) {
+		const errorData = await response.json();
+		throw new Error(errorData.message || "Failed to refresh token");
+	}
+
+	return response.json();
+}

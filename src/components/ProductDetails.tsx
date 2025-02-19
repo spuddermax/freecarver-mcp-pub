@@ -92,7 +92,7 @@ export function ProductDetails({
 								id="name"
 								value={name}
 								onChange={onInputChange}
-								className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+								className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white text-gray-700"
 							/>
 						</div>
 					</div>
@@ -114,7 +114,7 @@ export function ProductDetails({
 								id="sku"
 								value={productSKU}
 								onChange={onInputChange}
-								className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+								className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white text-gray-700"
 							/>
 						</div>
 					</div>
@@ -136,7 +136,8 @@ export function ProductDetails({
 								rows={4}
 								value={description}
 								onChange={onInputChange}
-								className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+								className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600
+                                    rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 text-gray-700 dark:text-white"
 							/>
 						</div>
 					</div>
