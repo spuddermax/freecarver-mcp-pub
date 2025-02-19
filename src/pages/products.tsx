@@ -238,7 +238,10 @@ export default function Products() {
 													<div className="flex items-center">
 														{product.productMedia &&
 														product.productMedia
-															.length > 0 ? (
+															.length > 0 &&
+														!product.productMedia[0].url.includes(
+															"youtube.com"
+														) ? (
 															<img
 																src={
 																	product
