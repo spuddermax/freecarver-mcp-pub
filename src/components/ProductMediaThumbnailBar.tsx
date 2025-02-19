@@ -8,7 +8,7 @@ import type {
 	DraggableProvided,
 } from "@hello-pangea/dnd";
 import { ProductMediaItem as MediaItemType } from "./ProductMedia";
-import { Video } from "lucide-react";
+import { Video, ImageIcon } from "lucide-react";
 
 interface ThumbnailBarProps {
 	mediaItems: MediaItemType[];
@@ -64,7 +64,7 @@ export const ThumbnailBar: React.FC<ThumbnailBarProps> = ({
 											>
 												<Video className="w-6 h-6 text-gray-500 dark:text-gray-300" />
 											</div>
-										) : (
+										) : item.url ? (
 											<img
 												src={item.url}
 												alt={item.title || "Thumbnail"}
@@ -73,6 +73,10 @@ export const ThumbnailBar: React.FC<ThumbnailBarProps> = ({
 												}
 												className="object-cover w-full h-full"
 											/>
+										) : (
+											<div className="flex items-center justify-center w-full h-full bg-gray-200 dark:bg-gray-700">
+												<ImageIcon className="w-6 h-6 text-gray-500 dark:text-gray-300" />
+											</div>
 										)}
 									</div>
 								)}

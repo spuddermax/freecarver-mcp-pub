@@ -1,6 +1,6 @@
 // /src/components/ProductMediaItem.tsx
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Image as ImageIcon, Trash2, Link2, Type } from "lucide-react";
 import { ProductMediaItem as MediaItemType } from "./ProductMedia";
 import { Modal } from "../components/Modal";
@@ -20,6 +20,18 @@ export function ProductMediaItem({
 }: ProductMediaItemProps) {
 	const [isImageModalOpen, setImageModalOpen] = useState(false);
 
+	// Local state to temporarily hold the URL until the field is exited.
+	const [tempUrl, setTempUrl] = useState(mediaItem.url);
+
+	useEffect(() => {
+		setTempUrl(mediaItem.url);
+	}, [mediaItem.url]);
+
+	// On blur, update the parent's mediaItem.url
+	const handleUrlBlur = () => {
+		onUpdate("url", tempUrl);
+	};
+
 	return (
 		<div className="border border-gray-300 dark:border-gray-600 rounded-md p-3">
 			{/* Media Preview */}
@@ -35,13 +47,15 @@ export function ProductMediaItem({
 							referrerPolicy="strict-origin-when-cross-origin"
 							allowFullScreen
 						/>
-					) : (
+					) : mediaItem.url ? (
 						<img
 							src={mediaItem.url}
 							alt="Media Preview"
 							className="max-h-full max-w-full object-contain rounded cursor-pointer"
 							onClick={() => setImageModalOpen(true)}
 						/>
+					) : (
+						<ImageIcon className="h-8 w-8 text-gray-400" />
 					)
 				) : (
 					<ImageIcon className="h-8 w-8 text-gray-400" />
@@ -78,8 +92,9 @@ export function ProductMediaItem({
 					<input
 						type="text"
 						id="media-url"
-						value={mediaItem.url}
-						onChange={(e) => onUpdate("url", e.target.value)}
+						value={tempUrl}
+						onChange={(e) => setTempUrl(e.target.value)}
+						onBlur={handleUrlBlur}
 						className="block w-full pl-10 pr-3 py-2 border text-gray-700 border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
 					/>
 				</div>
