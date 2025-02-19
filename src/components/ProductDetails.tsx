@@ -3,6 +3,7 @@
 import { ChangeEvent, useEffect, useState } from "react";
 import { Box, Barcode, FileText } from "lucide-react";
 import { updateProduct } from "../lib/api_client/products";
+import { Modal } from "../components/Modal";
 import Toast from "../components/Toast";
 
 export interface ProductDetailsProps {
@@ -35,6 +36,9 @@ export function ProductDetails({
 		message: string;
 		type: "success" | "error";
 	} | null>(null);
+
+	// Track whether to show the description preview modal.
+	const [showDescriptionPreview, setShowDescriptionPreview] = useState(false);
 
 	useEffect(() => {
 		setOriginalDetails({ productSKU, name, description });
@@ -125,6 +129,13 @@ export function ProductDetails({
 							className="block text-sm font-medium text-gray-700 dark:text-gray-300"
 						>
 							Description
+							<button
+								type="button"
+								onClick={() => setShowDescriptionPreview(true)}
+								className="ml-2 text-blue-600 text-xs underline"
+							>
+								Preview
+							</button>
 						</label>
 						<div className="mt-1 relative">
 							<div className="absolute top-3 left-0 pl-3 flex items-start pointer-events-none">
@@ -164,6 +175,20 @@ export function ProductDetails({
 					type={toast.type}
 					onClose={() => setToast(null)}
 				/>
+			)}
+			{/* Description Preview Modal */}
+			{showDescriptionPreview && (
+				<Modal
+					isOpen={showDescriptionPreview}
+					title="Description Preview"
+					onClose={() => setShowDescriptionPreview(false)}
+				>
+					<div className="p-4 max-h-[80vh] overflow-y-auto">
+						<div
+							dangerouslySetInnerHTML={{ __html: description }}
+						/>
+					</div>
+				</Modal>
 			)}
 		</div>
 	);

@@ -118,7 +118,7 @@ export default function Layout({
 	return (
 		<div className="min-h-screen">
 			{showGrid && <TronGrid />}
-			<nav className="fixed top-0 left-0 right-0 z-50 bg-white dark:bg-gray-800 shadow-lg backdrop-blur-sm bg-white/90 dark:bg-gray-800/90">
+			<nav className="fixed top-0 left-0 right-0 z-10 bg-white dark:bg-gray-800 shadow-lg backdrop-blur-sm bg-white/90 dark:bg-gray-800/90">
 				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 					<div className="flex flex-col">
 						<div className="flex justify-between h-16 items-center">
@@ -262,7 +262,7 @@ export default function Layout({
 				</div>
 			</nav>
 
-			<main className="pt-28 relative z-10">{children}</main>
+			<main className="pt-28 relative z-9">{children}</main>
 		</div>
 	);
 }
