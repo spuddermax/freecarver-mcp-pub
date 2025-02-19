@@ -213,6 +213,7 @@ router.put(
 				name,
 				description,
 				price,
+				sku,
 				sale_price,
 				sale_start,
 				sale_end,
@@ -221,14 +222,15 @@ router.put(
 
 			// Build an object with only the fields provided
 			const updateFields = {};
-			if (name) updateFields.name = name;
-			if (description) updateFields.description = description;
-			// Check for numeric fields using undefined since 0 is valid
+			if (name !== undefined) updateFields.name = name;
+			if (description !== undefined)
+				updateFields.description = description;
+			if (sku !== undefined) updateFields.sku = sku;
 			if (price !== undefined) updateFields.price = price;
 			if (sale_price !== undefined) updateFields.sale_price = sale_price;
-			if (sale_start) updateFields.sale_start = sale_start;
-			if (sale_end) updateFields.sale_end = sale_end;
-			if (product_media)
+			if (sale_start !== undefined) updateFields.sale_start = sale_start;
+			if (sale_end !== undefined) updateFields.sale_end = sale_end;
+			if (product_media !== undefined)
 				updateFields.product_media = JSON.stringify(product_media);
 
 			// If no valid fields are provided, return an error.
