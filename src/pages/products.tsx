@@ -17,7 +17,9 @@ interface ProductData {
 	id: string;
 	name: string;
 	price: number;
-	imageUrl?: string;
+	productMedia: {
+		url: string;
+	}[];
 	createdAt: string;
 }
 
@@ -234,10 +236,14 @@ export default function Products() {
 											>
 												<td className="px-6 py-4 whitespace-nowrap">
 													<div className="flex items-center">
-														{product.imageUrl ? (
+														{product.productMedia &&
+														product.productMedia
+															.length > 0 ? (
 															<img
 																src={
-																	product.imageUrl
+																	product
+																		.productMedia[0]
+																		.url
 																}
 																alt={
 																	product.name
