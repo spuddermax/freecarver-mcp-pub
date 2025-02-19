@@ -1,7 +1,7 @@
 // /src/components/ProductDetails.tsx
 
 import { ChangeEvent, useEffect, useState } from "react";
-import { Box, Barcode, FileText } from "lucide-react";
+import { Box, Barcode, FileText, Eye } from "lucide-react";
 import { updateProduct } from "../lib/api_client/products";
 import { Modal } from "../components/Modal";
 import Toast from "../components/Toast";
@@ -132,8 +132,14 @@ export function ProductDetails({
 							<button
 								type="button"
 								onClick={() => setShowDescriptionPreview(true)}
-								className="ml-2 text-blue-600 text-xs underline"
+								disabled={!description.trim()}
+								className={`inline-flex items-center gap-1 ml-2 px-3 py-1 text-xs rounded focus:outline-none ${
+									description.trim()
+										? "text-white bg-blue-600 hover:bg-blue-700"
+										: "text-gray-500 bg-blue-900 cursor-not-allowed"
+								}`}
 							>
+								<Eye className="h-4 w-4" />
 								Preview
 							</button>
 						</label>
