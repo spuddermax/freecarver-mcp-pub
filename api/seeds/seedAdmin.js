@@ -16,6 +16,12 @@ async function createSuperAdmin() {
 		const lastName = process.env.SUPER_ADMIN_LAST_NAME;
 		const avatarUrl = process.env.SUPER_ADMIN_AVATAR_URL;
 
+		console.log("Email:", email);
+		console.log("Password:", password);
+		console.log("First name:", firstName);
+		console.log("Last name:", lastName);
+		console.log("Avatar URL:", avatarUrl);
+
 		// Check if the admin already exists
 		const existing = await pool.query(
 			"SELECT * FROM admin_users WHERE email = $1",
@@ -28,6 +34,7 @@ async function createSuperAdmin() {
 
 		// Hash the password
 		const hashedPassword = await bcrypt.hash(password, 10);
+		console.log("Hashed password:", hashedPassword);
 
 		// Check if the "super_admin" role exists, and if not, create it
 		let roleResult = await pool.query(
@@ -38,7 +45,7 @@ async function createSuperAdmin() {
 		if (roleResult.rows.length === 0) {
 			const insertRole = await pool.query(
 				"INSERT INTO admin_roles(role_name, created_at, updated_at) VALUES($1, NOW(), NOW()) RETURNING id",
-				["super_admin", "admin"]
+				["super_admin"]
 			);
 			roleId = insertRole.rows[0].id;
 			console.log(`Created new role "super_admin" with id ${roleId}`);

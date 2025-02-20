@@ -27,7 +27,7 @@ router.use(verifyJWT);
 router.get("/", async (req, res) => {
 	try {
 		const result = await pool.query(
-			"SELECT * FROM product_options ORDER BY id"
+			"SELECT * FROM product_options ORDER BY option_name"
 		);
 		logger.info("Retrieved product options list.");
 		res.success(

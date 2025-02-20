@@ -37,6 +37,7 @@ export function formatProduct(product: any): any {
 		saleEnd: product.sale_end,
 		productMedia: product.product_media,
 		createdAt: product.created_at,
+		options: product.options,
 	};
 }
 

@@ -16,6 +16,9 @@ import { ProductPricing } from "../components/ProductPricing";
 import { ProductMedia } from "../components/ProductMedia";
 import { ProductMediaItem } from "../components/ProductMedia";
 import Footer from "../components/Footer";
+import ProductOptions from "../components/ProductOptions";
+import { Option } from "../types/ProductData";
+
 // Define the full product data interface.
 interface ProductData {
 	targetId: string;
@@ -29,6 +32,8 @@ interface ProductData {
 	// productMedia is stored as a JSON string after combining the mediaItems.
 	productMedia?: ProductMediaItem[];
 	createdAt: string;
+	options: string[];
+	skus: string[];
 }
 
 /**
@@ -52,9 +57,12 @@ export default function ProductEdit() {
 		saleEnd: "",
 		productMedia: [],
 		createdAt: "",
+		options: [],
+		skus: [],
 	});
 	// Manage the media items interactively.
 	const [mediaItems, setMediaItems] = useState<ProductMediaItem[]>([]);
+	const [productOptions, setProductOptions] = useState<Option[]>([]);
 
 	const [message, setMessage] = useState<{
 		type: "success" | "error" | "info";
@@ -84,6 +92,19 @@ export default function ProductEdit() {
 				) {
 					try {
 						setMediaItems(formattedProduct.productMedia);
+						console.log(
+							"Product options:",
+							formattedProduct.options
+						);
+						setProductOptions(
+							formattedProduct.options.map(
+								(opt: string, index: number) => ({
+									id: index,
+									name: opt,
+									values: [],
+								})
+							)
+						);
 					} catch (err) {
 						console.error("Error parsing product media", err);
 						setMediaItems([]);
@@ -167,6 +188,23 @@ export default function ProductEdit() {
 		}
 	};
 
+	const handleOptionsChange = (options: Option[]) => {
+		setProductData((prev) => ({
+			...prev,
+			options: options.map((opt) => opt.name),
+		}));
+	};
+
+	// Handler for Save Options button
+	const handleSaveOptions = () => {
+		const updatePayload = {
+			productId: productData.targetId,
+			options: productData.options,
+		};
+		console.log("Update payload:", updatePayload);
+		// TODO: Update the database via an API call when ready.
+	};
+
 	// Render loading or form view.
 	return (
 		<div>
@@ -223,6 +261,24 @@ export default function ProductEdit() {
 											saleEnd={productData.saleEnd}
 											onInputChange={handleInputChange}
 										/>
+										<ProductOptions
+											initialOptions={(
+												productData.options || []
+											).map((opt, index) =>
+												typeof opt === "string"
+													? {
+															id: index,
+															name: opt,
+															values: [],
+													  }
+													: opt
+											)}
+											initialSKUs={productData.skus}
+											onChange={handleOptionsChange}
+										/>
+										<button onClick={handleSaveOptions}>
+											Save Options
+										</button>
 										{/* Product Media Section */}
 										<ProductMedia
 											mediaItems={mediaItems}

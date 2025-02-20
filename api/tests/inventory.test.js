@@ -47,8 +47,8 @@ describe("Inventory Routes", () => {
 
 		// Seed a product to be used in inventory product records.
 		const productResult = await pool.query(
-			`INSERT INTO products (name, description, price)
-       VALUES ('Inventory Test Product', 'For inventory tests', 49.99) RETURNING id`
+			`INSERT INTO products (name, sku, description, price)
+       VALUES ('Inventory Test Product', 'INV-TEST-SKU', 'For inventory tests', 49.99) RETURNING id`
 		);
 		productId = productResult.rows[0].id;
 	});

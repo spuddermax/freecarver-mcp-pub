@@ -13,14 +13,42 @@ describe("AdminAuth Routes", () => {
 	let testAdmin;
 
 	beforeAll(async () => {
-		// Create an admin role if needed, and an admin user for testing.
-		// NOTE: Adjust the INSERT query below if your DB expects different fields.
+		let adminRoleId;
+		// Attempt to insert the "Admin" role.
+		const result = await pool.query(
+			`INSERT INTO admin_roles (role_name)
+       VALUES ('Admin')
+       ON CONFLICT (role_name) DO NOTHING
+       RETURNING id;`
+		);
+		if (result.rows.length > 0) {
+			adminRoleId = result.rows[0].id;
+		} else {
+			// If the role already exists, fetch its id.
+			const roleResult = await pool.query(
+				`SELECT id FROM admin_roles WHERE role_name = 'Admin' LIMIT 1;`
+			);
+			adminRoleId = roleResult.rows[0].id;
+		}
+
 		const hashedPassword = await bcrypt.hash("password", 10);
 		const adminUserResult = await pool.query(
-			`INSERT INTO admin_users (email, password_hash, first_name, last_name, role_id)
-       VALUES ($1, $2, 'Test', 'Admin', 1)
+			`INSERT INTO admin_users (
+         email, 
+         password_hash, 
+         first_name, 
+         last_name, 
+         role_id,
+         phone_number,
+         avatar_url,
+         timezone,
+         mfa_enabled,
+         mfa_method
+       ) VALUES (
+         $1, $2, 'Test', 'Admin', $3, '123-456-7890', 'https://example.com/avatar.png', 'UTC', false, null
+       )
        RETURNING *;`,
-			["testadmin@example.com", hashedPassword]
+			["testadmin@example.com", hashedPassword, adminRoleId]
 		);
 		testAdmin = adminUserResult.rows[0];
 	});
@@ -82,7 +110,9 @@ describe("AdminAuth Routes", () => {
 				.set("Authorization", `Bearer ${token}`);
 			expect(res.statusCode).toEqual(200);
 			expect(res.body.data).toHaveProperty("admin");
-			expect(res.body.data.admin.email).toEqual("testadmin@example.com");
+			expect(res.body.data.admin.adminEmail).toEqual(
+				"testadmin@example.com"
+			);
 			expect(res.body.message).toEqual("Admin details retrieved");
 		});
 	});

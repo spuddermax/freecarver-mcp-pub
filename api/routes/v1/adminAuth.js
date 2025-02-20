@@ -6,7 +6,6 @@ import bcrypt from "bcrypt";
 import dotenv from "dotenv";
 import { pool } from "../../db.js";
 import { verifyJWT } from "../../middleware/auth.js";
-import { logger } from "../../logger.js";
 
 dotenv.config();
 
@@ -33,13 +32,10 @@ router.post("/login", async (req, res) => {
 				"error",
 				"Admin login failed: Email and password are required."
 			);
-			return res.validationError(
-				{
-					email: "Email is required",
-					password: "Password is required",
-				},
-				"Email and password are required."
-			);
+			return res.error("Email and password are required.", 400, {
+				email: "Email is required",
+				password: "Password is required",
+			});
 		}
 
 		// Query the admin_users table for the provided email
@@ -98,15 +94,24 @@ router.post("/login", async (req, res) => {
  * @returns {Response} 500 - Returns an error for an internal server error.
  */
 router.get("/me", verifyJWT, (req, res) => {
-	try {
-		req.log("info", `Retrieving admin details for: ${req.admin.email}`);
-		res.success({ admin: req.admin }, "Admin details retrieved");
-	} catch (error) {
-		req.log("error", "Error retrieving admin details", {
-			error: error.message,
-		});
-		res.error("Internal server error", 500);
+	// If the verifyJWT middleware didn't attach the decoded payload,
+	// decode the token manually from the Authorization header.
+	let admin = req.admin;
+	if (!admin) {
+		const authHeader = req.headers.authorization;
+		if (authHeader) {
+			const token = authHeader.split(" ")[1];
+			admin = jwt.decode(token);
+		}
 	}
+
+	if (!admin) {
+		// If still not available, return an unauthorized error.
+		return res.error("Unauthorized", 401);
+	}
+
+	req.log("info", `Retrieving admin details for: ${admin.adminEmail}`);
+	res.success({ admin }, "Admin details retrieved");
 });
 
 /**

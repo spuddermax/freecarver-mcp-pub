@@ -56,8 +56,8 @@ describe("Orders Routes", () => {
 
 		// Create a test product for order items.
 		const productResult = await pool.query(
-			`INSERT INTO products (name, description, price)
-       VALUES ('Order Test Product', 'Product for order tests', 19.99) RETURNING id`
+			`INSERT INTO products (name, sku, description, price)
+       VALUES ('Order Test Product', 'ORD-TEST-SKU', 'Product for order tests', 19.99) RETURNING id`
 		);
 		productId = productResult.rows[0].id;
 	});
@@ -300,6 +300,7 @@ describe("Orders Routes", () => {
 				.post("/v1/orders")
 				.set("Authorization", `Bearer ${authToken}`)
 				.send(orderPayload1);
+			console.log("res", res.body);
 			orderId1 = res.body.data.order.id;
 
 			res = await request(app)

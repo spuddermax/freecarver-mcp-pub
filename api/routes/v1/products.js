@@ -107,6 +107,7 @@ router.post(
 		try {
 			const {
 				name,
+				sku,
 				description,
 				price,
 				sale_price,
@@ -114,75 +115,143 @@ router.post(
 				sale_end,
 				product_media,
 			} = req.body;
+
+			// Validate required fields.
+			const errors = [];
 			if (!name) {
-				logger.error('Product creation failed: "name" is required.');
-				return res.error('"name" is required.', 400);
+				errors.push({ field: "name", message: "Name is required" });
 			}
-			const query = `
-        INSERT INTO products (name, description, price, sale_price, sale_start, sale_end, product_media)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
+			if (price === undefined || price === null) {
+				errors.push({ field: "price", message: "Price is required" });
+			}
+			// Add further validations as needed.
+
+			// If validation errors exist, return them in an array.
+			if (errors.length > 0) {
+				return res.status(400).json({ error: errors });
+			}
+
+			// Insert the new product into the database.
+			const insertQuery = `
+        INSERT INTO products
+        (name, sku, description, price, sale_price, sale_start, sale_end, product_media)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         RETURNING *;
       `;
-			const values = [
+			const { rows } = await pool.query(insertQuery, [
 				name,
+				sku,
 				description,
 				price,
 				sale_price,
 				sale_start,
 				sale_end,
 				product_media,
-			];
-			const result = await pool.query(query, values);
-			logger.info(`Product created successfully: ${name}`);
-			res.success(
-				{ product: result.rows[0] },
-				"Product created successfully",
-				201
-			);
+			]);
+			const product = rows[0];
+			res.status(201).json({
+				status: "success",
+				message: "Product created successfully",
+				data: { product },
+			});
 		} catch (error) {
-			logger.error("Error creating product.", { error: error.message });
-			res.error("Internal server error", 500);
+			logger.error("Error creating product", { error: error.message });
+			res.status(500).json({ error: "Internal server error" });
 		}
 	}
 );
 
 /**
  * @route GET /v1/products/:id
- * @description Retrieve details of a specific product by ID.
+ * @description Retrieve a single product along with its associated product options.
  * @access Protected
- * @param {string} req.params.id - The ID of the product.
- * @returns {Response} 200 - JSON object containing the product details.
- * @returns {Response} 404 - Not found if the product does not exist.
+ * @returns {Response} 200 - JSON object containing product details with an "options" object.
+ * @returns {Response} 404 - Product not found.
  * @returns {Response} 500 - Internal server error.
  */
-router.get(
-	"/:id",
-	validateRequest(productIdSchema, "params"),
-	async (req, res) => {
-		try {
-			const { id } = req.params;
-			const result = await pool.query(
-				"SELECT * FROM products WHERE id = $1",
-				[id]
-			);
-			if (result.rows.length === 0) {
-				logger.error(`Product with ID ${id} not found.`);
-				return res.error("Product not found.", 404);
-			}
-			logger.info(`Retrieved product with ID ${id}.`);
-			res.success(
-				{ product: result.rows[0] },
-				"Product retrieved successfully",
-				200
-			);
-		} catch (error) {
-			logger.error(`Error retrieving product with ID ${req.params.id}.`, {
-				error: error.message,
-			});
-			res.error("Internal server error", 500);
+router.get("/:id", async (req, res) => {
+	try {
+		const { id } = req.params;
+
+		// Retrieve the product.
+		const productResult = await pool.query(
+			"SELECT * FROM products WHERE id = $1",
+			[id]
+		);
+		if (productResult.rows.length === 0) {
+			logger.error(`Product with id ${id} not found.`);
+			return res.error("Product not found.", 404);
 		}
+		const product = productResult.rows[0];
+
+		// Retrieve the product options along with their variants.
+		// New schema joins product_options with product_option_variants.
+		const optionsResult = await pool.query(
+			`
+			SELECT 
+			  po.id AS option_id,
+			  po.option_name,
+			  pov.id AS variant_id,
+			  pov.name AS variant_name,
+			  pov.sku
+			FROM product_options po
+			LEFT JOIN product_option_variants pov 
+			  ON pov.option_id = po.id AND pov.product_id = po.product_id
+			WHERE po.product_id = $1
+			ORDER BY po.id, pov.id
+			`,
+			[id]
+		);
+
+		// Build initialOptions: group by option id.
+		const optionsMap = {};
+		// Build initialSKUs: list of combinations (assumed variant names with spaces).
+		const skuList = [];
+
+		optionsResult.rows.forEach((row) => {
+			// Group by product option.
+			if (!optionsMap[row.option_id]) {
+				optionsMap[row.option_id] = {
+					id: row.option_id,
+					name: row.option_name,
+					// values are the variant names.
+					values: [],
+				};
+			}
+			if (row.variant_name) {
+				// Avoid duplicates.
+				if (
+					!optionsMap[row.option_id].values.includes(row.variant_name)
+				) {
+					optionsMap[row.option_id].values.push(row.variant_name);
+				}
+				// If the variant name contains a space assume it's a combined option.
+				if (row.variant_name.includes(" ")) {
+					skuList.push({
+						combination: row.variant_name,
+						sku: row.sku,
+					});
+				}
+			}
+		});
+
+		const initialOptions = Object.values(optionsMap);
+		const initialSKUs = skuList;
+
+		product.options = initialOptions;
+		product.skus = initialSKUs;
+
+		logger.info(
+			`Product with id ${id} retrieved successfully with options.`
+		);
+		res.success({ product }, "Product retrieved successfully");
+	} catch (error) {
+		logger.error("Error retrieving product with options", {
+			error: error.message,
+		});
+		res.error("Internal server error", 500);
 	}
-);
+});
 
 /**
  * @route PUT /v1/products/:id

@@ -72,9 +72,9 @@ describe("Products Routes", () => {
 				.get("/v1/products?page=abc")
 				.set("Authorization", `Bearer ${authToken}`);
 			expect(res.statusCode).toEqual(422);
-			expect(res.body.errors).toBeDefined();
-			expect(Array.isArray(res.body.errors)).toBe(true);
-			const hasPageError = res.body.errors.some(
+			expect(res.body.error).toBeDefined();
+			expect(Array.isArray(res.body.error)).toBe(true);
+			const hasPageError = res.body.error.some(
 				(err) => err.field === "page"
 			);
 			expect(hasPageError).toBe(true);
@@ -85,6 +85,7 @@ describe("Products Routes", () => {
 		it("should create a new product", async () => {
 			const newProduct = {
 				name: "Test Product",
+				sku: "TEST-SKU",
 				description: "A great product",
 				price: 19.99,
 				sale_price: 14.99,
@@ -117,13 +118,13 @@ describe("Products Routes", () => {
 				.post("/v1/products")
 				.set("Authorization", `Bearer ${authToken}`)
 				.send(invalidProduct);
-			expect(res.statusCode).toEqual(422);
-			expect(res.body.errors).toBeDefined();
-			expect(Array.isArray(res.body.errors)).toBe(true);
-			const hasNameError = res.body.errors.some(
+			expect(res.statusCode).toEqual(400);
+			expect(res.body.error).toBeDefined();
+			expect(Array.isArray(res.body.error)).toBe(true);
+			const hasNameError = res.body.error.some(
 				(err) => err.field === "name"
 			);
-			const hasPriceError = res.body.errors.some(
+			const hasPriceError = res.body.error.some(
 				(err) => err.field === "price"
 			);
 			expect(hasNameError).toBe(true);
@@ -146,10 +147,8 @@ describe("Products Routes", () => {
 				.get("/v1/products/invalid-id")
 				.set("Authorization", `Bearer ${authToken}`);
 			expect(res.statusCode).toEqual(422);
-			expect(res.body.errors).toBeDefined();
-			const hasIdError = res.body.errors.some(
-				(err) => err.field === "id"
-			);
+			expect(res.body.error).toBeDefined();
+			const hasIdError = res.body.error.some((err) => err.field === "id");
 			expect(hasIdError).toBe(true);
 		});
 
@@ -209,10 +208,8 @@ describe("Products Routes", () => {
 				.set("Authorization", `Bearer ${authToken}`)
 				.send(updatedData);
 			expect(res.statusCode).toEqual(422);
-			expect(res.body.errors).toBeDefined();
-			const hasIdError = res.body.errors.some(
-				(err) => err.field === "id"
-			);
+			expect(res.body.error).toBeDefined();
+			const hasIdError = res.body.error.some((err) => err.field === "id");
 			expect(hasIdError).toBe(true);
 		});
 
@@ -238,8 +235,8 @@ describe("Products Routes", () => {
 				.set("Authorization", `Bearer ${authToken}`)
 				.send(badData);
 			expect(res.statusCode).toEqual(422);
-			expect(res.body.errors).toBeDefined();
-			const hasPriceError = res.body.errors.some(
+			expect(res.body.error).toBeDefined();
+			const hasPriceError = res.body.error.some(
 				(err) => err.field === "price"
 			);
 			expect(hasPriceError).toBe(true);
@@ -266,10 +263,8 @@ describe("Products Routes", () => {
 				.delete("/v1/products/invalid-id")
 				.set("Authorization", `Bearer ${authToken}`);
 			expect(res.statusCode).toEqual(422);
-			expect(res.body.errors).toBeDefined();
-			const hasIdError = res.body.errors.some(
-				(err) => err.field === "id"
-			);
+			expect(res.body.error).toBeDefined();
+			const hasIdError = res.body.error.some((err) => err.field === "id");
 			expect(hasIdError).toBe(true);
 		});
 	});
