@@ -167,11 +167,18 @@ router.post(
  * @access Protected
  * @returns {Response} 200 - JSON object containing product details with an "options" object.
  * @returns {Response} 404 - Product not found.
+ * @returns {Response} 422 - Invalid product id (non-numeric).
  * @returns {Response} 500 - Internal server error.
  */
 router.get("/:id", async (req, res) => {
 	try {
 		const { id } = req.params;
+		if (!id || isNaN(id) || id < 0) {
+			logger.error("Invalid product id.");
+			return res.status(422).json({
+				error: [{ field: "id", message: "Invalid product id." }],
+			});
+		}
 
 		// Retrieve the product.
 		const productResult = await pool.query(
