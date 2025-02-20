@@ -4,7 +4,7 @@ import express from "express";
 import rateLimit from "express-rate-limit";
 import dotenv from "dotenv";
 import cors from "cors";
-import { logRequest } from "./logger.js"; // Corrected import
+import { logRequest } from "./middleware/logger.js"; // Corrected import
 import ipWhitelistMiddleware from "./middleware/ipWhitelist.js";
 
 // Import routes
@@ -14,7 +14,6 @@ import adminUsersRoutes from "./routes/v1/adminUsers.js";
 import systemRoutes from "./routes/v1/system.js";
 import productsRoutes from "./routes/v1/products.js";
 import productOptionsRoutes from "./routes/v1/productOptions.js";
-import productOptionSKUsRoutes from "./routes/v1/productOptionSKUs.js";
 import productCategoriesRoutes from "./routes/v1/productCategories.js";
 import customersRoutes from "./routes/v1/customers.js";
 import ordersRoutes from "./routes/v1/orders.js";
@@ -71,7 +70,6 @@ app.use("/v1/adminUsers", adminUsersRoutes);
 app.use("/v1/system", systemRoutes);
 app.use("/v1/products", productsRoutes);
 app.use("/v1/product_options", productOptionsRoutes);
-app.use("/v1/product_option_skus", productOptionSKUsRoutes);
 app.use("/v1/product_categories", productCategoriesRoutes);
 app.use("/v1/customers", customersRoutes);
 app.use("/v1/orders", ordersRoutes);

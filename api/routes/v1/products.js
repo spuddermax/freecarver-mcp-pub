@@ -2,7 +2,7 @@
 
 import express from "express";
 import { pool } from "../../db.js";
-import { logger } from "../../logger.js";
+import { logger } from "../../middleware/logger.js";
 import { verifyJWT } from "../../middleware/auth.js";
 import validateRequest from "../../middleware/validateRequest.js";
 import {
@@ -135,7 +135,7 @@ router.post(
 			const insertQuery = `
         INSERT INTO products
         (name, sku, description, price, sale_price, sale_start, sale_end, product_media)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8::json)
         RETURNING *;
       `;
 			const { rows } = await pool.query(insertQuery, [

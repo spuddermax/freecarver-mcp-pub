@@ -14,7 +14,7 @@ describe("Product Options Routes", () => {
 	let authAdmin; // Admin user used for authentication
 	let optionId; // Will store the ID of the created product option
 	let variantId; // Will store the ID of the created variant
-
+	let productId; // Will store the ID of the created product
 	beforeAll(async () => {
 		// Ensure an admin role with id = 1 exists.
 		await pool.query(`
@@ -43,6 +43,21 @@ describe("Product Options Routes", () => {
 			process.env.JWT_SECRET,
 			{ expiresIn: "1h" }
 		);
+
+		// Create a product for the option.
+		const productResult = await pool.query(
+			`INSERT INTO products (name, sku, description, price)
+			   VALUES ('Test Product', 'TEST-SKU', 'Test Description', 100.00) RETURNING id`
+		);
+		productId = productResult.rows[0].id;
+
+		// Create a product option.
+		const optionResult = await pool.query(
+			`INSERT INTO product_options (product_id, option_name)
+       VALUES ($1, 'Color') RETURNING id`,
+			[productId]
+		);
+		optionId = optionResult.rows[0].id;
 	});
 
 	afterAll(async () => {
@@ -56,6 +71,16 @@ describe("Product Options Routes", () => {
 				optionId,
 			]);
 		}
+		// Clean up the product if it still exists.
+		if (productId) {
+			await pool.query("DELETE FROM products WHERE id = $1", [productId]);
+		}
+		// Clean up the option if it still exists.
+		if (optionId) {
+			await pool.query("DELETE FROM product_options WHERE id = $1", [
+				optionId,
+			]);
+		}
 	});
 
 	describe("Product Options Endpoints", () => {
@@ -63,10 +88,14 @@ describe("Product Options Routes", () => {
 			const res = await request(app)
 				.post("/v1/product_options")
 				.set("Authorization", `Bearer ${authToken}`)
-				.send({ option_name: "Color" });
+				.send({
+					product_id: productId,
+					option_name: "Size",
+				});
+			console.log("CREATE OPTION RESPONSE", res.body);
 			expect(res.statusCode).toEqual(201);
 			expect(res.body.data.option).toBeDefined();
-			expect(res.body.data.option.option_name).toEqual("Color");
+			expect(res.body.data.option.option_name).toEqual("Size");
 			optionId = res.body.data.option.id;
 		});
 
@@ -95,7 +124,7 @@ describe("Product Options Routes", () => {
 				.set("Authorization", `Bearer ${authToken}`);
 			expect(res.statusCode).toEqual(200);
 			expect(res.body.data.option).toBeDefined();
-			expect(res.body.data.option.option_name).toEqual("Color");
+			expect(res.body.data.option.option_name).toEqual("Size");
 		});
 
 		it("should update an existing product option", async () => {
@@ -120,13 +149,20 @@ describe("Product Options Routes", () => {
 
 	describe("Product Option Variants Endpoints", () => {
 		it("should create a new variant for the product option", async () => {
+			const payload = {
+				name: "Red",
+				product_id: productId,
+				sku: "RED-SKU",
+			};
+			console.log("CREATE VARIANT PAYLOAD", payload);
 			const res = await request(app)
 				.post(`/v1/product_options/${optionId}/variants`)
 				.set("Authorization", `Bearer ${authToken}`)
-				.send({ option_value: "Red" });
+				.send(payload);
 			expect(res.statusCode).toEqual(200);
 			expect(res.body.data.variant).toBeDefined();
-			expect(res.body.data.variant.option_value).toEqual("Red");
+			expect(res.body.data.variant.name).toEqual("Red");
+			expect(res.body.data.variant.sku).toEqual("RED-SKU");
 			variantId = res.body.data.variant.id;
 		});
 
@@ -146,9 +182,10 @@ describe("Product Options Routes", () => {
 			const res = await request(app)
 				.get(`/v1/product_options/${optionId}/variants/${variantId}`)
 				.set("Authorization", `Bearer ${authToken}`);
+			//console.log("GET VARIANT RESPONSE", res.body);
 			expect(res.statusCode).toEqual(200);
 			expect(res.body.data.variant).toBeDefined();
-			expect(res.body.data.variant.option_value).toEqual("Red");
+			expect(res.body.data.variant.name).toEqual("Red");
 		});
 
 		it("should update an existing variant for the product option", async () => {

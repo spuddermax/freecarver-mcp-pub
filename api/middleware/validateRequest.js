@@ -1,7 +1,7 @@
 // /api/middleware/validateRequest.js
 
 import Joi from "joi";
-import { logger } from "../logger.js";
+import { logger } from "./logger.js";
 
 /**
  * validateRequest is a higher-order middleware that validates a property

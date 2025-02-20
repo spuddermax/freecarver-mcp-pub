@@ -1,6 +1,6 @@
 // /api/middleware/ipWhitelist.js
 
-import { logger } from "../logger.js";
+import { logger } from "./logger.js";
 
 function ipWhitelistMiddleware(req, res, next) {
 	// Get the client IP:

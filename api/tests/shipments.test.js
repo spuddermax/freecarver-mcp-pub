@@ -66,8 +66,8 @@ describe("Shipments Routes", () => {
 
 		// Seed a test product (for order items).
 		const productResult = await pool.query(
-			`INSERT INTO products (name, description, price)
-       VALUES ('Shipment Test Product', 'For shipments', 25.00) RETURNING id`
+			`INSERT INTO products (sku, name, description, price)
+       VALUES ('SKU-001', 'Shipment Test Product', 'For shipments', 25.00) RETURNING id`
 		);
 		productId = productResult.rows[0].id;
 

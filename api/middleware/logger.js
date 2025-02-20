@@ -6,7 +6,7 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-const { combine, timestamp, printf, colorize } = format;
+const { combine, timestamp, printf } = format;
 
 // Custom log format for both console and file output
 const customFormat = printf(
@@ -23,6 +23,24 @@ const customFormat = printf(
 				stack || message
 			}${bodyStr}`;
 		}
+	}
+);
+
+// This format enforces a structured JSON log entry.
+const structuredFormat = printf(
+	({ level, message, timestamp, ip, requestId, meta, stack }) => {
+		const logEntry = {
+			timestamp,
+			ip: ip || "LOCALHOST",
+			level,
+			message: stack || message,
+			// include the IP if available, or default to "N/A"
+			// optional: include a requestId if present
+			...(requestId && { requestId }),
+			// any extra metadata
+			...(meta && Object.keys(meta).length > 0 && { meta }),
+		};
+		return JSON.stringify(logEntry);
 	}
 );
 
@@ -43,7 +61,7 @@ const dailyRotateTransport = new DailyRotateFile({
 	maxFiles: "14d",
 });
 
-// Create an array of transports with the same plain text format for file logs
+// Create an array of transports with the same structured format for file logs
 const loggerTransports = [
 	new transports.File({
 		filename: errorLogFile,
@@ -63,7 +81,7 @@ if (process.env.NODE_ENV !== "production") {
 	loggerTransports.push(
 		new transports.Console({
 			level: "debug",
-			format: combine(colorize(), timestamp(), customFormat),
+			format: combine(timestamp(), customFormat),
 		})
 	);
 }

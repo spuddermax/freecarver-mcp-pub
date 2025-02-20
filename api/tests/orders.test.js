@@ -274,33 +274,35 @@ describe("Orders Routes", () => {
 
 	// New tests to verify pagination and ordering functionality.
 	describe("Orders Pagination and Ordering", () => {
+		let orderPayload1, orderPayload2;
 		let orderId1, orderId2;
-		const orderPayload1 = {
-			customer_id: customerId,
-			status: "pending",
-			order_total: 50.0,
-			refund_total: null,
-			refund_date: null,
-			refund_status: "none",
-			refund_reason: null,
-		};
-		const orderPayload2 = {
-			customer_id: customerId,
-			status: "pending",
-			order_total: 100.0,
-			refund_total: null,
-			refund_date: null,
-			refund_status: "none",
-			refund_reason: null,
-		};
 
 		beforeAll(async () => {
-			// Create two orders with different order_total values.
+			// Now customerId is already set from the outer beforeAll
+			orderPayload1 = {
+				customer_id: customerId,
+				status: "pending",
+				order_total: 50.0,
+				refund_total: null,
+				refund_date: null,
+				refund_status: "none",
+				refund_reason: null,
+			};
+			orderPayload2 = {
+				customer_id: customerId,
+				status: "pending",
+				order_total: 100.0,
+				refund_total: null,
+				refund_date: null,
+				refund_status: "none",
+				refund_reason: null,
+			};
+
+			// Create the orders using the properly defined payloads
 			let res = await request(app)
 				.post("/v1/orders")
 				.set("Authorization", `Bearer ${authToken}`)
 				.send(orderPayload1);
-			console.log("res", res.body);
 			orderId1 = res.body.data.order.id;
 
 			res = await request(app)
@@ -337,7 +339,7 @@ describe("Orders Routes", () => {
 			expect(limit).toEqual(1);
 			expect(Array.isArray(orders)).toBe(true);
 			expect(orders.length).toEqual(1);
-			expect(orders[0].order_total).toEqual(100.0);
+			expect(orders[0].order_total).toEqual("100.00");
 		});
 
 		it("should retrieve paginated orders with ordering by order_total ascending", async () => {
@@ -353,7 +355,7 @@ describe("Orders Routes", () => {
 			expect(limit).toEqual(1);
 			expect(Array.isArray(orders)).toBe(true);
 			expect(orders.length).toEqual(1);
-			expect(orders[0].order_total).toEqual(50.0);
+			expect(orders[0].order_total).toEqual("50.00");
 		});
 
 		it("should return an empty orders array for a page with no records", async () => {

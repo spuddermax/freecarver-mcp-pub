@@ -3,7 +3,7 @@
 import express from "express";
 import bcrypt from "bcrypt";
 import { pool } from "../../db.js";
-import { logger } from "../../logger.js";
+import { logger } from "../../middleware/logger.js";
 import { verifyJWT } from "../../middleware/auth.js";
 import validateRequest from "../../middleware/validateRequest.js";
 import {

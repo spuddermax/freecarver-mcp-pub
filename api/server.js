@@ -2,7 +2,7 @@
 
 import app from "./app.js";
 import dotenv from "dotenv";
-import { logger } from "./logger.js";
+import { logger } from "./middleware/logger.js";
 import fs from "fs";
 import https from "https";
 

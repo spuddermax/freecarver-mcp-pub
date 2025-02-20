@@ -5,7 +5,7 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import dotenv from "dotenv";
 import { pool } from "../../db.js";
-import { logger } from "../../logger.js";
+import { logger } from "../../middleware/logger.js";
 import { verifyJWT } from "../../middleware/auth.js";
 import validateRequest from "../../middleware/validateRequest.js";
 import { customerAuthLoginSchema } from "../../validators/customerAuth.js";

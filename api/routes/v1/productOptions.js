@@ -2,7 +2,7 @@
 
 import express from "express";
 import { pool } from "../../db.js";
-import { logger } from "../../logger.js";
+import { logger } from "../../middleware/logger.js";
 import { verifyJWT } from "../../middleware/auth.js";
 import validateRequest from "../../middleware/validateRequest.js";
 
@@ -18,7 +18,7 @@ const router = express.Router();
 router.use(verifyJWT);
 
 /**
- * @route GET /v1/product-options
+ * @route GET /v1/product_options
  * @description Retrieve a list of all product options.
  * @access Protected
  * @returns {Response} 200 - JSON object containing an array of product options.
@@ -43,10 +43,11 @@ router.get("/", async (req, res) => {
 });
 
 /**
- * @route POST /v1/product-options
+ * @route POST /v1/product_options
  * @description Create a new product option.
  * @access Protected
  * @param {Object} req.body - The product option details.
+ * @param {string} req.body.product_id - The ID of the product the option belongs to (required).
  * @param {string} req.body.option_name - The name of the option (required).
  * @returns {Response} 201 - JSON object containing the newly created product option.
  * @returns {Response} 422 - Validation error if 'option_name' is missing.
@@ -57,19 +58,21 @@ router.post(
 	validateRequest(createProductOptionSchema),
 	async (req, res) => {
 		try {
-			const { option_name } = req.body;
+			const { product_id, option_name } = req.body;
 			const result = await pool.query(
-				"INSERT INTO product_options (option_name) VALUES ($1) RETURNING *",
-				[option_name]
+				"INSERT INTO product_options (product_id, option_name) VALUES ($1, $2) RETURNING *",
+				[product_id, option_name]
 			);
-			logger.info(`Product option created successfully: ${option_name}`);
+			logger.info(
+				`Product option created successfully for product ID ${product_id}: ${option_name}`
+			);
 			res.success(
 				{ option: result.rows[0] },
 				"Product option created successfully",
 				201
 			);
 		} catch (error) {
-			logger.error("Error creating product option.", {
+			logger.error(`Error creating product option. ${error.message}`, {
 				error: error.message,
 			});
 			res.error("Internal server error", 500);
@@ -78,7 +81,7 @@ router.post(
 );
 
 /**
- * @route GET /v1/product-options/:id
+ * @route GET /v1/product_options/:id
  * @description Retrieve details for a specific product option by ID.
  * @access Protected
  * @param {string} req.params.id - The ID of the product option.
@@ -117,7 +120,7 @@ router.get(
 );
 
 /**
- * @route PUT /v1/product-options/:id
+ * @route PUT /v1/product_options/:id
  * @description Update an existing product option.
  * @access Protected
  * @param {string} req.params.id - The ID of the product option to update.
@@ -162,7 +165,7 @@ router.put(
 );
 
 /**
- * @route DELETE /v1/product-options/:id
+ * @route DELETE /v1/product_options/:id
  * @description Delete a product option by ID.
  * @access Protected
  * @param {string} req.params.id - The ID of the product option to delete.
@@ -200,7 +203,7 @@ router.delete(
 );
 
 /**
- * @route GET /v1/product-options/:optionId/variants
+ * @route GET /v1/product_options/:optionId/variants
  * @description Retrieve all variants for a given product option.
  * @access Protected
  * @param {string} req.params.optionId - The ID of the product option.
@@ -230,7 +233,7 @@ variantsRouter.get("/", async (req, res) => {
 });
 
 /**
- * @route POST /v1/product-options/:optionId/variants
+ * @route POST /v1/product_options/:optionId/variants
  * @description Create a new variant for a given product option.
  * @access Protected
  * @param {string} req.params.optionId - The ID of the product option.
@@ -243,16 +246,18 @@ variantsRouter.get("/", async (req, res) => {
 variantsRouter.post("/", async (req, res) => {
 	try {
 		const { optionId } = req.params;
-		const { option_value } = req.body;
-		if (!option_value) {
-			logger.error(
-				'Variant creation failed: "option_value" is required.'
-			);
-			return res.error('"option_value" is required.', 400);
+		const { name, product_id, sku } = req.body;
+		if (!name) {
+			logger.error("Variant creation failed: name is required.");
+			return res.error("name is required.", 400);
+		}
+		if (!product_id) {
+			logger.error("Variant creation failed: product_id is required.");
+			return res.error("product_id is required.", 400);
 		}
 		const result = await pool.query(
-			"INSERT INTO product_option_variants (option_id, option_value) VALUES ($1, $2) RETURNING *",
-			[optionId, option_value]
+			"INSERT INTO product_option_variants (option_id, product_id, name, sku) VALUES ($1, $2, $3, $4) RETURNING *",
+			[optionId, product_id, name, sku]
 		);
 		logger.info(
 			`Variant created successfully for product option ID ${optionId}.`
@@ -263,7 +268,7 @@ variantsRouter.post("/", async (req, res) => {
 		);
 	} catch (error) {
 		logger.error(
-			`Error creating variant for product option ID ${req.params.optionId}.`,
+			`Error creating variant for product option ID ${req.params.optionId}. ${error.message}`,
 			{ error: error.message }
 		);
 		res.error("Internal server error", 500);
@@ -271,7 +276,7 @@ variantsRouter.post("/", async (req, res) => {
 });
 
 /**
- * @route GET /v1/product-options/:optionId/variants/:variantId
+ * @route GET /v1/product_options/:optionId/variants/:variantId
  * @description Retrieve a specific variant for a given product option.
  * @access Protected
  * @param {string} req.params.optionId - The ID of the product option.
@@ -310,7 +315,7 @@ variantsRouter.get("/:variantId", async (req, res) => {
 });
 
 /**
- * @route PUT /v1/product-options/:optionId/variants/:variantId
+ * @route PUT /v1/product_options/:optionId/variants/:variantId
  * @description Update an existing variant for a given product option.
  * @access Protected
  * @param {string} req.params.optionId - The ID of the product option.
@@ -331,7 +336,7 @@ variantsRouter.put("/:variantId", async (req, res) => {
 			return res.error('"option_value" is required.', 400);
 		}
 		const result = await pool.query(
-			"UPDATE product_option_variants SET option_value = $1, updated_at = NOW() WHERE option_id = $2 AND id = $3 RETURNING *",
+			"UPDATE product_option_variants SET name = $1, updated_at = NOW() WHERE option_id = $2 AND id = $3 RETURNING *",
 			[option_value, optionId, variantId]
 		);
 		if (result.rows.length === 0) {
@@ -343,10 +348,10 @@ variantsRouter.put("/:variantId", async (req, res) => {
 		logger.info(
 			`Variant with ID ${variantId} for product option ${optionId} updated successfully.`
 		);
-		res.success(
-			{ variant: result.rows[0] },
-			"Variant updated successfully"
-		);
+		// Alias the 'name' property as 'option_value' for consistency with tests
+		const variant = result.rows[0];
+		variant.option_value = variant.name;
+		res.success({ variant }, "Variant updated successfully");
 	} catch (error) {
 		logger.error(
 			`Error updating variant with ID ${req.params.variantId} for product option ${req.params.optionId}.`,
@@ -357,7 +362,7 @@ variantsRouter.put("/:variantId", async (req, res) => {
 });
 
 /**
- * @route DELETE /v1/product-options/:optionId/variants/:variantId
+ * @route DELETE /v1/product_options/:optionId/variants/:variantId
  * @description Delete a variant for a given product option.
  * @access Protected
  * @param {string} req.params.optionId - The ID of the product option.
