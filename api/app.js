@@ -52,7 +52,7 @@ app.use(responseFormatter);
 app.use("/v1", apiLimiter);
 
 // If your API is behind a proxy, enable trust proxy for correct IP extraction.
-app.set("trust proxy", true);
+//app.set("trust proxy", true);
 
 // Log incoming requests with IP address
 app.use((req, res, next) => {

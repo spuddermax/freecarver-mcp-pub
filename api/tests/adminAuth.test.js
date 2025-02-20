@@ -11,10 +11,10 @@ dotenv.config();
 
 describe("AdminAuth Routes", () => {
 	let testAdmin;
-	let adminRoleId;
+	let adminRoleId = testAdmin;
 
 	beforeAll(async () => {
-		// Delete any existing "Admin" role.
+		await pool.query("DELETE FROM admin_users");
 		await pool.query("DELETE FROM admin_roles");
 
 		// Attempt to get the "Admin" role id.
@@ -61,7 +61,7 @@ describe("AdminAuth Routes", () => {
 		// Clean up inserted records.
 		await pool.query("DELETE FROM admin_users WHERE email = $1", [
 			"testadmin@example.com",
-		]);
+		]).query;
 		await pool.query("DELETE FROM admin_roles WHERE role_name = 'Admin'");
 		await pool.end();
 	});
