@@ -12,20 +12,12 @@ import Layout from "../components/Layout";
 import { Toast } from "../components/Toast";
 import { Pagination } from "../components/Pagination";
 import { formatProduct } from "../utils/formatters";
-
-interface ProductData {
-	id: string;
-	name: string;
-	price: number;
-	productMedia: {
-		url: string;
-	}[];
-	createdAt: string;
-}
+import { Product } from "../types/Interfaces";
+import { format } from "date-fns";
 
 export default function Products() {
 	const navigate = useNavigate();
-	const [products, setProducts] = useState<ProductData[]>([]);
+	const [products, setProducts] = useState<Product[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [searchQuery, setSearchQuery] = useState("");
 	const [isSearching, setIsSearching] = useState(false);
@@ -40,7 +32,6 @@ export default function Products() {
 
 	useEffect(() => {
 		loadProducts();
-		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [currentPage]);
 
 	useEffect(() => {
@@ -236,16 +227,16 @@ export default function Products() {
 											>
 												<td className="px-6 py-4 whitespace-nowrap">
 													<div className="flex items-center">
-														{product.productMedia &&
-														product.productMedia
+														{product.product_media &&
+														product.product_media
 															.length > 0 &&
-														!product.productMedia[0].url.includes(
+														!product.product_media[0].url.includes(
 															"youtube.com"
 														) ? (
 															<img
 																src={
 																	product
-																		.productMedia[0]
+																		.product_media[0]
 																		.url
 																}
 																alt={
@@ -269,7 +260,10 @@ export default function Products() {
 													${product.price}
 												</td>
 												<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-													{product.createdAt}
+													{format(
+														product.created_at,
+														"MM/dd/yyyy"
+													)}
 												</td>
 											</tr>
 										))

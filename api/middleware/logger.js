@@ -9,7 +9,7 @@ dotenv.config();
 const { combine, timestamp, printf } = format;
 
 // Custom log format for both console and file output
-const customFormat = printf(
+const structuredFormat = printf(
 	({ level, message, timestamp, stack, ip, body }) => {
 		let bodyStr = "";
 		// If the body is defined and not empty, log the body
@@ -27,7 +27,7 @@ const customFormat = printf(
 );
 
 // This format enforces a structured JSON log entry.
-const structuredFormat = printf(
+const customFormat = printf(
 	({ level, message, timestamp, ip, requestId, meta, stack }) => {
 		const logEntry = {
 			timestamp,

@@ -74,7 +74,7 @@ router.post("/login", async (req, res) => {
 			adminAvatarUrl: admin.avatar_url,
 		};
 		const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, {
-			expiresIn: "1h",
+			expiresIn: process.env.JWT_EXPIRES_IN,
 		});
 
 		req.log("info", `Admin logged in successfully: ${email}`);

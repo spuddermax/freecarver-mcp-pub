@@ -17,24 +17,8 @@ import { ProductMedia } from "../components/ProductMedia";
 import { ProductMediaItem } from "../components/ProductMedia";
 import Footer from "../components/Footer";
 import ProductOptions from "../components/ProductOptions";
-import { Option } from "../types/ProductData";
-
-// Define the full product data interface.
-interface ProductData {
-	targetId: string;
-	sku: string;
-	name: string;
-	description: string;
-	price: number;
-	salePrice?: number;
-	saleStart?: string;
-	saleEnd?: string;
-	// productMedia is stored as a JSON string after combining the mediaItems.
-	productMedia?: ProductMediaItem[];
-	createdAt: string;
-	options: string[];
-	skus: string[];
-}
+import { ProductOption } from "../types/Interfaces";
+import { Product } from "../types/Interfaces";
 
 /**
  * Edit the product details.
@@ -46,23 +30,23 @@ export default function ProductEdit() {
 
 	const [loading, setLoading] = useState<boolean>(true);
 	const [isSaving, setIsSaving] = useState<boolean>(false);
-	const [productData, setProductData] = useState<ProductData>({
-		targetId: "",
+	const [productData, setProductData] = useState<Product>({
+		id: 0,
 		sku: "",
 		name: "",
 		description: "",
 		price: 0,
-		salePrice: undefined,
-		saleStart: "",
-		saleEnd: "",
-		productMedia: [],
-		createdAt: "",
+		sale_price: 0,
+		sale_start: new Date(),
+		sale_end: new Date(),
+		product_media: [],
+		created_at: new Date(),
+		updated_at: new Date(),
 		options: [],
-		skus: [],
 	});
+
 	// Manage the media items interactively.
 	const [mediaItems, setMediaItems] = useState<ProductMediaItem[]>([]);
-	const [productOptions, setProductOptions] = useState<Option[]>([]);
 
 	const [message, setMessage] = useState<{
 		type: "success" | "error" | "info";
@@ -83,24 +67,20 @@ export default function ProductEdit() {
 			try {
 				const data = await fetchProduct(targetId);
 				// Use our formatter to ensure field names match the interface.
-				const formattedProduct: ProductData = formatProduct(data);
+				const formattedProduct: Product = formatProduct(data);
 				setProductData(formattedProduct);
 				// Parse the productMedia JSON string into mediaItems array.
 				if (
-					formattedProduct.productMedia &&
-					formattedProduct.productMedia.length > 0
+					formattedProduct.product_media &&
+					formattedProduct.product_media.length > 0
 				) {
 					try {
-						setMediaItems(formattedProduct.productMedia);
-						console.log(
-							"Product options:",
-							formattedProduct.options
-						);
+						setMediaItems(formattedProduct.product_media);
 						setProductOptions(
 							formattedProduct.options.map(
-								(opt: string, index: number) => ({
+								(opt: ProductOption, index: number) => ({
 									id: index,
-									name: opt,
+									name: opt.option_name,
 									values: [],
 								})
 							)
@@ -136,13 +116,14 @@ export default function ProductEdit() {
 		setIsSaving(true);
 		setMessage(null);
 		const payload = {
-			id: productData.targetId,
+			id: productData.id.toString(),
+			sku: productData.sku,
 			name: productData.name,
 			description: productData.description,
 			price: productData.price,
-			sale_price: productData.salePrice,
-			sale_start: productData.saleStart,
-			sale_end: productData.saleEnd,
+			sale_price: productData.sale_price,
+			sale_start: productData.sale_start?.toISOString(),
+			sale_end: productData.sale_end?.toISOString(),
 			product_media: JSON.stringify(mediaItems),
 		};
 
@@ -171,7 +152,7 @@ export default function ProductEdit() {
 		setMessage(null);
 
 		try {
-			await deleteProduct(productData.targetId);
+			await deleteProduct(productData.id.toString());
 			setMessage({
 				type: "success",
 				text: "Product deleted successfully!",
@@ -188,17 +169,17 @@ export default function ProductEdit() {
 		}
 	};
 
-	const handleOptionsChange = (options: Option[]) => {
+	const handleOptionsChange = (options: ProductOption[]) => {
 		setProductData((prev) => ({
 			...prev,
-			options: options.map((opt) => opt.name),
+			options: options,
 		}));
 	};
 
 	// Handler for Save Options button
 	const handleSaveOptions = () => {
 		const updatePayload = {
-			productId: productData.targetId,
+			productId: productData.id.toString(),
 			options: productData.options,
 		};
 		console.log("Update payload:", updatePayload);
@@ -256,9 +237,9 @@ export default function ProductEdit() {
 										<ProductPricing
 											productId={targetId ?? ""}
 											price={productData.price}
-											salePrice={productData.salePrice}
-											saleStart={productData.saleStart}
-											saleEnd={productData.saleEnd}
+											salePrice={productData.sale_price}
+											saleStart={productData.sale_start}
+											saleEnd={productData.sale_end}
 											onInputChange={handleInputChange}
 										/>
 										<ProductOptions
