@@ -3,11 +3,12 @@ import {
 	Calendar,
 	Tag,
 	DollarSign,
-	Percent,
+	Barcode,
 	Image,
 	Plus,
 	Save,
 	Trash2,
+	Type,
 } from "lucide-react";
 import { Variant } from "./ProductOptions";
 
@@ -312,247 +313,267 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 					<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
 						Variant Name
 					</label>
-					<input
-						type="text"
-						value={
-							selectedVariant
-								? (getFieldValue("variant_name") as string)
-								: newVariant.variant_name || ""
-						}
-						onChange={(e) =>
-							selectedVariant
-								? handleVariantFieldChange(
-										"variant_name",
-										e.target.value
-								  )
-								: handleNewVariantChangeString(
-										"variant_name",
-										e.target.value
-								  )
-						}
-						onKeyPress={
-							selectedVariant
-								? undefined
-								: (e) => onKeyPress(e, index)
-						}
-						placeholder="Enter variant name"
-						className={`block w-full px-3 py-2 border text-gray-700 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white ${getFieldBorderClass(
-							"variant_name"
-						)}`}
-					/>
+					<div className="mt-1 relative">
+						<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+							<Type className="h-5 w-5 text-gray-400" />
+						</div>
+						<input
+							type="text"
+							value={
+								selectedVariant
+									? (getFieldValue("variant_name") as string)
+									: newVariant.variant_name || ""
+							}
+							onChange={(e) =>
+								selectedVariant
+									? handleVariantFieldChange(
+											"variant_name",
+											e.target.value
+									  )
+									: handleNewVariantChangeString(
+											"variant_name",
+											e.target.value
+									  )
+							}
+							onKeyPress={
+								selectedVariant
+									? undefined
+									: (e) => onKeyPress(e, index)
+							}
+							placeholder="Enter variant name"
+							className={`block w-full pl-10 pr-3 py-2 border text-gray-700 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white ${getFieldBorderClass(
+								"variant_name"
+							)}`}
+						/>
+					</div>
 				</div>
 
 				{/* SKU */}
 				<div>
 					<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-						<div className="flex items-center">
-							<Tag className="h-4 w-4 mr-1" />
-							SKU
-						</div>
+						SKU
 					</label>
-					<input
-						type="text"
-						value={
-							selectedVariant
-								? (getFieldValue("sku") as string)
-								: newVariant.sku || ""
-						}
-						onChange={(e) =>
-							selectedVariant
-								? handleVariantFieldChange(
-										"sku",
-										e.target.value
-								  )
-								: handleNewVariantChangeString(
-										"sku",
-										e.target.value
-								  )
-						}
-						placeholder="Enter SKU code"
-						className={`block w-full px-3 py-2 border text-gray-700 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white ${getFieldBorderClass(
-							"sku"
-						)}`}
-					/>
+					<div className="mt-1 relative">
+						<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+							<Barcode className="h-5 w-5 text-gray-400" />
+						</div>
+						<input
+							type="text"
+							value={
+								selectedVariant
+									? (getFieldValue("sku") as string)
+									: newVariant.sku || ""
+							}
+							onChange={(e) =>
+								selectedVariant
+									? handleVariantFieldChange(
+											"sku",
+											e.target.value
+									  )
+									: handleNewVariantChangeString(
+											"sku",
+											e.target.value
+									  )
+							}
+							placeholder="Enter SKU code"
+							className={`block w-full pl-10 pr-3 py-2 border text-gray-700 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white ${getFieldBorderClass(
+								"sku"
+							)}`}
+						/>
+					</div>
 				</div>
 
 				{/* Price */}
 				<div>
 					<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-						<div className="flex items-center">
-							<DollarSign className="h-4 w-4 mr-1" />
-							Price
-						</div>
+						Price
 					</label>
-					<input
-						type="number"
-						step="0.01"
-						min="0"
-						value={
-							selectedVariant
-								? (getFieldValue("price") as number)
-								: newVariant.price !== null
-								? newVariant.price
-								: ""
-						}
-						onChange={(e) => {
-							const value =
-								e.target.value === ""
-									? null
-									: parseFloat(e.target.value);
-							if (selectedVariant) {
-								handleVariantFieldChange(
-									"price",
-									value === null ? 0 : value
-								);
-							} else {
-								handleNewVariantChangeNumber("price", value);
+					<div className="mt-1 relative">
+						<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+							<DollarSign className="h-5 w-5 text-gray-400" />
+						</div>
+						<input
+							type="number"
+							step="0.01"
+							min="0"
+							value={
+								selectedVariant
+									? (getFieldValue("price") as number)
+									: newVariant.price !== null
+									? newVariant.price
+									: ""
 							}
-						}}
-						placeholder="0.00"
-						className={`block w-full px-3 py-2 border text-gray-700 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white ${getFieldBorderClass(
-							"price"
-						)}`}
-					/>
+							onChange={(e) => {
+								const value =
+									e.target.value === ""
+										? null
+										: parseFloat(e.target.value);
+								if (selectedVariant) {
+									handleVariantFieldChange(
+										"price",
+										value === null ? 0 : value
+									);
+								} else {
+									handleNewVariantChangeNumber(
+										"price",
+										value
+									);
+								}
+							}}
+							placeholder="0.00"
+							className={`block w-full pl-10 pr-3 py-2 border text-gray-700 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white ${getFieldBorderClass(
+								"price"
+							)}`}
+						/>
+					</div>
 				</div>
 
 				{/* Sale Price */}
 				<div>
 					<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-						<div className="flex items-center">
-							<Percent className="h-4 w-4 mr-1" />
-							Sale Price
-						</div>
+						Sale Price
 					</label>
-					<input
-						type="number"
-						step="0.01"
-						min="0"
-						value={
-							selectedVariant
-								? (getFieldValue("sale_price") as number)
-								: newVariant.sale_price !== null
-								? newVariant.sale_price
-								: ""
-						}
-						onChange={(e) => {
-							const value =
-								e.target.value === ""
-									? null
-									: parseFloat(e.target.value);
-							if (selectedVariant) {
-								handleVariantFieldChange(
-									"sale_price",
-									value === null ? 0 : value
-								);
-							} else {
-								handleNewVariantChangeNumber(
-									"sale_price",
-									value
-								);
+					<div className="mt-1 relative">
+						<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+							<Tag className="h-5 w-5 text-gray-400" />
+						</div>
+						<input
+							type="number"
+							step="0.01"
+							min="0"
+							value={
+								selectedVariant
+									? (getFieldValue("sale_price") as number)
+									: newVariant.sale_price !== null
+									? newVariant.sale_price
+									: ""
 							}
-						}}
-						placeholder="0.00"
-						className={`block w-full px-3 py-2 border text-gray-700 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white ${getFieldBorderClass(
-							"sale_price"
-						)}`}
-					/>
+							onChange={(e) => {
+								const value =
+									e.target.value === ""
+										? null
+										: parseFloat(e.target.value);
+								if (selectedVariant) {
+									handleVariantFieldChange(
+										"sale_price",
+										value === null ? 0 : value
+									);
+								} else {
+									handleNewVariantChangeNumber(
+										"sale_price",
+										value
+									);
+								}
+							}}
+							placeholder="0.00"
+							className={`block w-full pl-10 pr-3 py-2 border text-gray-700 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white ${getFieldBorderClass(
+								"sale_price"
+							)}`}
+						/>
+					</div>
 				</div>
 
 				{/* Sale Start */}
 				<div>
 					<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-						<div className="flex items-center">
-							<Calendar className="h-4 w-4 mr-1" />
-							Sale Start
-						</div>
+						Sale Start
 					</label>
-					<input
-						type="datetime-local"
-						value={
-							selectedVariant
-								? (getFieldValue("sale_start") as string)
-								: newVariant.sale_start || ""
-						}
-						onChange={(e) =>
-							selectedVariant
-								? handleVariantFieldChange(
-										"sale_start",
-										e.target.value
-								  )
-								: handleNewVariantChangeString(
-										"sale_start",
-										e.target.value
-								  )
-						}
-						className={`block w-full px-3 py-2 border text-gray-700 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white ${getFieldBorderClass(
-							"sale_start"
-						)}`}
-					/>
+					<div className="mt-1 relative">
+						<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+							<Calendar className="h-5 w-5 text-gray-400" />
+						</div>
+						<input
+							type="datetime-local"
+							value={
+								selectedVariant
+									? (getFieldValue("sale_start") as string)
+									: newVariant.sale_start || ""
+							}
+							onChange={(e) =>
+								selectedVariant
+									? handleVariantFieldChange(
+											"sale_start",
+											e.target.value
+									  )
+									: handleNewVariantChangeString(
+											"sale_start",
+											e.target.value
+									  )
+							}
+							className={`block w-full pl-10 pr-3 py-2 border text-gray-700 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white ${getFieldBorderClass(
+								"sale_start"
+							)}`}
+						/>
+					</div>
 				</div>
 
 				{/* Sale End */}
 				<div>
 					<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-						<div className="flex items-center">
-							<Calendar className="h-4 w-4 mr-1" />
-							Sale End
-						</div>
+						Sale End
 					</label>
-					<input
-						type="datetime-local"
-						value={
-							selectedVariant
-								? (getFieldValue("sale_end") as string)
-								: newVariant.sale_end || ""
-						}
-						onChange={(e) =>
-							selectedVariant
-								? handleVariantFieldChange(
-										"sale_end",
-										e.target.value
-								  )
-								: handleNewVariantChangeString(
-										"sale_end",
-										e.target.value
-								  )
-						}
-						className={`block w-full px-3 py-2 border text-gray-700 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white ${getFieldBorderClass(
-							"sale_end"
-						)}`}
-					/>
+					<div className="mt-1 relative">
+						<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+							<Calendar className="h-5 w-5 text-gray-400" />
+						</div>
+						<input
+							type="datetime-local"
+							value={
+								selectedVariant
+									? (getFieldValue("sale_end") as string)
+									: newVariant.sale_end || ""
+							}
+							onChange={(e) =>
+								selectedVariant
+									? handleVariantFieldChange(
+											"sale_end",
+											e.target.value
+									  )
+									: handleNewVariantChangeString(
+											"sale_end",
+											e.target.value
+									  )
+							}
+							className={`block w-full pl-10 pr-3 py-2 border text-gray-700 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white ${getFieldBorderClass(
+								"sale_end"
+							)}`}
+						/>
+					</div>
 				</div>
 
 				{/* Media URL */}
 				<div className="col-span-1 md:col-span-2">
 					<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-						<div className="flex items-center">
-							<Image className="h-4 w-4 mr-1" />
-							Media URL
-						</div>
+						Media URL
 					</label>
-					<input
-						type="text"
-						value={
-							selectedVariant
-								? (getFieldValue("media") as string)
-								: newVariant.media || ""
-						}
-						onChange={(e) =>
-							selectedVariant
-								? handleVariantFieldChange(
-										"media",
-										e.target.value
-								  )
-								: handleNewVariantChangeString(
-										"media",
-										e.target.value
-								  )
-						}
-						placeholder="Enter media URL"
-						className={`block w-full px-3 py-2 border text-gray-700 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white ${getFieldBorderClass(
-							"media"
-						)}`}
-					/>
+					<div className="mt-1 relative">
+						<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+							<Image className="h-5 w-5 text-gray-400" />
+						</div>
+						<input
+							type="text"
+							value={
+								selectedVariant
+									? (getFieldValue("media") as string)
+									: newVariant.media || ""
+							}
+							onChange={(e) =>
+								selectedVariant
+									? handleVariantFieldChange(
+											"media",
+											e.target.value
+									  )
+									: handleNewVariantChangeString(
+											"media",
+											e.target.value
+									  )
+							}
+							placeholder="Enter media URL"
+							className={`block w-full pl-10 pr-3 py-2 border text-gray-700 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white ${getFieldBorderClass(
+								"media"
+							)}`}
+						/>
+					</div>
 				</div>
 			</div>
 
