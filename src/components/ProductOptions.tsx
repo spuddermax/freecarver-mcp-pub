@@ -1,12 +1,14 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
 	OptionIcon,
 	Trash2,
 	SlidersHorizontal,
 	Star,
 	Plus,
+	Code,
 } from "lucide-react";
 import ProductOptionVariant from "./ProductOptionVariant";
+import { ProductOptionsJsonEditor } from "./ProductOptionsJsonEditor";
 
 // Local interface definitions
 export interface Option {
@@ -48,10 +50,25 @@ const ProductOptions: React.FC<ProductOptionsProps> = ({
 	const [selectedVariants, setSelectedVariants] = useState<{
 		[key: number]: string;
 	}>({});
+	const [jsonEditorOpen, setJsonEditorOpen] = useState(false);
+	const [jsonText, setJsonText] = useState(JSON.stringify(options, null, 2));
+	const [newVariantData, setNewVariantData] = useState<{
+		[key: number]: Partial<Variant>;
+	}>({});
+
+	// Update the JSON text when options change
+	useEffect(() => {
+		setJsonText(JSON.stringify(options, null, 2));
+	}, [options]);
 
 	const updateOptions = (newOptions: Option[]) => {
 		setOptions(newOptions);
 		onChange(newOptions);
+	};
+
+	const handleSaveJson = (parsedJson: Option[]) => {
+		updateOptions(parsedJson);
+		setJsonEditorOpen(false);
 	};
 
 	const handleOptionNameChange = (index: number, newName: string) => {
@@ -64,15 +81,22 @@ const ProductOptions: React.FC<ProductOptionsProps> = ({
 	const handleAddVariant = (index: number, variantValue: string) => {
 		if (!variantValue.trim()) return;
 
+		// Get any variant data that might have been entered in the form
+		const variantData = newVariantData[index] || {};
+
 		const newVariant: Variant = {
 			variant_id: Date.now(),
 			variant_name: variantValue.trim(),
-			sku: "",
-			price: 0,
-			sale_price: 0,
-			sale_start: "",
-			sale_end: "",
-			media: "",
+			sku: variantData.sku || "",
+			price:
+				typeof variantData.price === "number" ? variantData.price : 0,
+			sale_price:
+				typeof variantData.sale_price === "number"
+					? variantData.sale_price
+					: 0,
+			sale_start: variantData.sale_start || "",
+			sale_end: variantData.sale_end || "",
+			media: variantData.media || "",
 		};
 
 		const updatedOptions = options.map((option, i) => {
@@ -84,6 +108,14 @@ const ProductOptions: React.FC<ProductOptionsProps> = ({
 			}
 			return option;
 		});
+
+		// Clear the variant data after adding
+		setNewVariantData((prev) => {
+			const updated = { ...prev };
+			delete updated[index];
+			return updated;
+		});
+
 		updateOptions(updatedOptions);
 	};
 
@@ -109,6 +141,36 @@ const ProductOptions: React.FC<ProductOptionsProps> = ({
 
 	const handleNewVariantInputChange = (index: number, value: string) => {
 		setNewVariantInputs((prev) => ({ ...prev, [index]: value }));
+
+		// Also update the variant data
+		setNewVariantData((prev) => ({
+			...prev,
+			[index]: {
+				...prev[index],
+				variant_name: value,
+			},
+		}));
+	};
+
+	// Handle changes to other variant fields for new variants
+	const handleNewVariantDataChange = (
+		index: number,
+		field: string,
+		value: string | number | null
+	) => {
+		// Use null coalescing to handle numeric fields
+		const safeValue =
+			value === null && (field === "price" || field === "sale_price")
+				? 0
+				: value;
+
+		setNewVariantData((prev) => ({
+			...prev,
+			[index]: {
+				...prev[index],
+				[field]: safeValue,
+			},
+		}));
 	};
 
 	const handleVariantKeyPress = (
@@ -182,124 +244,180 @@ const ProductOptions: React.FC<ProductOptionsProps> = ({
 	};
 
 	return (
-		<fieldset className="border rounded-lg p-4 border-gray-200 dark:border-gray-700">
-			<legend className="text-2xl font-medium text-gray-700 dark:text-gray-300 px-2">
-				Product Options
-			</legend>
-			{options.length > 0 && (
-				<div id="options-container">
-					{options.map((option, index) => (
-						<div
-							key={option.option_id}
-							className="mb-4 border rounded-lg p-4 border-gray-200 dark:border-gray-700"
-						>
-							{/* Option Name Select */}
-							<label
-								htmlFor={`option-name-${index}`}
-								className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+		<>
+			<fieldset className="border rounded-lg p-4 border-gray-200 dark:border-gray-700">
+				<legend className="text-2xl font-medium text-gray-700 dark:text-gray-300 px-2 flex items-center justify-between">
+					<span>Product Options</span>
+				</legend>
+				{options.length > 0 && (
+					<div id="options-container">
+						{options.map((option, index) => (
+							<div
+								key={option.option_id}
+								className="mb-4 border rounded-lg p-4 border-gray-200 dark:border-gray-700"
 							>
-								Option Name
-							</label>
-							<div className="mt-1 relative">
-								<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-									<OptionIcon className="h-5 w-5 text-gray-400" />
-								</div>
-								<input
-									type="text"
-									id={`option-name-${index}`}
-									value={option.option_name || ""}
-									onChange={(e) =>
-										handleOptionNameChange(
-											index,
-											e.target.value
-										)
-									}
-									placeholder="Enter Option Name"
-									className="block w-full pl-10 pr-3 py-2 border text-gray-700 border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-								/>
-							</div>
-
-							{/* Variant Select */}
-							{option.option_name && (
-								<>
-									<label
-										htmlFor={`variant-select-${index}`}
-										className="block text-sm font-medium text-gray-700 dark:text-gray-300 mt-2"
-									>
-										Option Variants
-									</label>
-									<div className="mt-1 relative">
-										<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-											<SlidersHorizontal className="h-5 w-5 text-gray-400" />
-										</div>
-										<select
-											id={`variant-select-${index}`}
-											className="block w-full pl-10 pr-3 py-2 border text-gray-700 border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-											onChange={(e) =>
-												handleVariantSelect(
-													index,
-													e.target.value
-												)
-											}
-											value={
-												selectedVariants[index] || ""
-											}
-										>
-											<option value="">
-												Select Variant...
-											</option>
-											{option.variants.map((variant) => (
-												<option
-													key={variant.variant_id}
-													value={variant.variant_name}
-												>
-													★ {variant.variant_name} ($
-													{variant.price})
-												</option>
-											))}
-										</select>
-									</div>
-								</>
-							)}
-
-							{/* Variant Editor */}
-							{option.option_name && (
-								<ProductOptionVariant
-									index={index}
-									inputValue={newVariantInputs[index] || ""}
-									onInputChange={handleNewVariantInputChange}
-									onKeyPress={handleVariantKeyPress}
-									selectedVariant={getSelectedVariant(index)}
-									onVariantChange={handleVariantChange}
-									onAddVariant={handleAddVariant}
-								/>
-							)}
-
-							<div className="flex justify-end space-x-2 mt-4">
-								<button
-									type="button"
-									onClick={() => handleRemoveOption(index)}
-									className="inline-flex items-center px-3 py-1 border border-transparent rounded-md shadow-sm text-xs font-medium text-white bg-red-700 hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500"
+								{/* Option Name Select */}
+								<label
+									htmlFor={`option-name-${index}`}
+									className="block text-sm font-medium text-gray-700 dark:text-gray-300"
 								>
-									<Trash2 className="h-4 w-4 mr-1" />
-									Delete Option
-								</button>
+									Option Name
+								</label>
+								<div className="mt-1 relative">
+									<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+										<OptionIcon className="h-5 w-5 text-gray-400" />
+									</div>
+									<input
+										type="text"
+										id={`option-name-${index}`}
+										value={option.option_name || ""}
+										onChange={(e) =>
+											handleOptionNameChange(
+												index,
+												e.target.value
+											)
+										}
+										placeholder="Enter Option Name"
+										className="block w-full pl-10 pr-3 py-2 border text-gray-700 border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+									/>
+								</div>
+
+								{/* Variant Select */}
+								{option.option_name && (
+									<>
+										<label
+											htmlFor={`variant-select-${index}`}
+											className="block text-sm font-medium text-gray-700 dark:text-gray-300 mt-2"
+										>
+											Option Variants{" "}
+											{option.variants.length === 0 && (
+												<span className="text-xs text-amber-600">
+													(Add a variant first)
+												</span>
+											)}
+										</label>
+										<div className="mt-1 relative">
+											<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+												<SlidersHorizontal className="h-5 w-5 text-gray-400" />
+											</div>
+											<select
+												id={`variant-select-${index}`}
+												className={`block w-full pl-10 pr-3 py-2 border text-gray-700 border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white ${
+													option.variants.length === 0
+														? "bg-gray-100 dark:bg-gray-800 cursor-not-allowed"
+														: ""
+												}`}
+												onChange={(e) =>
+													handleVariantSelect(
+														index,
+														e.target.value
+													)
+												}
+												value={
+													selectedVariants[index] ||
+													""
+												}
+												disabled={
+													option.variants.length === 0
+												}
+											>
+												<option value="">
+													{option.variants.length ===
+													0
+														? "No variants available yet"
+														: "Select Variant..."}
+												</option>
+												{option.variants.map(
+													(variant) => (
+														<option
+															key={
+																variant.variant_id
+															}
+															value={
+																variant.variant_name
+															}
+														>
+															★{" "}
+															{
+																variant.variant_name
+															}{" "}
+															($
+															{variant.price})
+														</option>
+													)
+												)}
+											</select>
+										</div>
+									</>
+								)}
+
+								{/* Variant Editor */}
+								{option.option_name && (
+									<ProductOptionVariant
+										index={index}
+										inputValue={
+											newVariantInputs[index] || ""
+										}
+										onInputChange={
+											handleNewVariantInputChange
+										}
+										onKeyPress={handleVariantKeyPress}
+										selectedVariant={getSelectedVariant(
+											index
+										)}
+										onVariantChange={
+											getSelectedVariant(index)
+												? handleVariantChange
+												: handleNewVariantDataChange
+										}
+										onAddVariant={handleAddVariant}
+									/>
+								)}
+
+								<div className="flex justify-end space-x-2 mt-4">
+									<button
+										type="button"
+										onClick={() =>
+											handleRemoveOption(index)
+										}
+										className="inline-flex items-center px-3 py-1 border border-transparent rounded-md shadow-sm text-xs font-medium text-white bg-red-700 hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500"
+									>
+										<Trash2 className="h-4 w-4 mr-1" />
+										Delete Option
+									</button>
+								</div>
 							</div>
-						</div>
-					))}
+						))}
+					</div>
+				)}
+				<div className="flex justify-start space-x-2">
+					<button
+						onClick={handleAddOption}
+						type="button"
+						className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-700 hover:bg-green-600"
+					>
+						<Plus className="h-4 w-4 mr-1" />
+						Add Option
+					</button>
+					<button
+						type="button"
+						onClick={() => setJsonEditorOpen(true)}
+						className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-purple-700 hover:bg-purple-600"
+					>
+						<Code className="h-3 w-3 mr-1" />
+						Edit Options JSON
+					</button>
 				</div>
-			)}
-			<div className="flex justify-start space-x-2">
-				<button
-					onClick={handleAddOption}
-					type="button"
-					className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-700 hover:bg-green-600"
-				>
-					<Plus className="h-4 w-4 mr-1" />
-					Add Option
-				</button>
-			</div>
-		</fieldset>
+			</fieldset>
+
+			<ProductOptionsJsonEditor
+				isOpen={jsonEditorOpen}
+				jsonText={jsonText}
+				onJsonTextChange={setJsonText}
+				onSave={handleSaveJson}
+				onClose={() => setJsonEditorOpen(false)}
+			/>
+		</>
 	);
 };
 

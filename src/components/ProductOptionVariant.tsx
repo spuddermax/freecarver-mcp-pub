@@ -1,16 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Calendar, Tag, DollarSign, Percent, Image, Plus } from "lucide-react";
-
-interface Variant {
-	variant_id?: number;
-	variant_name: string;
-	sku: string;
-	price: number | string;
-	sale_price: number | string;
-	sale_start: string;
-	sale_end: string;
-	media: string;
-}
+import { Variant } from "./ProductOptions";
 
 interface ProductOptionVariantProps {
 	index: number;
@@ -29,6 +19,17 @@ interface ProductOptionVariantProps {
 	onAddVariant?: (index: number, variantName: string) => void;
 }
 
+// Local interface for new variant form state
+interface NewVariantState {
+	variant_name: string;
+	sku: string;
+	price: number | null;
+	sale_price: number | null;
+	sale_start: string;
+	sale_end: string;
+	media: string;
+}
+
 const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 	index,
 	inputValue,
@@ -39,18 +40,18 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 	onAddVariant = () => {},
 }) => {
 	// State for tracking new variant information
-	const [newVariant, setNewVariant] = useState<Partial<Variant>>({
+	const [newVariant, setNewVariant] = useState<NewVariantState>({
 		variant_name: inputValue || "",
 		sku: "",
-		price: "",
-		sale_price: "",
+		price: null,
+		sale_price: null,
 		sale_start: "",
 		sale_end: "",
 		media: "",
 	});
 
-	// Update function for new variant fields
-	const handleNewVariantChange = (field: string, value: string | number) => {
+	// Update function for string fields
+	const handleNewVariantChangeString = (field: string, value: string) => {
 		setNewVariant((prev) => ({
 			...prev,
 			[field]: value,
@@ -58,12 +59,23 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 
 		// Special case for variant_name as it's also managed by parent component
 		if (field === "variant_name") {
-			onInputChange(index, value as string);
+			onInputChange(index, value);
 		}
 	};
 
+	// Update function for number fields that can be null
+	const handleNewVariantChangeNumber = (
+		field: string,
+		value: number | null
+	) => {
+		setNewVariant((prev) => ({
+			...prev,
+			[field]: value,
+		}));
+	};
+
 	// Sync the variant name input value to state when it changes from parent
-	React.useEffect(() => {
+	useEffect(() => {
 		if (!selectedVariant) {
 			setNewVariant((prev) => ({
 				...prev,
@@ -74,14 +86,15 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 
 	const handleAddVariant = () => {
 		if (newVariant.variant_name && newVariant.variant_name.trim()) {
+			// Use the entered variant data when adding it
 			onAddVariant(index, newVariant.variant_name.trim());
 
 			// Reset the new variant state after adding
 			setNewVariant({
 				variant_name: "",
 				sku: "",
-				price: "",
-				sale_price: "",
+				price: null,
+				sale_price: null,
 				sale_start: "",
 				sale_end: "",
 				media: "",
@@ -106,8 +119,8 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 		return (
 			newVariant.variant_name?.trim() !== "" ||
 			newVariant.sku?.trim() !== "" ||
-			(newVariant.price !== "" && newVariant.price !== 0) ||
-			(newVariant.sale_price !== "" && newVariant.sale_price !== 0) ||
+			newVariant.price !== null ||
+			newVariant.sale_price !== null ||
 			newVariant.sale_start !== "" ||
 			newVariant.sale_end !== "" ||
 			newVariant.media?.trim() !== ""
@@ -140,7 +153,7 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 										"variant_name",
 										e.target.value
 								  )
-								: handleNewVariantChange(
+								: handleNewVariantChangeString(
 										"variant_name",
 										e.target.value
 								  )
@@ -173,7 +186,10 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 						onChange={(e) =>
 							selectedVariant
 								? onVariantChange(index, "sku", e.target.value)
-								: handleNewVariantChange("sku", e.target.value)
+								: handleNewVariantChangeString(
+										"sku",
+										e.target.value
+								  )
 						}
 						placeholder="Enter SKU code"
 						className="block w-full px-3 py-2 border text-gray-700 border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
@@ -195,16 +211,24 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 						value={
 							selectedVariant
 								? selectedVariant.price
-								: newVariant.price || ""
+								: newVariant.price !== null
+								? newVariant.price
+								: ""
 						}
 						onChange={(e) => {
 							const value =
 								e.target.value === ""
-									? ""
+									? null
 									: parseFloat(e.target.value);
-							selectedVariant
-								? onVariantChange(index, "price", value)
-								: handleNewVariantChange("price", value);
+							if (selectedVariant) {
+								onVariantChange(
+									index,
+									"price",
+									value === null ? 0 : value
+								);
+							} else {
+								handleNewVariantChangeNumber("price", value);
+							}
 						}}
 						placeholder="0.00"
 						className="block w-full px-3 py-2 border text-gray-700 border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
@@ -226,16 +250,27 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 						value={
 							selectedVariant
 								? selectedVariant.sale_price
-								: newVariant.sale_price || ""
+								: newVariant.sale_price !== null
+								? newVariant.sale_price
+								: ""
 						}
 						onChange={(e) => {
 							const value =
 								e.target.value === ""
-									? ""
+									? null
 									: parseFloat(e.target.value);
-							selectedVariant
-								? onVariantChange(index, "sale_price", value)
-								: handleNewVariantChange("sale_price", value);
+							if (selectedVariant) {
+								onVariantChange(
+									index,
+									"sale_price",
+									value === null ? 0 : value
+								);
+							} else {
+								handleNewVariantChangeNumber(
+									"sale_price",
+									value
+								);
+							}
 						}}
 						placeholder="0.00"
 						className="block w-full px-3 py-2 border text-gray-700 border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
@@ -264,7 +299,7 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 										"sale_start",
 										e.target.value
 								  )
-								: handleNewVariantChange(
+								: handleNewVariantChangeString(
 										"sale_start",
 										e.target.value
 								  )
@@ -295,7 +330,7 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 										"sale_end",
 										e.target.value
 								  )
-								: handleNewVariantChange(
+								: handleNewVariantChangeString(
 										"sale_end",
 										e.target.value
 								  )
@@ -326,7 +361,7 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 										"media",
 										e.target.value
 								  )
-								: handleNewVariantChange(
+								: handleNewVariantChangeString(
 										"media",
 										e.target.value
 								  )
