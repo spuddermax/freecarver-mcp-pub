@@ -119,14 +119,16 @@ export function ProductMedia({
 			</legend>
 			{mediaItems.length > 0 && (
 				<div id="media-order" className="mb-4">
-					<label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+					<label className="block text-lg font-medium text-gray-700 dark:text-gray-300">
 						Media Order (Drag and drop to reorder)
 					</label>
-					<ThumbnailBar
-						mediaItems={mediaItems}
-						setMediaItems={setMediaItems}
-					/>
-					<label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+					<div className="mb-4">
+						<ThumbnailBar
+							mediaItems={mediaItems}
+							setMediaItems={setMediaItems}
+						/>
+					</div>
+					<label className="block text-lg font-medium text-gray-700 dark:text-gray-300">
 						Media Items
 					</label>
 					{/* Media items grid */}
@@ -146,7 +148,7 @@ export function ProductMedia({
 			)}
 			<div>
 				{/* Buttons */}
-				<div className="mt-4 flex justify-center gap-4">
+				<div className="flex justify-start space-x-2">
 					<button
 						type="button"
 						onClick={() => {
@@ -158,7 +160,7 @@ export function ProductMedia({
 							};
 							setMediaItems((prev) => [...prev, newItem]);
 						}}
-						className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-purple-700 hover:bg-purple-600"
+						className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-700 hover:bg-green-600"
 					>
 						<Plus className="h-4 w-4 mr-1" />
 						Add Media
@@ -166,7 +168,7 @@ export function ProductMedia({
 					<button
 						type="button"
 						onClick={() => setJsonPreviewOpen(true)}
-						className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-700 hover:bg-green-600"
+						className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white  bg-purple-700 hover:bg-purple-600"
 					>
 						<Code className="h-4 w-4 mr-1" />
 						JSON Edit

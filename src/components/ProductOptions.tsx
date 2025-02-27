@@ -1,5 +1,11 @@
 import React, { useState } from "react";
-import { OptionIcon, Trash2, SlidersHorizontal, Star } from "lucide-react";
+import {
+	OptionIcon,
+	Trash2,
+	SlidersHorizontal,
+	Star,
+	Plus,
+} from "lucide-react";
 import ProductOptionVariant from "./ProductOptionVariant";
 
 // Local interface definitions
@@ -185,7 +191,7 @@ const ProductOptions: React.FC<ProductOptionsProps> = ({
 					{options.map((option, index) => (
 						<div
 							key={option.option_id}
-							className="mb-10 border rounded-lg p-4 border-gray-200 dark:border-gray-700"
+							className="mb-4 border rounded-lg p-4 border-gray-200 dark:border-gray-700"
 						>
 							{/* Option Name Select */}
 							<label
@@ -282,12 +288,13 @@ const ProductOptions: React.FC<ProductOptionsProps> = ({
 					))}
 				</div>
 			)}
-			<div className="flex justify-start space-x-2 mt-0">
+			<div className="flex justify-start space-x-2">
 				<button
 					onClick={handleAddOption}
 					type="button"
-					className="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 text-sm"
+					className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-700 hover:bg-green-600"
 				>
+					<Plus className="h-4 w-4 mr-1" />
 					Add Option
 				</button>
 				{options.some((opt) => opt.option_name) && (
