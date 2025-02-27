@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { OptionIcon } from "lucide-react";
+import { OptionIcon, Trash2 } from "lucide-react";
 
 // Local interface definitions
 export interface Option {
@@ -116,7 +116,10 @@ const ProductOptions: React.FC<ProductOptionsProps> = ({
 				Product Options
 			</legend>
 			{options.map((option, index) => (
-				<div key={option.option_id} className="mb-4">
+				<div
+					key={option.option_id}
+					className="mb-4 border rounded-lg p-4 border-gray-200 dark:border-gray-700"
+				>
 					{/* Option Name Select */}
 					<label
 						htmlFor={`option-name-${index}`}
@@ -138,13 +141,6 @@ const ProductOptions: React.FC<ProductOptionsProps> = ({
 							placeholder="Enter Option Name"
 							className="block w-full pl-10 pr-3 py-2 border text-gray-700 border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
 						/>
-						<button
-							onClick={() => handleRemoveOption(index)}
-							className="absolute inset-y-0 right-0 bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 text-sm"
-							type="button"
-						>
-							Remove
-						</button>
 					</div>
 
 					{/* Variant Select */}
@@ -194,6 +190,15 @@ const ProductOptions: React.FC<ProductOptionsProps> = ({
 							/>
 						</div>
 					)}
+
+					<button
+						type="button"
+						onClick={() => handleRemoveOption(index)}
+						className="inline-flex items-center px-3 py-1 border border-transparent rounded-md shadow-sm text-xs font-medium text-white bg-red-700 hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500"
+					>
+						<Trash2 className="h-4 w-4 mr-1" />
+						Delete
+					</button>
 				</div>
 			))}
 			<div className="flex justify-end space-x-2 mt-4">
