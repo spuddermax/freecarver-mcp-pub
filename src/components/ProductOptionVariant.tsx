@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Calendar, Tag, DollarSign, Percent, Image, Plus } from "lucide-react";
 
 interface Variant {
@@ -38,11 +38,80 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 	onVariantChange = () => {},
 	onAddVariant = () => {},
 }) => {
-	const handleAddVariant = () => {
-		if (inputValue.trim()) {
-			onAddVariant(index, inputValue);
-			onInputChange(index, ""); // Clear the input
+	// State for tracking new variant information
+	const [newVariant, setNewVariant] = useState<Partial<Variant>>({
+		variant_name: inputValue || "",
+		sku: "",
+		price: "",
+		sale_price: "",
+		sale_start: "",
+		sale_end: "",
+		media: "",
+	});
+
+	// Update function for new variant fields
+	const handleNewVariantChange = (field: string, value: string | number) => {
+		setNewVariant((prev) => ({
+			...prev,
+			[field]: value,
+		}));
+
+		// Special case for variant_name as it's also managed by parent component
+		if (field === "variant_name") {
+			onInputChange(index, value as string);
 		}
+	};
+
+	// Sync the variant name input value to state when it changes from parent
+	React.useEffect(() => {
+		if (!selectedVariant) {
+			setNewVariant((prev) => ({
+				...prev,
+				variant_name: inputValue || "",
+			}));
+		}
+	}, [inputValue, selectedVariant]);
+
+	const handleAddVariant = () => {
+		if (newVariant.variant_name && newVariant.variant_name.trim()) {
+			onAddVariant(index, newVariant.variant_name.trim());
+
+			// Reset the new variant state after adding
+			setNewVariant({
+				variant_name: "",
+				sku: "",
+				price: "",
+				sale_price: "",
+				sale_start: "",
+				sale_end: "",
+				media: "",
+			});
+		}
+	};
+
+	// Check if any variant information has been entered
+	const hasVariantInfo = () => {
+		if (selectedVariant) {
+			return (
+				selectedVariant.variant_name.trim() !== "" ||
+				selectedVariant.sku.trim() !== "" ||
+				selectedVariant.price !== 0 ||
+				selectedVariant.sale_price !== 0 ||
+				selectedVariant.sale_start !== "" ||
+				selectedVariant.sale_end !== "" ||
+				selectedVariant.media.trim() !== ""
+			);
+		}
+
+		return (
+			newVariant.variant_name?.trim() !== "" ||
+			newVariant.sku?.trim() !== "" ||
+			(newVariant.price !== "" && newVariant.price !== 0) ||
+			(newVariant.sale_price !== "" && newVariant.sale_price !== 0) ||
+			newVariant.sale_start !== "" ||
+			newVariant.sale_end !== "" ||
+			newVariant.media?.trim() !== ""
+		);
 	};
 
 	return (
@@ -62,7 +131,7 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 						value={
 							selectedVariant
 								? selectedVariant.variant_name
-								: inputValue || ""
+								: newVariant.variant_name || ""
 						}
 						onChange={(e) =>
 							selectedVariant
@@ -71,7 +140,10 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 										"variant_name",
 										e.target.value
 								  )
-								: onInputChange(index, e.target.value)
+								: handleNewVariantChange(
+										"variant_name",
+										e.target.value
+								  )
 						}
 						onKeyPress={
 							selectedVariant
@@ -93,9 +165,15 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 					</label>
 					<input
 						type="text"
-						value={selectedVariant ? selectedVariant.sku : ""}
+						value={
+							selectedVariant
+								? selectedVariant.sku
+								: newVariant.sku || ""
+						}
 						onChange={(e) =>
-							onVariantChange(index, "sku", e.target.value)
+							selectedVariant
+								? onVariantChange(index, "sku", e.target.value)
+								: handleNewVariantChange("sku", e.target.value)
 						}
 						placeholder="Enter SKU code"
 						className="block w-full px-3 py-2 border text-gray-700 border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
@@ -114,14 +192,20 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 						type="number"
 						step="0.01"
 						min="0"
-						value={selectedVariant ? selectedVariant.price : ""}
-						onChange={(e) =>
-							onVariantChange(
-								index,
-								"price",
-								parseFloat(e.target.value)
-							)
+						value={
+							selectedVariant
+								? selectedVariant.price
+								: newVariant.price || ""
 						}
+						onChange={(e) => {
+							const value =
+								e.target.value === ""
+									? ""
+									: parseFloat(e.target.value);
+							selectedVariant
+								? onVariantChange(index, "price", value)
+								: handleNewVariantChange("price", value);
+						}}
 						placeholder="0.00"
 						className="block w-full px-3 py-2 border text-gray-700 border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
 					/>
@@ -140,15 +224,19 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 						step="0.01"
 						min="0"
 						value={
-							selectedVariant ? selectedVariant.sale_price : ""
+							selectedVariant
+								? selectedVariant.sale_price
+								: newVariant.sale_price || ""
 						}
-						onChange={(e) =>
-							onVariantChange(
-								index,
-								"sale_price",
-								parseFloat(e.target.value)
-							)
-						}
+						onChange={(e) => {
+							const value =
+								e.target.value === ""
+									? ""
+									: parseFloat(e.target.value);
+							selectedVariant
+								? onVariantChange(index, "sale_price", value)
+								: handleNewVariantChange("sale_price", value);
+						}}
 						placeholder="0.00"
 						className="block w-full px-3 py-2 border text-gray-700 border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
 					/>
@@ -165,10 +253,21 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 					<input
 						type="datetime-local"
 						value={
-							selectedVariant ? selectedVariant.sale_start : ""
+							selectedVariant
+								? selectedVariant.sale_start
+								: newVariant.sale_start || ""
 						}
 						onChange={(e) =>
-							onVariantChange(index, "sale_start", e.target.value)
+							selectedVariant
+								? onVariantChange(
+										index,
+										"sale_start",
+										e.target.value
+								  )
+								: handleNewVariantChange(
+										"sale_start",
+										e.target.value
+								  )
 						}
 						className="block w-full px-3 py-2 border text-gray-700 border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
 					/>
@@ -184,9 +283,22 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 					</label>
 					<input
 						type="datetime-local"
-						value={selectedVariant ? selectedVariant.sale_end : ""}
+						value={
+							selectedVariant
+								? selectedVariant.sale_end
+								: newVariant.sale_end || ""
+						}
 						onChange={(e) =>
-							onVariantChange(index, "sale_end", e.target.value)
+							selectedVariant
+								? onVariantChange(
+										index,
+										"sale_end",
+										e.target.value
+								  )
+								: handleNewVariantChange(
+										"sale_end",
+										e.target.value
+								  )
 						}
 						className="block w-full px-3 py-2 border text-gray-700 border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
 					/>
@@ -202,9 +314,22 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 					</label>
 					<input
 						type="text"
-						value={selectedVariant ? selectedVariant.media : ""}
+						value={
+							selectedVariant
+								? selectedVariant.media
+								: newVariant.media || ""
+						}
 						onChange={(e) =>
-							onVariantChange(index, "media", e.target.value)
+							selectedVariant
+								? onVariantChange(
+										index,
+										"media",
+										e.target.value
+								  )
+								: handleNewVariantChange(
+										"media",
+										e.target.value
+								  )
 						}
 						placeholder="Enter media URL"
 						className="block w-full px-3 py-2 border text-gray-700 border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
@@ -214,12 +339,12 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 
 			{/* Add Variant Button - Only show when not editing an existing variant */}
 			{!selectedVariant && (
-				<div className="flex justify-end mt-4">
+				<div className="flex justify-start mt-4">
 					<button
 						onClick={handleAddVariant}
 						type="button"
-						className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-700 hover:bg-blue-600"
-						disabled={!inputValue.trim()}
+						className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-700 hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+						disabled={!hasVariantInfo()}
 					>
 						<Plus className="h-4 w-4 mr-1" />
 						Add Variant

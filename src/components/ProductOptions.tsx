@@ -40,7 +40,7 @@ const ProductOptions: React.FC<ProductOptionsProps> = ({
 	initialOptions = [],
 	onChange,
 }) => {
-	console.log(initialOptions);
+	//console.log(initialOptions);
 	const [options, setOptions] = useState<Option[]>(initialOptions);
 	const [newVariantInputs, setNewVariantInputs] = useState<{
 		[key: number]: string;
