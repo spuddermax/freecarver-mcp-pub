@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
 	OptionIcon,
 	Trash2,
@@ -7,10 +7,12 @@ import {
 	Plus,
 	Code,
 	X,
+	Save,
 } from "lucide-react";
 import ProductOptionVariant from "./ProductOptionVariant";
 import { ProductOptionsJsonEditor } from "./ProductOptionsJsonEditor";
 import { Modal } from "../components/Modal";
+import Toast from "../components/Toast";
 
 // Local interface definitions
 export interface Option {
@@ -38,11 +40,13 @@ export interface Variant {
 export interface ProductOptionsProps {
 	initialOptions?: Option[];
 	onChange: (options: Option[]) => void;
+	productId?: string;
 }
 
 const ProductOptions: React.FC<ProductOptionsProps> = ({
 	initialOptions = [],
 	onChange,
+	productId,
 }) => {
 	//console.log(initialOptions);
 	const [options, setOptions] = useState<Option[]>(initialOptions);
@@ -62,14 +66,70 @@ const ProductOptions: React.FC<ProductOptionsProps> = ({
 		variantId: number;
 	} | null>(null);
 
+	// State for tracking original options and save button visibility
+	const [originalOptionsJSON, setOriginalOptionsJSON] = useState(
+		JSON.stringify(initialOptions)
+	);
+	const saveButtonRef = useRef<HTMLButtonElement>(null);
+	const [isSaveButtonVisible, setIsSaveButtonVisible] = useState(true);
+	const [toast, setToast] = useState<{
+		message: string;
+		type: "success" | "error" | "info";
+	} | null>(null);
+
 	// Update the JSON text when options change
 	useEffect(() => {
 		setJsonText(JSON.stringify(options, null, 2));
 	}, [options]);
 
+	// Set up observer for save button visibility
+	useEffect(() => {
+		if (!saveButtonRef.current) return;
+		const observer = new IntersectionObserver(
+			(entries) => {
+				entries.forEach((entry) => {
+					setIsSaveButtonVisible(entry.isIntersecting);
+				});
+			},
+			{ root: null, threshold: 0.1 }
+		);
+		observer.observe(saveButtonRef.current);
+		return () => {
+			if (saveButtonRef.current) {
+				observer.unobserve(saveButtonRef.current);
+			}
+		};
+	}, []);
+
+	// Check if options have changed
+	const isOptionsUnchanged = JSON.stringify(options) === originalOptionsJSON;
+
 	const updateOptions = (newOptions: Option[]) => {
 		setOptions(newOptions);
 		onChange(newOptions);
+	};
+
+	// Handle saving options explicitly
+	const handleSaveOptions = async () => {
+		try {
+			// Call onChange to notify parent of changes
+			onChange(options);
+
+			// Update the original options JSON after saving
+			setOriginalOptionsJSON(JSON.stringify(options));
+
+			// Show success message
+			setToast({
+				message: "Product options saved successfully.",
+				type: "success",
+			});
+		} catch (error: any) {
+			console.error("Error saving product options:", error);
+			setToast({
+				message: "Error saving options: " + error.message,
+				type: "error",
+			});
+		}
 	};
 
 	const handleSaveJson = (parsedJson: Option[]) => {
@@ -300,7 +360,7 @@ const ProductOptions: React.FC<ProductOptionsProps> = ({
 
 	return (
 		<>
-			<fieldset className="border rounded-lg p-4 border-cyan-200 dark:border-cyan-700">
+			<fieldset className="border rounded-lg p-4 border-cyan-200 dark:border-cyan-700 relative">
 				<legend className="text-2xl font-medium text-gray-700 dark:text-gray-300 px-2 flex items-center justify-between">
 					<span>Product Options</span>
 				</legend>
@@ -465,6 +525,20 @@ const ProductOptions: React.FC<ProductOptionsProps> = ({
 						<Code className="h-3 w-3 mr-1" />
 						Edit Options JSON
 					</button>
+					<button
+						type="button"
+						ref={saveButtonRef}
+						onClick={handleSaveOptions}
+						disabled={isOptionsUnchanged}
+						className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+							isOptionsUnchanged
+								? "text-gray-500 bg-blue-900 cursor-not-allowed"
+								: "text-white bg-blue-600 hover:bg-blue-700"
+						}`}
+					>
+						<Save className="h-4 w-4 mr-1" />
+						Save Options
+					</button>
 				</div>
 			</fieldset>
 
@@ -501,6 +575,20 @@ const ProductOptions: React.FC<ProductOptionsProps> = ({
 				</div>
 			</Modal>
 
+			{/* Fixed Save Options button when original is scrolled out of view */}
+			{!isOptionsUnchanged && !isSaveButtonVisible && (
+				<div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50">
+					<button
+						type="button"
+						onClick={handleSaveOptions}
+						className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-blue-500 bg-blue-700 hover:bg-blue-600"
+					>
+						<Save className="h-4 w-4 mr-1" />
+						Save Options
+					</button>
+				</div>
+			)}
+
 			<ProductOptionsJsonEditor
 				isOpen={jsonEditorOpen}
 				jsonText={jsonText}
@@ -508,6 +596,14 @@ const ProductOptions: React.FC<ProductOptionsProps> = ({
 				onSave={handleSaveJson}
 				onClose={() => setJsonEditorOpen(false)}
 			/>
+
+			{toast && (
+				<Toast
+					message={toast.message}
+					type={toast.type}
+					onClose={() => setToast(null)}
+				/>
+			)}
 		</>
 	);
 };
