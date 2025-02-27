@@ -6,9 +6,11 @@ import {
 	Star,
 	Plus,
 	Code,
+	X,
 } from "lucide-react";
 import ProductOptionVariant from "./ProductOptionVariant";
 import { ProductOptionsJsonEditor } from "./ProductOptionsJsonEditor";
+import { Modal } from "../components/Modal";
 
 // Local interface definitions
 export interface Option {
@@ -55,6 +57,10 @@ const ProductOptions: React.FC<ProductOptionsProps> = ({
 	const [newVariantData, setNewVariantData] = useState<{
 		[key: number]: Partial<Variant>;
 	}>({});
+	const [deleteVariantInfo, setDeleteVariantInfo] = useState<{
+		optionIndex: number;
+		variantId: number;
+	} | null>(null);
 
 	// Update the JSON text when options change
 	useEffect(() => {
@@ -255,8 +261,20 @@ const ProductOptions: React.FC<ProductOptionsProps> = ({
 		return undefined;
 	};
 
-	// Handle deleting a specific variant from an option
-	const handleDeleteVariant = (optionIndex: number, variantId: number) => {
+	// Request to delete a variant (shows confirmation modal)
+	const handleRequestDeleteVariant = (
+		optionIndex: number,
+		variantId: number
+	) => {
+		setDeleteVariantInfo({ optionIndex, variantId });
+	};
+
+	// Actually delete the variant after confirmation
+	const confirmDeleteVariant = () => {
+		if (!deleteVariantInfo) return;
+
+		const { optionIndex, variantId } = deleteVariantInfo;
+
 		const updatedOptions = options.map((option, i) => {
 			if (i === optionIndex) {
 				return {
@@ -277,6 +295,7 @@ const ProductOptions: React.FC<ProductOptionsProps> = ({
 		});
 
 		updateOptions(updatedOptions);
+		setDeleteVariantInfo(null);
 	};
 
 	return (
@@ -407,7 +426,9 @@ const ProductOptions: React.FC<ProductOptionsProps> = ({
 												: handleNewVariantDataChange
 										}
 										onAddVariant={handleAddVariant}
-										onDeleteVariant={handleDeleteVariant}
+										onDeleteVariant={
+											handleRequestDeleteVariant
+										}
 									/>
 								)}
 
@@ -446,6 +467,39 @@ const ProductOptions: React.FC<ProductOptionsProps> = ({
 					</button>
 				</div>
 			</fieldset>
+
+			{/* Delete Confirmation Modal */}
+			<Modal
+				isOpen={deleteVariantInfo !== null}
+				onClose={() => setDeleteVariantInfo(null)}
+				title="Confirm Delete"
+			>
+				<div>
+					<p>
+						Are you sure you want to delete this variant? You must
+						still save the options to actually remove it from the
+						database.
+					</p>
+					<div className="mt-4 flex justify-end gap-4">
+						<button
+							type="button"
+							onClick={() => setDeleteVariantInfo(null)}
+							className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gray-700 hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500"
+						>
+							<X className="h-4 w-4 mr-1" />
+							Cancel
+						</button>
+						<button
+							type="button"
+							onClick={confirmDeleteVariant}
+							className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-700 hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500"
+						>
+							<Trash2 className="h-4 w-4 mr-1" />
+							Delete
+						</button>
+					</div>
+				</div>
+			</Modal>
 
 			<ProductOptionsJsonEditor
 				isOpen={jsonEditorOpen}

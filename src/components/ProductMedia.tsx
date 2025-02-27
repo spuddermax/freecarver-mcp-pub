@@ -197,7 +197,8 @@ export function ProductMedia({
 					<div>
 						<p>
 							Are you sure you want to delete this media item? You
-							must still save the media to actually remove it.
+							must still save the media to actually remove it from
+							the database.
 						</p>
 						<div className="mt-4 flex justify-end gap-4">
 							<button
