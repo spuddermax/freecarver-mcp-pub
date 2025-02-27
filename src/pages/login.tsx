@@ -106,7 +106,10 @@ export default function Login({ onLogin }: LoginProps) {
 		<div className="min-h-screen flex items-center justify-center p-4">
 			{showGrid && <TronGrid />}
 			<div className="w-full max-w-md">
-				<div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-8">
+				<div
+					id="login-container"
+					className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-8"
+				>
 					<div className="text-center mb-8">
 						<h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
 							Free Carver MCP

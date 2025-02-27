@@ -76,15 +76,15 @@ export default function ProductEdit() {
 				) {
 					try {
 						setMediaItems(formattedProduct.product_media);
-						setProductOptions(
-							formattedProduct.options.map(
-								(opt: ProductOption, index: number) => ({
-									id: index,
-									name: opt.option_name,
+						setProductData((prev) => ({
+							...prev,
+							options: formattedProduct.options.map(
+								(opt: ProductOption) => ({
+									...opt,
 									values: [],
 								})
-							)
-						);
+							),
+						}));
 					} catch (err) {
 						console.error("Error parsing product media", err);
 						setMediaItems([]);
@@ -120,10 +120,18 @@ export default function ProductEdit() {
 			sku: productData.sku,
 			name: productData.name,
 			description: productData.description,
-			price: productData.price,
-			sale_price: productData.sale_price,
-			sale_start: productData.sale_start?.toISOString(),
-			sale_end: productData.sale_end?.toISOString(),
+			price: productData.price ?? undefined,
+			sale_price: productData.sale_price ?? undefined,
+			sale_start: productData.sale_start
+				? productData.sale_start instanceof Date
+					? productData.sale_start.toISOString()
+					: String(productData.sale_start)
+				: undefined,
+			sale_end: productData.sale_end
+				? productData.sale_end instanceof Date
+					? productData.sale_end.toISOString()
+					: String(productData.sale_end)
+				: undefined,
 			product_media: JSON.stringify(mediaItems),
 		};
 
@@ -236,10 +244,30 @@ export default function ProductEdit() {
 										/>
 										<ProductPricing
 											productId={targetId ?? ""}
-											price={productData.price}
-											salePrice={productData.sale_price}
-											saleStart={productData.sale_start}
-											saleEnd={productData.sale_end}
+											price={productData.price ?? 0}
+											salePrice={
+												productData.sale_price ?? 0
+											}
+											saleStart={
+												productData.sale_start
+													? productData.sale_start instanceof
+													  Date
+														? productData.sale_start.toISOString()
+														: String(
+																productData.sale_start
+														  )
+													: undefined
+											}
+											saleEnd={
+												productData.sale_end
+													? productData.sale_end instanceof
+													  Date
+														? productData.sale_end.toISOString()
+														: String(
+																productData.sale_end
+														  )
+													: undefined
+											}
 											onInputChange={handleInputChange}
 										/>
 										<ProductOptions
@@ -254,7 +282,7 @@ export default function ProductEdit() {
 													  }
 													: opt
 											)}
-											initialSKUs={productData.skus}
+											initialSKUs={[productData.sku]}
 											onChange={handleOptionsChange}
 										/>
 										<button onClick={handleSaveOptions}>

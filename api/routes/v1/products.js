@@ -2,7 +2,7 @@
 
 import express from "express";
 import { pool } from "../../db.js";
-import { logger } from "../../middleware/logger.js";
+import { logger, logError } from "../../middleware/logger.js";
 import { verifyJWT } from "../../middleware/auth.js";
 import validateRequest from "../../middleware/validateRequest.js";
 import {
@@ -12,8 +12,6 @@ import {
 } from "../../validators/products.js";
 
 const router = express.Router();
-
-router.use(verifyJWT);
 
 /**
  * @route GET /v1/products
@@ -210,6 +208,8 @@ router.get("/:id", async (req, res) => {
 			[id]
 		);
 
+		console.log(optionsResult.rows);
+
 		// Build initialOptions: group by option id.
 		const optionsMap = {};
 		// Build initialSKUs: list of combinations (assumed variant names with spaces).
@@ -253,9 +253,11 @@ router.get("/:id", async (req, res) => {
 		);
 		res.success({ product }, "Product retrieved successfully");
 	} catch (error) {
-		logger.error("Error retrieving product with options", {
-			error: error.message,
-		});
+		logError(
+			`Error retrieving product with options: ${req.params.id}`,
+			error,
+			{ productId: req.params.id }
+		);
 		res.error("Internal server error", 500);
 	}
 });

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
-import { Bell, User, LayoutDashboard } from "lucide-react";
+import { Bell, User } from "lucide-react";
 import { MCPIcon } from "./MCPIcon";
 import { useTheme } from "../lib/theme";
 import { useGrid } from "../lib/grid";

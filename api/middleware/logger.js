@@ -1,125 +1,190 @@
-// /api/logger.js
+// /api/middleware/logger.js
 
-import { createLogger, format, transports } from "winston";
-import DailyRotateFile from "winston-daily-rotate-file";
-import dotenv from "dotenv";
+import winston from "winston";
+import express from "express";
 
-dotenv.config();
+// Regular JavaScript object to replace the TypeScript interface
+// Uses JSDoc for type documentation
+/**
+ * @typedef {Object} LogInfo
+ * @property {string} [ip]
+ * @property {Object} [req]
+ * @property {Object} [res]
+ */
 
-const { combine, timestamp, printf } = format;
-
-// Custom log format for both console and file output
-const structuredFormat = printf(
-	({ level, message, timestamp, stack, ip, body }) => {
-		let bodyStr = "";
-		// If the body is defined and not empty, log the body
-		if (body && Object.keys(body).length > 0) {
-			bodyStr = ` | Request Body: ${JSON.stringify(body)}`;
-			return `${timestamp} [${ip || "N/A"}] ${level}: ${
-				stack || message
-			}${bodyStr}`;
-		} else {
-			return `${timestamp} [${ip || "N/A"}] ${level}: ${
-				stack || message
-			}${bodyStr}`;
-		}
-	}
-);
-
-// This format enforces a structured JSON log entry.
-const customFormat = printf(
-	({ level, message, timestamp, ip, requestId, meta, stack }) => {
-		const logEntry = {
-			timestamp,
-			ip: ip || "LOCALHOST",
-			level,
-			message: stack || message,
-			// include the IP if available, or default to "N/A"
-			// optional: include a requestId if present
-			...(requestId && { requestId }),
-			// any extra metadata
-			...(meta && Object.keys(meta).length > 0 && { meta }),
-		};
-		return JSON.stringify(logEntry);
-	}
-);
-
-// Define file paths with fallback defaults
-const errorLogFile =
-	process.env.ERROR_LOG_FILE || "/var/log/freecarver-api/error.log";
-const infoLogFile =
-	process.env.INFO_LOG_FILE || "/var/log/freecarver-api/info.log";
-
-// Daily rotate transport configuration
-const dailyRotateTransport = new DailyRotateFile({
-	filename:
-		process.env.LOG_FILE_PATH ||
-		"/var/log/freecarver-api/application-%DATE%.log",
-	datePattern: "YYYY-MM-DD",
-	zippedArchive: true,
-	maxSize: "20m",
-	maxFiles: "14d",
+/**
+ * Custom log format
+ * @param {Object} info - Log information object
+ */
+const logFormat = winston.format.printf((info) => {
+	const ip = info.ip || "-";
+	const user = "-";
+	const method = info.req?.method || "-";
+	const url = info.req?.url || "-";
+	const status = info.res?.statusCode || "-";
+	const agent = info.req?.headers?.["user-agent"] || "-";
+	const json = JSON.stringify(info);
+	return `${ip} ${user} [${info.timestamp}] "${method} ${url}" ${status} - "${agent}" ${json}`;
 });
 
-// Create an array of transports with the same structured format for file logs
-const loggerTransports = [
-	new transports.File({
-		filename: errorLogFile,
-		level: "error",
-		format: combine(timestamp(), customFormat),
-	}),
-	new transports.File({
-		filename: infoLogFile,
-		level: "info",
-		format: combine(timestamp(), customFormat),
-	}),
-	// Add the daily rotating transport
-	dailyRotateTransport,
-];
-
-if (process.env.NODE_ENV !== "production") {
-	loggerTransports.push(
-		new transports.Console({
+export const logger = winston.createLogger({
+	level: process.env.LOG_LEVEL || "info",
+	format: winston.format.combine(
+		winston.format.timestamp({ format: "DD/MMM/YYYY:HH:mm:ss Z" }),
+		logFormat
+	),
+	transports: [
+		new winston.transports.File({
+			filename: "/var/log/freecarver-api/info.log",
+			level: "info",
+		}),
+		new winston.transports.File({
+			filename: "/var/log/freecarver-api/error.log",
+			level: "error",
+		}),
+		new winston.transports.File({
+			filename: "/var/log/freecarver-api/debug.log",
 			level: "debug",
-			format: combine(timestamp(), customFormat),
-		})
-	);
-}
-
-// Create logger instance
-const logger = createLogger({
-	level: process.env.NODE_ENV !== "production" ? "debug" : "info",
-	transports: loggerTransports,
-	exitOnError: false,
+		}),
+		new winston.transports.Console({ level: "debug" }),
+	],
 });
 
-function sanitizeData(data) {
-	if (!data || typeof data !== "object") return data;
-	const sanitized = { ...data };
-	// Mask sensitive fields
-	["password", "newPassword", "confirmPassword"].forEach((field) => {
-		if (sanitized[field]) {
-			sanitized[field] = "******";
-		}
+/**
+ * Enhanced error logger that includes detailed error information
+ * @param {string} message - Error message
+ * @param {Error|Object} error - Error object or details
+ * @param {Object} [additionalInfo] - Any additional contextual information
+ */
+export function logError(message, error, additionalInfo = {}) {
+	// Extract the error stack and message if it's an Error object
+	const errorDetails =
+		error instanceof Error
+			? {
+					message: error.message,
+					stack: error.stack,
+					name: error.name,
+					...(error.code && { code: error.code }),
+					...(error.details && { details: error.details }),
+			  }
+			: error;
+
+	// Log the full error with a structured format that's easily readable
+	logger.error(message, {
+		error: errorDetails,
+		...additionalInfo,
+		// Add timestamp in a readable format
+		timestamp: new Date().toISOString(),
 	});
-	return sanitized;
+
+	// Also log to console during development for immediate visibility
+	if (process.env.NODE_ENV !== "production") {
+		console.error(message, errorDetails);
+	}
 }
 
-// Middleware for attaching client IP and sanitized request body to logs
-const logRequest = (req, res, next) => {
-	req.log = (level, message, extraData = {}) => {
-		const clientIp =
-			req.headers["x-forwarded-for"] || req.connection.remoteAddress;
-		logger.log({
-			level,
-			message,
-			ip: clientIp,
-			body: sanitizeData(req.body),
-			...extraData,
+/**
+ * Log each request and response
+ * @param {express.Request} req - Express request
+ * @param {express.Response} res - Express response
+ * @param {Function} next - Next middleware
+ * @returns {void}
+ */
+export function logRequest(req, res, next) {
+	const start = Date.now();
+
+	// Add log method to the request object to be used throughout the application
+	req.log = function (level, message, metadata = {}) {
+		logger[level](message, {
+			ip: req.ip,
+			...metadata,
+			req: {
+				method: req.method,
+				url: req.url,
+				headers: req.headers,
+			},
 		});
 	};
-	next();
-};
 
-export { logger }; // Correctly export as named export
-export { logRequest }; // Ensure logRequest is exported properly
+	// Capture original response methods
+	const originalSend = res.send;
+	const originalJson = res.json;
+	let responseBody;
+
+	// Override res.send to capture response body
+	res.send = function (body) {
+		responseBody = body;
+		return originalSend.apply(res, arguments);
+	};
+
+	// Override res.json to capture response body
+	res.json = function (body) {
+		responseBody = body;
+		return originalJson.apply(res, arguments);
+	};
+
+	// Log request body immediately
+	logger.info("API request received", {
+		ip: req.ip,
+		req: {
+			method: req.method,
+			url: req.url,
+			headers: req.headers,
+			body: req.body,
+			params: req.params,
+			query: req.query,
+		},
+	});
+
+	res.on("finish", () => {
+		const duration = Date.now() - start;
+
+		// Parse response body if it's a string that looks like JSON
+		let parsedResponseBody;
+		if (typeof responseBody === "string") {
+			try {
+				if (
+					responseBody.startsWith("{") ||
+					responseBody.startsWith("[")
+				) {
+					parsedResponseBody = JSON.parse(responseBody);
+				} else {
+					parsedResponseBody = responseBody;
+				}
+			} catch (e) {
+				parsedResponseBody = responseBody;
+			}
+		} else {
+			parsedResponseBody = responseBody;
+		}
+
+		const logData = {
+			ip: req.ip,
+			req: {
+				method: req.method,
+				url: req.url,
+				headers: req.headers,
+				body: req.body,
+			},
+			res: {
+				status: res.statusCode,
+				headers: res.getHeaders(),
+				body: parsedResponseBody || res.locals.body,
+			},
+			duration,
+		};
+
+		if (res.statusCode >= 400) {
+			// Log as error for any status code >= 400
+			logger.error(
+				`API request failed with status ${res.statusCode}`,
+				logData
+			);
+		} else {
+			// Log as info for successful responses
+			logger.info("API request completed", logData);
+		}
+	});
+
+	next();
+}
