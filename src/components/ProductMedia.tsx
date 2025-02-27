@@ -171,7 +171,7 @@ export function ProductMedia({
 						className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white  bg-purple-700 hover:bg-purple-600"
 					>
 						<Code className="h-4 w-4 mr-1" />
-						JSON Edit
+						Edit Media JSON
 					</button>
 					<button
 						type="button"
