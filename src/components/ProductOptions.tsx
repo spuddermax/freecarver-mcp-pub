@@ -271,6 +271,7 @@ const ProductOptions: React.FC<ProductOptionsProps> = ({
 									onKeyPress={handleVariantKeyPress}
 									selectedVariant={getSelectedVariant(index)}
 									onVariantChange={handleVariantChange}
+									onAddVariant={handleAddVariant}
 								/>
 							)}
 
@@ -297,29 +298,6 @@ const ProductOptions: React.FC<ProductOptionsProps> = ({
 					<Plus className="h-4 w-4 mr-1" />
 					Add Option
 				</button>
-				{options.some((opt) => opt.option_name) && (
-					<button
-						onClick={() => {
-							const selectedIndex = options.findIndex(
-								(opt) => opt.option_name
-							);
-							if (selectedIndex !== -1) {
-								const variant =
-									newVariantInputs[selectedIndex] || "";
-								handleAddVariant(selectedIndex, variant);
-								setNewVariantInputs((prev) => ({
-									...prev,
-									[selectedIndex]: "",
-								}));
-							}
-						}}
-						type="button"
-						className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 text-sm"
-						disabled={!options.some((opt) => opt.option_name)}
-					>
-						Add Variant
-					</button>
-				)}
 			</div>
 		</fieldset>
 	);

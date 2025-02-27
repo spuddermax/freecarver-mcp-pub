@@ -1,5 +1,5 @@
 import React from "react";
-import { Calendar, Tag, DollarSign, Percent, Image } from "lucide-react";
+import { Calendar, Tag, DollarSign, Percent, Image, Plus } from "lucide-react";
 
 interface Variant {
 	variant_id?: number;
@@ -26,6 +26,7 @@ interface ProductOptionVariantProps {
 		field: string,
 		value: string | number
 	) => void;
+	onAddVariant?: (index: number, variantName: string) => void;
 }
 
 const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
@@ -35,7 +36,15 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 	onKeyPress,
 	selectedVariant,
 	onVariantChange = () => {},
+	onAddVariant = () => {},
 }) => {
+	const handleAddVariant = () => {
+		if (inputValue.trim()) {
+			onAddVariant(index, inputValue);
+			onInputChange(index, ""); // Clear the input
+		}
+	};
+
 	return (
 		<div className="p-4 border rounded-lg mt-4 bg-gray-50 dark:bg-gray-800">
 			<h3 className="text-md font-medium text-gray-700 dark:text-gray-300 mb-4">
@@ -202,6 +211,21 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 					/>
 				</div>
 			</div>
+
+			{/* Add Variant Button - Only show when not editing an existing variant */}
+			{!selectedVariant && (
+				<div className="flex justify-end mt-4">
+					<button
+						onClick={handleAddVariant}
+						type="button"
+						className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-700 hover:bg-blue-600"
+						disabled={!inputValue.trim()}
+					>
+						<Plus className="h-4 w-4 mr-1" />
+						Add Variant
+					</button>
+				</div>
+			)}
 		</div>
 	);
 };
