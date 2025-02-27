@@ -16,7 +16,7 @@ import { ProductPricing } from "../components/ProductPricing";
 import { ProductMedia } from "../components/ProductMedia";
 import { ProductMediaItem } from "../components/ProductMedia";
 import Footer from "../components/Footer";
-import ProductOptions from "../components/ProductOptions";
+import ProductOptions, { Option } from "../components/ProductOptions";
 import { ProductOption } from "../types/Interfaces";
 import { Product } from "../types/Interfaces";
 
@@ -68,6 +68,7 @@ export default function ProductEdit() {
 				const data = await fetchProduct(targetId);
 				// Use our formatter to ensure field names match the interface.
 				const formattedProduct: Product = formatProduct(data);
+				console.log(formattedProduct);
 				setProductData(formattedProduct);
 				// Parse the productMedia JSON string into mediaItems array.
 				if (
@@ -177,10 +178,31 @@ export default function ProductEdit() {
 		}
 	};
 
-	const handleOptionsChange = (options: ProductOption[]) => {
+	const handleOptionsChange = (options: Option[]) => {
+		// Map the Option interface to ProductOption
+		const productOptions: ProductOption[] = options.map((opt) => ({
+			option_id: opt.option_id,
+			option_name: opt.option_name,
+			variants: opt.variants.map((variant) => ({
+				variant_id: variant.variant_id,
+				variant_name: variant.variant_name,
+				sku: variant.sku,
+				price: parseFloat(variant.price as unknown as string) || 0,
+				sale_price:
+					parseFloat(variant.sale_price as unknown as string) || 0,
+				sale_start: variant.sale_start
+					? new Date(variant.sale_start)
+					: null,
+				sale_end: variant.sale_end ? new Date(variant.sale_end) : null,
+				media: [],
+				created_at: new Date(),
+				updated_at: new Date(),
+			})),
+		}));
+
 		setProductData((prev) => ({
 			...prev,
-			options: options,
+			options: productOptions,
 		}));
 	};
 
@@ -273,16 +295,32 @@ export default function ProductEdit() {
 										<ProductOptions
 											initialOptions={(
 												productData.options || []
-											).map((opt, index) =>
-												typeof opt === "string"
-													? {
-															id: index,
-															name: opt,
-															values: [],
-													  }
-													: opt
-											)}
-											initialSKUs={[productData.sku]}
+											).map((opt: ProductOption) => ({
+												option_id: opt.option_id,
+												option_name: opt.option_name,
+												variants:
+													opt.variants?.map((v) => ({
+														variant_id:
+															v.variant_id,
+														variant_name:
+															v.variant_name,
+														sku: v.sku,
+														price: v.price,
+														sale_price:
+															v.sale_price,
+														sale_start: v.sale_start
+															? v.sale_start.toISOString()
+															: "",
+														sale_end: v.sale_end
+															? v.sale_end.toISOString()
+															: "",
+														media: "",
+														created_at:
+															v.created_at,
+														updated_at:
+															v.updated_at,
+													})) || [],
+											}))}
 											onChange={handleOptionsChange}
 										/>
 										<button onClick={handleSaveOptions}>

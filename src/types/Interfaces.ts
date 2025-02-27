@@ -141,18 +141,14 @@ export interface ProductMedia {
 }
 
 export interface ProductOption {
-	id: number;
-	product_id: number;
+	option_id: number;
 	option_name: string;
-	created_at: Date;
-	updated_at: Date;
+	variants: ProductOptionVariant[];
 }
 
 export interface ProductOptionVariant {
-	id: number;
-	product_id: number;
-	option_id: number;
-	name: string;
+	variant_id: number;
+	variant_name: string;
 	sku: string;
 	price: number;
 	sale_price: number;

@@ -198,7 +198,14 @@ router.get("/:id", async (req, res) => {
 			  po.option_name,
 			  pov.id AS variant_id,
 			  pov.name AS variant_name,
-			  pov.sku
+			  pov.sku,
+			  pov.price,
+			  pov.sale_price,
+			  pov.sale_start,
+			  pov.sale_end,
+			  pov.media,
+			  pov.created_at,
+			  pov.updated_at
 			FROM product_options po
 			LEFT JOIN product_option_variants pov 
 			  ON pov.option_id = po.id AND pov.product_id = po.product_id
@@ -208,7 +215,7 @@ router.get("/:id", async (req, res) => {
 			[id]
 		);
 
-		console.log(optionsResult.rows);
+		//console.log(optionsResult.rows);
 
 		// Build initialOptions: group by option id.
 		const optionsMap = {};
@@ -216,37 +223,46 @@ router.get("/:id", async (req, res) => {
 		const skuList = [];
 
 		optionsResult.rows.forEach((row) => {
+			console.log(row);
 			// Group by product option.
 			if (!optionsMap[row.option_id]) {
 				optionsMap[row.option_id] = {
-					id: row.option_id,
-					name: row.option_name,
-					// values are the variant names.
-					values: [],
+					option_id: row.option_id,
+					option_name: row.option_name,
+					variants: [
+						{
+							variant_id: row.variant_id,
+							variant_name: row.variant_name,
+							sku: row.sku,
+							price: row.price,
+							sale_price: row.sale_price,
+							sale_start: row.sale_start,
+							sale_end: row.sale_end,
+							media: row.media,
+							created_at: row.created_at,
+							updated_at: row.updated_at,
+						},
+					],
 				};
-			}
-			if (row.variant_name) {
-				// Avoid duplicates.
-				if (
-					!optionsMap[row.option_id].values.includes(row.variant_name)
-				) {
-					optionsMap[row.option_id].values.push(row.variant_name);
-				}
-				// If the variant name contains a space assume it's a combined option.
-				if (row.variant_name.includes(" ")) {
-					skuList.push({
-						combination: row.variant_name,
-						sku: row.sku,
-					});
-				}
+			} else {
+				optionsMap[row.option_id].variants.push({
+					variant_id: row.variant_id,
+					variant_name: row.variant_name,
+					sku: row.sku,
+					price: row.price,
+					sale_price: row.sale_price,
+					sale_start: row.sale_start,
+					sale_end: row.sale_end,
+					media: row.media,
+					created_at: row.created_at,
+					updated_at: row.updated_at,
+				});
 			}
 		});
 
 		const initialOptions = Object.values(optionsMap);
-		const initialSKUs = skuList;
 
 		product.options = initialOptions;
-		product.skus = initialSKUs;
 
 		logger.info(
 			`Product with id ${id} retrieved successfully with options.`
