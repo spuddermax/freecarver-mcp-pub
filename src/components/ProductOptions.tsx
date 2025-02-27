@@ -117,7 +117,14 @@ const ProductOptions: React.FC<ProductOptionsProps> = ({
 		// Clear the variant input after adding
 		setNewVariantInputs((prev) => ({ ...prev, [index]: "" }));
 
+		// Update the options
 		updateOptions(updatedOptions);
+
+		// Auto-select the newly added variant
+		setSelectedVariants((prev) => ({
+			...prev,
+			[index]: newVariant.variant_name,
+		}));
 	};
 
 	const handleRemoveOption = (index: number) => {

@@ -248,6 +248,9 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 			setIsUpdated(false);
 			setModifiedFields(new Set());
 			setEditedVariant({});
+
+			// Note: We don't clear any fields here to allow the user to continue editing
+			// the same variant data they just added
 		}
 	};
 
