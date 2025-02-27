@@ -7,6 +7,7 @@ import {
 	Image,
 	Plus,
 	Save,
+	Trash2,
 } from "lucide-react";
 import { Variant } from "./ProductOptions";
 
@@ -24,7 +25,8 @@ interface ProductOptionVariantProps {
 		field: string,
 		value: string | number
 	) => void;
-	onAddVariant?: (index: number, variantName: string) => void;
+	onAddVariant?: (index: number, variantData: Partial<Variant>) => void;
+	onDeleteVariant?: (index: number, variantId: number) => void;
 }
 
 // Local interface for new variant form state
@@ -46,6 +48,7 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 	selectedVariant,
 	onVariantChange = () => {},
 	onAddVariant = () => {},
+	onDeleteVariant = () => {},
 }) => {
 	// State for tracking new variant information
 	const [newVariant, setNewVariant] = useState<NewVariantState>({
@@ -58,8 +61,23 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 		media: "",
 	});
 
+	// State to track edits to existing variant
+	const [editedVariant, setEditedVariant] = useState<
+		Record<string, string | number>
+	>({});
+
 	// State to track if variant has been updated
 	const [isUpdated, setIsUpdated] = useState(false);
+
+	// State to track which fields have been modified
+	const [modifiedFields, setModifiedFields] = useState<Set<string>>(
+		new Set()
+	);
+
+	// Keep track of the currently selected variant's ID to detect real variant changes vs updates
+	const [previousVariantId, setPreviousVariantId] = useState<number | null>(
+		null
+	);
 
 	// Update function for string fields
 	const handleNewVariantChangeString = (field: string, value: string) => {
@@ -95,19 +113,84 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 		}
 	}, [inputValue, selectedVariant]);
 
+	// Reset states when selectedVariant changes
+	useEffect(() => {
+		// Only reset if we switched to a completely different variant (different ID)
+		if (
+			selectedVariant &&
+			previousVariantId !== selectedVariant.variant_id
+		) {
+			// Reset states when a different variant is selected
+			setIsUpdated(false);
+			setModifiedFields(new Set());
+			setEditedVariant({}); // Clear edited variant data
+			setPreviousVariantId(selectedVariant.variant_id);
+		} else if (!selectedVariant) {
+			// Reset when no variant is selected
+			setIsUpdated(false);
+			setModifiedFields(new Set());
+			setEditedVariant({});
+			setPreviousVariantId(null);
+		}
+	}, [selectedVariant, previousVariantId]);
+
 	// Set isUpdated to true when a variant field change occurs
 	const handleVariantFieldChange = (
 		field: string,
 		value: string | number
 	) => {
-		setIsUpdated(true);
-		onVariantChange(index, field, value);
+		if (!selectedVariant) return;
+
+		// Check if the value has actually changed
+		if (String(selectedVariant[field as keyof Variant]) !== String(value)) {
+			// Store the change locally instead of sending to parent immediately
+			setEditedVariant((prev) => ({
+				...prev,
+				[field]: value,
+			}));
+
+			setIsUpdated(true);
+			setModifiedFields((prev) => {
+				const updated = new Set(prev);
+				updated.add(field);
+				return updated;
+			});
+		} else {
+			// If the value is reset to original, remove from modified fields
+			setEditedVariant((prev) => {
+				const updated = { ...prev };
+				delete updated[field];
+				return updated;
+			});
+
+			setModifiedFields((prev) => {
+				const updated = new Set(prev);
+				updated.delete(field);
+				// If no more modified fields, set isUpdated to false
+				if (updated.size === 0) {
+					setIsUpdated(false);
+				}
+				return updated;
+			});
+		}
 	};
 
 	const handleAddVariant = () => {
 		if (newVariant.variant_name && newVariant.variant_name.trim()) {
-			// Use the entered variant data when adding it
-			onAddVariant(index, newVariant.variant_name.trim());
+			// Prepare the complete variant data to pass to the parent
+			const completeVariant = {
+				variant_name: newVariant.variant_name.trim(),
+				sku: newVariant.sku || "",
+				price: newVariant.price !== null ? newVariant.price : 0,
+				sale_price:
+					newVariant.sale_price !== null ? newVariant.sale_price : 0,
+				sale_start: newVariant.sale_start || "",
+				sale_end: newVariant.sale_end || "",
+				media: newVariant.media || "",
+			};
+
+			// Pass the complete variant data to the parent
+			onAddVariant(index, completeVariant);
 
 			// Reset the new variant state after adding
 			setNewVariant({
@@ -124,16 +207,61 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 
 	// Function to explicitly save all variant data
 	const saveVariant = () => {
-		if (selectedVariant) {
-			// Update every field to ensure all data is saved properly
-			Object.entries(selectedVariant).forEach(([key, value]) => {
-				if (key !== "variant_id") {
-					// Skip the ID field
-					onVariantChange(index, key, value);
-				}
+		if (selectedVariant && Object.keys(editedVariant).length > 0) {
+			// Apply all edited fields to the parent component
+			Object.entries(editedVariant).forEach(([field, value]) => {
+				onVariantChange(index, field, value);
 			});
+
+			// Reset state after saving
 			setIsUpdated(false);
+			setModifiedFields(new Set());
+			setEditedVariant({});
 		}
+	};
+
+	// Function to add the current variant data as a new variant
+	const addAsNew = () => {
+		if (selectedVariant) {
+			// Create a new variant with base data from the selected variant
+			const newVariantData: Partial<Variant> = {
+				variant_name: selectedVariant.variant_name,
+				sku: selectedVariant.sku,
+				price: selectedVariant.price,
+				sale_price: selectedVariant.sale_price,
+				sale_start: selectedVariant.sale_start,
+				sale_end: selectedVariant.sale_end,
+				media: selectedVariant.media,
+			};
+
+			// Apply any edits that have been made
+			Object.entries(editedVariant).forEach(([field, value]) => {
+				// This cast is safe because we're only adding properties that exist in Variant
+				(newVariantData as Record<string, string | number>)[field] =
+					value;
+			});
+
+			// Add as a new variant
+			onAddVariant(index, newVariantData);
+
+			// Reset update status
+			setIsUpdated(false);
+			setModifiedFields(new Set());
+			setEditedVariant({});
+		}
+	};
+
+	// Get the display value for a field (either from edits or original variant)
+	const getFieldValue = (field: keyof Variant) => {
+		if (selectedVariant) {
+			// If the field has been edited, use the edited value
+			if (field in editedVariant) {
+				return editedVariant[field];
+			}
+			// Otherwise use the original value
+			return selectedVariant[field];
+		}
+		return null;
 	};
 
 	// Check if any variant information has been entered
@@ -161,6 +289,14 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 		);
 	};
 
+	// Returns appropriate border class based on whether field has been modified
+	const getFieldBorderClass = (field: string) => {
+		if (!selectedVariant) return "";
+		return modifiedFields.has(field)
+			? "border-yellow-400 dark:border-yellow-600"
+			: "border-gray-300 dark:border-gray-600";
+	};
+
 	return (
 		<div className="p-4 border rounded-lg mt-4 bg-gray-50 dark:bg-gray-800">
 			<h3 className="text-md font-medium text-gray-700 dark:text-gray-300 mb-4">
@@ -177,7 +313,7 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 						type="text"
 						value={
 							selectedVariant
-								? selectedVariant.variant_name
+								? (getFieldValue("variant_name") as string)
 								: newVariant.variant_name || ""
 						}
 						onChange={(e) =>
@@ -197,7 +333,9 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 								: (e) => onKeyPress(e, index)
 						}
 						placeholder="Enter variant name"
-						className="block w-full px-3 py-2 border text-gray-700 border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+						className={`block w-full px-3 py-2 border text-gray-700 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white ${getFieldBorderClass(
+							"variant_name"
+						)}`}
 					/>
 				</div>
 
@@ -213,7 +351,7 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 						type="text"
 						value={
 							selectedVariant
-								? selectedVariant.sku
+								? (getFieldValue("sku") as string)
 								: newVariant.sku || ""
 						}
 						onChange={(e) =>
@@ -228,7 +366,9 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 								  )
 						}
 						placeholder="Enter SKU code"
-						className="block w-full px-3 py-2 border text-gray-700 border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+						className={`block w-full px-3 py-2 border text-gray-700 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white ${getFieldBorderClass(
+							"sku"
+						)}`}
 					/>
 				</div>
 
@@ -246,7 +386,7 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 						min="0"
 						value={
 							selectedVariant
-								? selectedVariant.price
+								? (getFieldValue("price") as number)
 								: newVariant.price !== null
 								? newVariant.price
 								: ""
@@ -266,7 +406,9 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 							}
 						}}
 						placeholder="0.00"
-						className="block w-full px-3 py-2 border text-gray-700 border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+						className={`block w-full px-3 py-2 border text-gray-700 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white ${getFieldBorderClass(
+							"price"
+						)}`}
 					/>
 				</div>
 
@@ -284,7 +426,7 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 						min="0"
 						value={
 							selectedVariant
-								? selectedVariant.sale_price
+								? (getFieldValue("sale_price") as number)
 								: newVariant.sale_price !== null
 								? newVariant.sale_price
 								: ""
@@ -307,7 +449,9 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 							}
 						}}
 						placeholder="0.00"
-						className="block w-full px-3 py-2 border text-gray-700 border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+						className={`block w-full px-3 py-2 border text-gray-700 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white ${getFieldBorderClass(
+							"sale_price"
+						)}`}
 					/>
 				</div>
 
@@ -323,7 +467,7 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 						type="datetime-local"
 						value={
 							selectedVariant
-								? selectedVariant.sale_start
+								? (getFieldValue("sale_start") as string)
 								: newVariant.sale_start || ""
 						}
 						onChange={(e) =>
@@ -337,7 +481,9 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 										e.target.value
 								  )
 						}
-						className="block w-full px-3 py-2 border text-gray-700 border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+						className={`block w-full px-3 py-2 border text-gray-700 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white ${getFieldBorderClass(
+							"sale_start"
+						)}`}
 					/>
 				</div>
 
@@ -353,7 +499,7 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 						type="datetime-local"
 						value={
 							selectedVariant
-								? selectedVariant.sale_end
+								? (getFieldValue("sale_end") as string)
 								: newVariant.sale_end || ""
 						}
 						onChange={(e) =>
@@ -367,7 +513,9 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 										e.target.value
 								  )
 						}
-						className="block w-full px-3 py-2 border text-gray-700 border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+						className={`block w-full px-3 py-2 border text-gray-700 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white ${getFieldBorderClass(
+							"sale_end"
+						)}`}
 					/>
 				</div>
 
@@ -383,7 +531,7 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 						type="text"
 						value={
 							selectedVariant
-								? selectedVariant.media
+								? (getFieldValue("media") as string)
 								: newVariant.media || ""
 						}
 						onChange={(e) =>
@@ -398,31 +546,59 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 								  )
 						}
 						placeholder="Enter media URL"
-						className="block w-full px-3 py-2 border text-gray-700 border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+						className={`block w-full px-3 py-2 border text-gray-700 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white ${getFieldBorderClass(
+							"media"
+						)}`}
 					/>
 				</div>
 			</div>
 
 			{/* Action Buttons */}
-			<div className="flex justify-start mt-4">
-				{selectedVariant ? (
+			<div className="flex justify-between mt-4">
+				<div>
+					{selectedVariant ? (
+						<div className="flex space-x-2">
+							<button
+								onClick={saveVariant}
+								type="button"
+								disabled={!isUpdated}
+								className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-700 hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+							>
+								<Save className="h-4 w-4 mr-1" />
+								Update Variant
+							</button>
+							<button
+								onClick={addAsNew}
+								type="button"
+								disabled={!isUpdated}
+								className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-700 hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
+							>
+								<Plus className="h-4 w-4 mr-1" />
+								Add As New
+							</button>
+						</div>
+					) : (
+						<button
+							onClick={handleAddVariant}
+							type="button"
+							className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-700 hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+							disabled={!hasVariantInfo()}
+						>
+							<Plus className="h-4 w-4 mr-1" />
+							Add Variant
+						</button>
+					)}
+				</div>
+				{selectedVariant && (
 					<button
-						onClick={saveVariant}
 						type="button"
-						className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-700 hover:bg-blue-600"
+						onClick={() =>
+							onDeleteVariant(index, selectedVariant.variant_id)
+						}
+						className="inline-flex items-center px-3 py-1 border border-transparent rounded-md shadow-sm text-xs font-medium text-white bg-red-700 hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500"
 					>
-						<Save className="h-4 w-4 mr-1" />
-						Update Variant
-					</button>
-				) : (
-					<button
-						onClick={handleAddVariant}
-						type="button"
-						className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-700 hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
-						disabled={!hasVariantInfo()}
-					>
-						<Plus className="h-4 w-4 mr-1" />
-						Add Variant
+						<Trash2 className="h-4 w-4 mr-1" />
+						Delete Variant
 					</button>
 				)}
 			</div>

@@ -78,15 +78,13 @@ const ProductOptions: React.FC<ProductOptionsProps> = ({
 		updateOptions(updatedOptions);
 	};
 
-	const handleAddVariant = (index: number, variantValue: string) => {
-		if (!variantValue.trim()) return;
-
-		// Get any variant data that might have been entered in the form
-		const variantData = newVariantData[index] || {};
+	const handleAddVariant = (index: number, variantData: Partial<Variant>) => {
+		if (!variantData.variant_name || !variantData.variant_name.trim())
+			return;
 
 		const newVariant: Variant = {
 			variant_id: Date.now(),
-			variant_name: variantValue.trim(),
+			variant_name: variantData.variant_name.trim(),
 			sku: variantData.sku || "",
 			price:
 				typeof variantData.price === "number" ? variantData.price : 0,
@@ -115,6 +113,9 @@ const ProductOptions: React.FC<ProductOptionsProps> = ({
 			delete updated[index];
 			return updated;
 		});
+
+		// Clear the variant input after adding
+		setNewVariantInputs((prev) => ({ ...prev, [index]: "" }));
 
 		updateOptions(updatedOptions);
 	};
@@ -164,13 +165,17 @@ const ProductOptions: React.FC<ProductOptionsProps> = ({
 				? 0
 				: value;
 
-		setNewVariantData((prev) => ({
-			...prev,
-			[index]: {
-				...prev[index],
+		setNewVariantData((prev) => {
+			const updated = { ...prev };
+			if (!updated[index]) {
+				updated[index] = {};
+			}
+			updated[index] = {
+				...updated[index],
 				[field]: safeValue,
-			},
-		}));
+			};
+			return updated;
+		});
 	};
 
 	const handleVariantKeyPress = (
@@ -180,7 +185,7 @@ const ProductOptions: React.FC<ProductOptionsProps> = ({
 		if (e.key === "Enter") {
 			e.preventDefault();
 			const variant = newVariantInputs[index] || "";
-			handleAddVariant(index, variant);
+			handleAddVariant(index, { variant_name: variant });
 			setNewVariantInputs((prev) => ({ ...prev, [index]: "" }));
 		}
 	};
@@ -241,6 +246,30 @@ const ProductOptions: React.FC<ProductOptionsProps> = ({
 		}
 
 		return undefined;
+	};
+
+	// Handle deleting a specific variant from an option
+	const handleDeleteVariant = (optionIndex: number, variantId: number) => {
+		const updatedOptions = options.map((option, i) => {
+			if (i === optionIndex) {
+				return {
+					...option,
+					variants: option.variants.filter(
+						(variant) => variant.variant_id !== variantId
+					),
+				};
+			}
+			return option;
+		});
+
+		// Clear the selected variant if it was deleted
+		setSelectedVariants((prev) => {
+			const updated = { ...prev };
+			delete updated[optionIndex];
+			return updated;
+		});
+
+		updateOptions(updatedOptions);
 	};
 
 	return (
@@ -371,6 +400,7 @@ const ProductOptions: React.FC<ProductOptionsProps> = ({
 												: handleNewVariantDataChange
 										}
 										onAddVariant={handleAddVariant}
+										onDeleteVariant={handleDeleteVariant}
 									/>
 								)}
 
