@@ -1,5 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { Calendar, Tag, DollarSign, Percent, Image, Plus } from "lucide-react";
+import {
+	Calendar,
+	Tag,
+	DollarSign,
+	Percent,
+	Image,
+	Plus,
+	Save,
+} from "lucide-react";
 import { Variant } from "./ProductOptions";
 
 interface ProductOptionVariantProps {
@@ -50,6 +58,9 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 		media: "",
 	});
 
+	// State to track if variant has been updated
+	const [isUpdated, setIsUpdated] = useState(false);
+
 	// Update function for string fields
 	const handleNewVariantChangeString = (field: string, value: string) => {
 		setNewVariant((prev) => ({
@@ -84,6 +95,15 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 		}
 	}, [inputValue, selectedVariant]);
 
+	// Set isUpdated to true when a variant field change occurs
+	const handleVariantFieldChange = (
+		field: string,
+		value: string | number
+	) => {
+		setIsUpdated(true);
+		onVariantChange(index, field, value);
+	};
+
 	const handleAddVariant = () => {
 		if (newVariant.variant_name && newVariant.variant_name.trim()) {
 			// Use the entered variant data when adding it
@@ -99,6 +119,20 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 				sale_end: "",
 				media: "",
 			});
+		}
+	};
+
+	// Function to explicitly save all variant data
+	const saveVariant = () => {
+		if (selectedVariant) {
+			// Update every field to ensure all data is saved properly
+			Object.entries(selectedVariant).forEach(([key, value]) => {
+				if (key !== "variant_id") {
+					// Skip the ID field
+					onVariantChange(index, key, value);
+				}
+			});
+			setIsUpdated(false);
 		}
 	};
 
@@ -148,8 +182,7 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 						}
 						onChange={(e) =>
 							selectedVariant
-								? onVariantChange(
-										index,
+								? handleVariantFieldChange(
 										"variant_name",
 										e.target.value
 								  )
@@ -185,7 +218,10 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 						}
 						onChange={(e) =>
 							selectedVariant
-								? onVariantChange(index, "sku", e.target.value)
+								? handleVariantFieldChange(
+										"sku",
+										e.target.value
+								  )
 								: handleNewVariantChangeString(
 										"sku",
 										e.target.value
@@ -221,8 +257,7 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 									? null
 									: parseFloat(e.target.value);
 							if (selectedVariant) {
-								onVariantChange(
-									index,
+								handleVariantFieldChange(
 									"price",
 									value === null ? 0 : value
 								);
@@ -260,8 +295,7 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 									? null
 									: parseFloat(e.target.value);
 							if (selectedVariant) {
-								onVariantChange(
-									index,
+								handleVariantFieldChange(
 									"sale_price",
 									value === null ? 0 : value
 								);
@@ -294,8 +328,7 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 						}
 						onChange={(e) =>
 							selectedVariant
-								? onVariantChange(
-										index,
+								? handleVariantFieldChange(
 										"sale_start",
 										e.target.value
 								  )
@@ -325,8 +358,7 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 						}
 						onChange={(e) =>
 							selectedVariant
-								? onVariantChange(
-										index,
+								? handleVariantFieldChange(
 										"sale_end",
 										e.target.value
 								  )
@@ -356,8 +388,7 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 						}
 						onChange={(e) =>
 							selectedVariant
-								? onVariantChange(
-										index,
+								? handleVariantFieldChange(
 										"media",
 										e.target.value
 								  )
@@ -372,9 +403,18 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 				</div>
 			</div>
 
-			{/* Add Variant Button - Only show when not editing an existing variant */}
-			{!selectedVariant && (
-				<div className="flex justify-start mt-4">
+			{/* Action Buttons */}
+			<div className="flex justify-start mt-4">
+				{selectedVariant ? (
+					<button
+						onClick={saveVariant}
+						type="button"
+						className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-700 hover:bg-blue-600"
+					>
+						<Save className="h-4 w-4 mr-1" />
+						Update Variant
+					</button>
+				) : (
 					<button
 						onClick={handleAddVariant}
 						type="button"
@@ -384,8 +424,8 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 						<Plus className="h-4 w-4 mr-1" />
 						Add Variant
 					</button>
-				</div>
-			)}
+				)}
+			</div>
 		</div>
 	);
 };
