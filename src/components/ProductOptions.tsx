@@ -128,27 +128,19 @@ const ProductOptions: React.FC<ProductOptionsProps> = ({
 						<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
 							<OptionIcon className="h-5 w-5 text-gray-400" />
 						</div>
-						<select
+						<input
+							type="text"
 							id={`option-name-${index}`}
-							value={option.option_name || ""} // Ensure value is always a string
+							value={option.option_name || ""}
 							onChange={(e) =>
 								handleOptionNameChange(index, e.target.value)
 							}
+							placeholder="Enter Option Name"
 							className="block w-full pl-10 pr-3 py-2 border text-gray-700 border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-						>
-							<option value="">Select Option</option>
-							{initialOptions.map((opt) => (
-								<option
-									key={opt.option_id}
-									value={opt.option_name}
-								>
-									{opt.option_name}
-								</option>
-							))}
-						</select>
+						/>
 						<button
 							onClick={() => handleRemoveOption(index)}
-							className="absolute inset-y-0 right-0 pr-3 text-red-600 hover:text-red-800 text-sm"
+							className="absolute inset-y-0 right-0 bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 text-sm"
 							type="button"
 						>
 							Remove
@@ -166,7 +158,6 @@ const ProductOptions: React.FC<ProductOptionsProps> = ({
 							</label>
 							<select
 								id={`variant-select-${index}`}
-								multiple
 								className="block w-full mt-1 py-2 border text-gray-700 border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
 							>
 								{option.variants.map((variant) => (
@@ -175,18 +166,6 @@ const ProductOptions: React.FC<ProductOptionsProps> = ({
 										value={variant.variant_name}
 									>
 										{variant.variant_name}{" "}
-										<button
-											onClick={() =>
-												handleRemoveVariant(
-													index,
-													variant.variant_id
-												)
-											}
-											className="text-red-600 hover:text-red-800 ml-2"
-											type="button"
-										>
-											Remove
-										</button>
 									</option>
 								))}
 							</select>
