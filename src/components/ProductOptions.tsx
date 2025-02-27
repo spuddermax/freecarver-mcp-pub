@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { OptionIcon, Trash2, SlidersHorizontal } from "lucide-react";
+import { OptionIcon, Trash2, SlidersHorizontal, Star } from "lucide-react";
 import ProductOptionVariant from "./ProductOptionVariant";
 
 // Local interface definitions
@@ -39,6 +39,9 @@ const ProductOptions: React.FC<ProductOptionsProps> = ({
 	const [newVariantInputs, setNewVariantInputs] = useState<{
 		[key: number]: string;
 	}>({});
+	const [selectedVariants, setSelectedVariants] = useState<{
+		[key: number]: string;
+	}>({});
 
 	const updateOptions = (newOptions: Option[]) => {
 		setOptions(newOptions);
@@ -47,19 +50,30 @@ const ProductOptions: React.FC<ProductOptionsProps> = ({
 
 	const handleOptionNameChange = (index: number, newName: string) => {
 		const updatedOptions = options.map((option, i) =>
-			i === index ? { ...option, name: newName } : option
+			i === index ? { ...option, option_name: newName } : option
 		);
 		updateOptions(updatedOptions);
 	};
 
 	const handleAddVariant = (index: number, variantValue: string) => {
 		if (!variantValue.trim()) return;
+
+		const newVariant: Variant = {
+			variant_id: Date.now(),
+			variant_name: variantValue.trim(),
+			sku: "",
+			price: 0,
+			sale_price: 0,
+			sale_start: "",
+			sale_end: "",
+			media: "",
+		};
+
 		const updatedOptions = options.map((option, i) => {
 			if (i === index) {
 				return {
 					...option,
-					variant_name: variantValue.trim(),
-					sku: variantValue.trim(),
+					variants: [...option.variants, newVariant],
 				};
 			}
 			return option;
@@ -77,8 +91,9 @@ const ProductOptions: React.FC<ProductOptionsProps> = ({
 			if (i === optionIndex) {
 				return {
 					...option,
-					variant_name: "",
-					sku: "",
+					variants: option.variants.filter(
+						(_, vi) => vi !== variantIndex
+					),
 				};
 			}
 			return option;
@@ -102,6 +117,37 @@ const ProductOptions: React.FC<ProductOptionsProps> = ({
 		}
 	};
 
+	const handleVariantChange = (
+		optionIndex: number,
+		field: string,
+		value: string | number
+	) => {
+		const updatedOptions = options.map((option, i) => {
+			if (i === optionIndex) {
+				const variantName = selectedVariants[optionIndex];
+				const variantIndex = option.variants.findIndex(
+					(v) => v.variant_name === variantName
+				);
+
+				if (variantIndex >= 0) {
+					const updatedVariants = [...option.variants];
+					updatedVariants[variantIndex] = {
+						...updatedVariants[variantIndex],
+						[field]: value,
+					};
+
+					return {
+						...option,
+						variants: updatedVariants,
+					};
+				}
+			}
+			return option;
+		});
+
+		updateOptions(updatedOptions);
+	};
+
 	const handleAddOption = () => {
 		const newOption: Option = {
 			option_id: Date.now(),
@@ -109,6 +155,24 @@ const ProductOptions: React.FC<ProductOptionsProps> = ({
 			variants: [],
 		};
 		updateOptions([...options, newOption]);
+	};
+
+	const handleVariantSelect = (index: number, value: string) => {
+		setSelectedVariants((prev) => ({
+			...prev,
+			[index]: value,
+		}));
+	};
+
+	const getSelectedVariant = (optionIndex: number): Variant | undefined => {
+		const option = options[optionIndex];
+		const variantName = selectedVariants[optionIndex];
+
+		if (option && variantName) {
+			return option.variants.find((v) => v.variant_name === variantName);
+		}
+
+		return undefined;
 	};
 
 	return (
@@ -160,13 +224,21 @@ const ProductOptions: React.FC<ProductOptionsProps> = ({
 								<select
 									id={`variant-select-${index}`}
 									className="block w-full pl-10 pr-3 py-2 border text-gray-700 border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+									onChange={(e) =>
+										handleVariantSelect(
+											index,
+											e.target.value
+										)
+									}
+									value={selectedVariants[index] || ""}
 								>
+									<option value="">Select Variant...</option>
 									{option.variants.map((variant) => (
 										<option
 											key={variant.variant_id}
 											value={variant.variant_name}
 										>
-											{variant.variant_name} ($
+											★ {variant.variant_name} ($
 											{variant.price})
 										</option>
 									))}
@@ -175,13 +247,15 @@ const ProductOptions: React.FC<ProductOptionsProps> = ({
 						</>
 					)}
 
-					{/* New Variant Input */}
+					{/* Variant Editor */}
 					{option.option_name && (
 						<ProductOptionVariant
 							index={index}
 							inputValue={newVariantInputs[index] || ""}
 							onInputChange={handleNewVariantInputChange}
 							onKeyPress={handleVariantKeyPress}
+							selectedVariant={getSelectedVariant(index)}
+							onVariantChange={handleVariantChange}
 						/>
 					)}
 
@@ -192,7 +266,7 @@ const ProductOptions: React.FC<ProductOptionsProps> = ({
 							className="inline-flex items-center px-3 py-1 border border-transparent rounded-md shadow-sm text-xs font-medium text-white bg-red-700 hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500"
 						>
 							<Trash2 className="h-4 w-4 mr-1" />
-							Delete
+							Delete Option
 						</button>
 					</div>
 				</div>
