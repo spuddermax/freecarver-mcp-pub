@@ -74,7 +74,7 @@ export function ProductDetails({
 
 	return (
 		<div>
-			<fieldset className="border rounded-lg p-4 border-gray-200 dark:border-gray-700">
+			<fieldset className="border rounded-lg p-4 border-cyan-200 dark:border-cyan-700">
 				<legend className="text-2xl font-medium text-gray-700 dark:text-gray-300 px-2">
 					Product Details
 				</legend>

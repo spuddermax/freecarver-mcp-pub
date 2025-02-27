@@ -302,7 +302,7 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 	};
 
 	return (
-		<div className="p-4 border rounded-lg mt-4 bg-gray-50 dark:bg-gray-800">
+		<div className="border rounded-lg p-4 border-gray-200 dark:border-gray-700 mt-4">
 			<h3 className="text-md font-medium text-gray-700 dark:text-gray-300 mb-4">
 				{selectedVariant ? "Edit Variant" : "New Variant"}
 			</h3>
