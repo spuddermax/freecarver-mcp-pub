@@ -323,10 +323,6 @@ export default function ProductEdit() {
 											}))}
 											onChange={handleOptionsChange}
 										/>
-										<button onClick={handleSaveOptions}>
-											Save Options
-										</button>
-										{/* Product Media Section */}
 										<ProductMedia
 											mediaItems={mediaItems}
 											setMediaItems={setMediaItems}

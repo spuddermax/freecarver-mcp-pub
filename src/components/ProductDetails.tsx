@@ -75,7 +75,7 @@ export function ProductDetails({
 	return (
 		<div>
 			<fieldset className="border rounded-lg p-4 border-gray-200 dark:border-gray-700">
-				<legend className="text-lg font-medium text-gray-700 dark:text-gray-300 px-2">
+				<legend className="text-2xl font-medium text-gray-700 dark:text-gray-300 px-2">
 					Product Details
 				</legend>
 				<div className="space-y-4">
@@ -159,22 +159,22 @@ export function ProductDetails({
 						</div>
 					</div>
 				</div>
+				{/* Save Details Button */}
+				<div className="mt-4 flex justify-center">
+					<button
+						type="button"
+						onClick={handleSaveDetails}
+						disabled={detailsUnchanged}
+						className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+							detailsUnchanged
+								? "text-gray-500 bg-blue-900 cursor-not-allowed"
+								: "text-white bg-blue-600 hover:bg-blue-700"
+						}`}
+					>
+						Save Details
+					</button>
+				</div>
 			</fieldset>
-			{/* Save Details Button */}
-			<div className="mt-4 flex justify-center">
-				<button
-					type="button"
-					onClick={handleSaveDetails}
-					disabled={detailsUnchanged}
-					className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-						detailsUnchanged
-							? "text-gray-500 bg-blue-900 cursor-not-allowed"
-							: "text-white bg-blue-600 hover:bg-blue-700"
-					}`}
-				>
-					Save Details
-				</button>
-			</div>
 			{toast && (
 				<Toast
 					message={toast.message}

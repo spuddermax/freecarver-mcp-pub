@@ -177,13 +177,13 @@ const ProductOptions: React.FC<ProductOptionsProps> = ({
 
 	return (
 		<fieldset className="border rounded-lg p-4 border-gray-200 dark:border-gray-700">
-			<legend className="text-lg font-medium text-gray-700 dark:text-gray-300 px-2">
+			<legend className="text-2xl font-medium text-gray-700 dark:text-gray-300 px-2">
 				Product Options
 			</legend>
 			{options.map((option, index) => (
 				<div
 					key={option.option_id}
-					className="mb-4 border rounded-lg p-4 border-gray-200 dark:border-gray-700"
+					className="mb-10 border rounded-lg p-4 border-gray-200 dark:border-gray-700"
 				>
 					{/* Option Name Select */}
 					<label

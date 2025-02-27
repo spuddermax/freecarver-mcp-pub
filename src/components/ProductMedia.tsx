@@ -114,36 +114,37 @@ export function ProductMedia({
 
 	return (
 		<fieldset className="border rounded-lg p-4 border-gray-200 dark:border-gray-700 relative">
-			<div className="mb-4">
-				<label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-					Media Order (Drag and drop to reorder)
-				</label>
-				<ThumbnailBar
-					mediaItems={mediaItems}
-					setMediaItems={setMediaItems}
-				/>
-			</div>
-
-			<legend className="text-lg font-medium text-gray-700 dark:text-gray-300 px-2">
+			<legend className="text-2xl font-medium text-gray-700 dark:text-gray-300 px-2">
 				Product Media
 			</legend>
-			<div>
-				<label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-					Media Items
-				</label>
-				{/* Media items grid */}
-				<div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-1">
-					{mediaItems.map((item, index) => (
-						<ProductMediaItem
-							key={item.media_id}
-							mediaItem={item}
-							onUpdate={(key, value) =>
-								updateMediaItem(index, key, value)
-							}
-							onDelete={() => setDeleteIndex(index)}
-						/>
-					))}
+			{mediaItems.length > 0 && (
+				<div id="media-order" className="mb-4">
+					<label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+						Media Order (Drag and drop to reorder)
+					</label>
+					<ThumbnailBar
+						mediaItems={mediaItems}
+						setMediaItems={setMediaItems}
+					/>
+					<label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+						Media Items
+					</label>
+					{/* Media items grid */}
+					<div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-1">
+						{mediaItems.map((item, index) => (
+							<ProductMediaItem
+								key={item.media_id}
+								mediaItem={item}
+								onUpdate={(key, value) =>
+									updateMediaItem(index, key, value)
+								}
+								onDelete={() => setDeleteIndex(index)}
+							/>
+						))}
+					</div>
 				</div>
+			)}
+			<div>
 				{/* Buttons */}
 				<div className="mt-4 flex justify-center gap-4">
 					<button
