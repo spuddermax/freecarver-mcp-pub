@@ -180,98 +180,109 @@ const ProductOptions: React.FC<ProductOptionsProps> = ({
 			<legend className="text-2xl font-medium text-gray-700 dark:text-gray-300 px-2">
 				Product Options
 			</legend>
-			{options.map((option, index) => (
-				<div
-					key={option.option_id}
-					className="mb-10 border rounded-lg p-4 border-gray-200 dark:border-gray-700"
-				>
-					{/* Option Name Select */}
-					<label
-						htmlFor={`option-name-${index}`}
-						className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-					>
-						Option Name
-					</label>
-					<div className="mt-1 relative">
-						<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-							<OptionIcon className="h-5 w-5 text-gray-400" />
-						</div>
-						<input
-							type="text"
-							id={`option-name-${index}`}
-							value={option.option_name || ""}
-							onChange={(e) =>
-								handleOptionNameChange(index, e.target.value)
-							}
-							placeholder="Enter Option Name"
-							className="block w-full pl-10 pr-3 py-2 border text-gray-700 border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-						/>
-					</div>
-
-					{/* Variant Select */}
-					{option.option_name && (
-						<>
+			{options.length > 0 && (
+				<div id="options-container">
+					{options.map((option, index) => (
+						<div
+							key={option.option_id}
+							className="mb-10 border rounded-lg p-4 border-gray-200 dark:border-gray-700"
+						>
+							{/* Option Name Select */}
 							<label
-								htmlFor={`variant-select-${index}`}
-								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mt-2"
+								htmlFor={`option-name-${index}`}
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300"
 							>
-								Option Variants
+								Option Name
 							</label>
 							<div className="mt-1 relative">
 								<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-									<SlidersHorizontal className="h-5 w-5 text-gray-400" />
+									<OptionIcon className="h-5 w-5 text-gray-400" />
 								</div>
-								<select
-									id={`variant-select-${index}`}
-									className="block w-full pl-10 pr-3 py-2 border text-gray-700 border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+								<input
+									type="text"
+									id={`option-name-${index}`}
+									value={option.option_name || ""}
 									onChange={(e) =>
-										handleVariantSelect(
+										handleOptionNameChange(
 											index,
 											e.target.value
 										)
 									}
-									value={selectedVariants[index] || ""}
-								>
-									<option value="">Select Variant...</option>
-									{option.variants.map((variant) => (
-										<option
-											key={variant.variant_id}
-											value={variant.variant_name}
-										>
-											★ {variant.variant_name} ($
-											{variant.price})
-										</option>
-									))}
-								</select>
+									placeholder="Enter Option Name"
+									className="block w-full pl-10 pr-3 py-2 border text-gray-700 border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+								/>
 							</div>
-						</>
-					)}
 
-					{/* Variant Editor */}
-					{option.option_name && (
-						<ProductOptionVariant
-							index={index}
-							inputValue={newVariantInputs[index] || ""}
-							onInputChange={handleNewVariantInputChange}
-							onKeyPress={handleVariantKeyPress}
-							selectedVariant={getSelectedVariant(index)}
-							onVariantChange={handleVariantChange}
-						/>
-					)}
+							{/* Variant Select */}
+							{option.option_name && (
+								<>
+									<label
+										htmlFor={`variant-select-${index}`}
+										className="block text-sm font-medium text-gray-700 dark:text-gray-300 mt-2"
+									>
+										Option Variants
+									</label>
+									<div className="mt-1 relative">
+										<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+											<SlidersHorizontal className="h-5 w-5 text-gray-400" />
+										</div>
+										<select
+											id={`variant-select-${index}`}
+											className="block w-full pl-10 pr-3 py-2 border text-gray-700 border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+											onChange={(e) =>
+												handleVariantSelect(
+													index,
+													e.target.value
+												)
+											}
+											value={
+												selectedVariants[index] || ""
+											}
+										>
+											<option value="">
+												Select Variant...
+											</option>
+											{option.variants.map((variant) => (
+												<option
+													key={variant.variant_id}
+													value={variant.variant_name}
+												>
+													★ {variant.variant_name} ($
+													{variant.price})
+												</option>
+											))}
+										</select>
+									</div>
+								</>
+							)}
 
-					<div className="flex justify-end space-x-2 mt-4">
-						<button
-							type="button"
-							onClick={() => handleRemoveOption(index)}
-							className="inline-flex items-center px-3 py-1 border border-transparent rounded-md shadow-sm text-xs font-medium text-white bg-red-700 hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500"
-						>
-							<Trash2 className="h-4 w-4 mr-1" />
-							Delete Option
-						</button>
-					</div>
+							{/* Variant Editor */}
+							{option.option_name && (
+								<ProductOptionVariant
+									index={index}
+									inputValue={newVariantInputs[index] || ""}
+									onInputChange={handleNewVariantInputChange}
+									onKeyPress={handleVariantKeyPress}
+									selectedVariant={getSelectedVariant(index)}
+									onVariantChange={handleVariantChange}
+								/>
+							)}
+
+							<div className="flex justify-end space-x-2 mt-4">
+								<button
+									type="button"
+									onClick={() => handleRemoveOption(index)}
+									className="inline-flex items-center px-3 py-1 border border-transparent rounded-md shadow-sm text-xs font-medium text-white bg-red-700 hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500"
+								>
+									<Trash2 className="h-4 w-4 mr-1" />
+									Delete Option
+								</button>
+							</div>
+						</div>
+					))}
 				</div>
-			))}
-			<div className="flex justify-end space-x-2 mt-4">
+			)}
+			<div className="flex justify-start space-x-2 mt-0">
 				<button
 					onClick={handleAddOption}
 					type="button"
