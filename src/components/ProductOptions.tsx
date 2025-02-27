@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { OptionIcon, Trash2, SlidersHorizontal, Star } from "lucide-react";
+import { OptionIcon, Trash2, SlidersHorizontal } from "lucide-react";
+import ProductOptionVariant from "./ProductOptionVariant";
 
 // Local interface definitions
 export interface Option {
@@ -176,25 +177,12 @@ const ProductOptions: React.FC<ProductOptionsProps> = ({
 
 					{/* New Variant Input */}
 					{option.option_name && (
-						<div className="flex items-center space-x-2 mt-2">
-							<label className="block text-sm font-medium text-gray-700">
-								New Variant:
-							</label>
-							<input
-								type="text"
-								value={newVariantInputs[index] || ""}
-								onChange={(e) =>
-									handleNewVariantInputChange(
-										index,
-										e.target.value
-									)
-								}
-								onKeyPress={(e) =>
-									handleVariantKeyPress(e, index)
-								}
-								className="block w-full pl-10 pr-3 py-2 border text-gray-700 border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-							/>
-						</div>
+						<ProductOptionVariant
+							index={index}
+							inputValue={newVariantInputs[index] || ""}
+							onInputChange={handleNewVariantInputChange}
+							onKeyPress={handleVariantKeyPress}
+						/>
 					)}
 
 					<div className="flex justify-end space-x-2 mt-4">
