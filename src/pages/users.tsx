@@ -11,6 +11,7 @@ import Layout from "../components/Layout";
 import { Toast } from "../components/Toast";
 import { fetchAdminUsers } from "../lib/api_client/adminUsers";
 import { formatUser } from "../utils/formatters";
+import { LoadingModal } from "../components/LoadingModal";
 
 interface UserData {
 	id: string;
@@ -197,14 +198,10 @@ export default function Users() {
 								</thead>
 								<tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
 									{loading ? (
-										<tr>
-											<td
-												colSpan={5}
-												className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400"
-											>
-												Loading users...
-											</td>
-										</tr>
+										<LoadingModal
+											isOpen={loading}
+											message="Loading users..."
+										/>
 									) : filteredUsers.length === 0 ? (
 										<tr>
 											<td

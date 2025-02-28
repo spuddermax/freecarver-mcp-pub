@@ -10,6 +10,7 @@ import { UserDelete } from "../components/UserDelete";
 import { useParams, useNavigate } from "react-router-dom";
 import { fetchAdminUser } from "../lib/api_client/adminUsers";
 import { UserIcon } from "lucide-react";
+import { LoadingModal } from "../components/LoadingModal";
 
 export interface UserData {
 	id: string;
@@ -33,6 +34,9 @@ export interface UserData {
 export default function UserEdit() {
 	const { targetId } = useParams<{ targetId: string }>();
 	const navigate = useNavigate();
+
+	// State for loading
+	const [loading, setLoading] = useState<boolean>(true);
 
 	// State for messages (for success/error notifications)
 	const [message, setMessage] = useState<{
@@ -59,8 +63,10 @@ export default function UserEdit() {
 	// Load user details from the API when the component mounts or when the targetId changes.
 	useEffect(() => {
 		async function loadUser() {
+			setLoading(true);
 			if (!targetId) {
 				console.log("No UUID provided");
+				setLoading(false);
 				return;
 			}
 			try {
@@ -91,6 +97,8 @@ export default function UserEdit() {
 					type: "error",
 					text: "Failed to load user details.",
 				});
+			} finally {
+				setLoading(false);
 			}
 		}
 		loadUser();
@@ -120,77 +128,90 @@ export default function UserEdit() {
 				<div className="px-4 py-6 sm:px-0">
 					<div className="bg-white dark:bg-gray-800 shadow rounded-lg">
 						<div className="p-6 space-y-8">
-							<UserEmail
-								email={userData.email}
-								targetUserId={userData.id}
-								onEmailChange={(email) =>
-									setUserData((prev) => ({ ...prev, email }))
-								}
-								onMessage={setMessage}
-							/>
+							{loading ? (
+								<LoadingModal
+									isOpen={loading}
+									message="Loading user..."
+								/>
+							) : (
+								<>
+									<UserEmail
+										email={userData.email}
+										targetUserId={userData.id}
+										onEmailChange={(email) =>
+											setUserData((prev) => ({
+												...prev,
+												email,
+											}))
+										}
+										onMessage={setMessage}
+									/>
 
-							<UserPersonalDetails
-								User={{
-									id: userData.id,
-									firstName: userData.firstName,
-									lastName: userData.lastName,
-									phoneNumber: userData.phoneNumber,
-								}}
-								onMessage={setMessage}
-								onUserChange={(changes) =>
-									setUserData((prev) => ({
-										...prev,
-										...changes,
-									}))
-								}
-							/>
+									<UserPersonalDetails
+										User={{
+											id: userData.id,
+											firstName: userData.firstName,
+											lastName: userData.lastName,
+											phoneNumber: userData.phoneNumber,
+										}}
+										onMessage={setMessage}
+										onUserChange={(changes) =>
+											setUserData((prev) => ({
+												...prev,
+												...changes,
+											}))
+										}
+									/>
 
-							<UserPicture
-								avatarUrl={userData.avatarUrl}
-								onAvatarChange={(url) =>
-									setUserData((prev) => ({
-										...prev,
-										avatarUrl: url,
-									}))
-								}
-							/>
+									<UserPicture
+										avatarUrl={userData.avatarUrl}
+										onAvatarChange={(url) =>
+											setUserData((prev) => ({
+												...prev,
+												avatarUrl: url,
+											}))
+										}
+									/>
 
-							<UserPassword
-								targetUserId={userData.id}
-								onMessage={setMessage}
-								adminRole={userData.role}
-							/>
+									<UserPassword
+										targetUserId={userData.id}
+										onMessage={setMessage}
+										adminRole={userData.role}
+									/>
 
-							<UserPreferences
-								preferences={{
-									twoFactorEnabled: userData.twoFactorEnabled,
-									notificationsEnabled:
-										userData.notificationsEnabled,
-									notificationPreference:
-										userData.notificationPreference,
-									timezone: userData.timezone,
-								}}
-								onMessage={setMessage}
-								onPreferencesChange={(changes) =>
-									setUserData((prev) => ({
-										...prev,
-										...changes,
-									}))
-								}
-							/>
+									<UserPreferences
+										preferences={{
+											twoFactorEnabled:
+												userData.twoFactorEnabled,
+											notificationsEnabled:
+												userData.notificationsEnabled,
+											notificationPreference:
+												userData.notificationPreference,
+											timezone: userData.timezone,
+										}}
+										onMessage={setMessage}
+										onPreferencesChange={(changes) =>
+											setUserData((prev) => ({
+												...prev,
+												...changes,
+											}))
+										}
+									/>
 
-							<UserDelete
-								userId={userData.id}
-								onMessage={setMessage}
-								onDelete={() => {
-									// popup a confirmation toast
-									setMessage({
-										type: "info",
-										text: "User deleted successfully",
-									});
-									navigate("/users");
-								}}
-							/>
+									<UserDelete
+										userId={userData.id}
+										onMessage={setMessage}
+										onDelete={() => {
+											// popup a confirmation toast
+											setMessage({
+												type: "info",
+												text: "User deleted successfully",
+											});
+											navigate("/users");
+										}}
+									/>
+								</>
+							)}
 						</div>
 					</div>
 				</div>
