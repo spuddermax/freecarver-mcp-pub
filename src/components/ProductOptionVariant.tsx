@@ -142,8 +142,14 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 	) => {
 		if (!selectedVariant) return;
 
-		// Check if the value has actually changed
-		if (String(selectedVariant[field as keyof Variant]) !== String(value)) {
+		// Special handling for date fields - always mark them as modified
+		const isDateField = field === "sale_start" || field === "sale_end";
+
+		// Check if the value has actually changed, or if it's a date field (which we always want to track)
+		if (
+			isDateField ||
+			String(selectedVariant[field as keyof Variant]) !== String(value)
+		) {
 			// Store the change locally instead of sending to parent immediately
 			setEditedVariant((prev) => ({
 				...prev,
@@ -209,8 +215,39 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 	// Function to explicitly save all variant data
 	const saveVariant = () => {
 		if (selectedVariant && Object.keys(editedVariant).length > 0) {
+			// Create a formatted version of editedVariant for submission
+			// This ensures date fields are properly formatted
+			const formattedEditedVariant = { ...editedVariant };
+
+			// Special handling for date fields - ensure proper ISO format for dates
+			if ("sale_start" in editedVariant) {
+				const saleStartValue = editedVariant.sale_start as string;
+				if (saleStartValue && saleStartValue.trim() !== "") {
+					// Format the date in ISO format
+					try {
+						const date = new Date(saleStartValue);
+						formattedEditedVariant.sale_start = date.toISOString();
+					} catch (e) {
+						console.error("Error formatting sale_start date:", e);
+					}
+				}
+			}
+
+			if ("sale_end" in editedVariant) {
+				const saleEndValue = editedVariant.sale_end as string;
+				if (saleEndValue && saleEndValue.trim() !== "") {
+					// Format the date in ISO format
+					try {
+						const date = new Date(saleEndValue);
+						formattedEditedVariant.sale_end = date.toISOString();
+					} catch (e) {
+						console.error("Error formatting sale_end date:", e);
+					}
+				}
+			}
+
 			// Apply all edited fields to the parent component
-			Object.entries(editedVariant).forEach(([field, value]) => {
+			Object.entries(formattedEditedVariant).forEach(([field, value]) => {
 				onVariantChange(index, field, value);
 			});
 
@@ -489,17 +526,56 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 									? (getFieldValue("sale_start") as string)
 									: newVariant.sale_start || ""
 							}
-							onChange={(e) =>
-								selectedVariant
-									? handleVariantFieldChange(
-											"sale_start",
-											e.target.value
-									  )
-									: handleNewVariantChangeString(
-											"sale_start",
-											e.target.value
-									  )
-							}
+							onChange={(e) => {
+								const value = e.target.value;
+								console.log("==== SALE START DATE CHANGE ====");
+								console.log(
+									"Current editedVariant:",
+									editedVariant
+								);
+								console.log(
+									"Date input changed for sale_start:",
+									value
+								);
+
+								if (selectedVariant) {
+									// ALWAYS track the date field change, even if empty
+									// Force the field to be considered changed
+									console.log(
+										"Adding sale_start to editedVariant:",
+										value
+									);
+
+									// Directly update the editedVariant state
+									setEditedVariant((prev) => {
+										const updated = {
+											...prev,
+											sale_start: value,
+										};
+										console.log(
+											"Updated editedVariant:",
+											updated
+										);
+										return updated;
+									});
+
+									// Mark the field as modified
+									setModifiedFields((prev) => {
+										const updated = new Set(prev);
+										updated.add("sale_start");
+										return updated;
+									});
+
+									// Set the component as updated
+									setIsUpdated(true);
+								} else {
+									handleNewVariantChangeString(
+										"sale_start",
+										value
+									);
+								}
+								console.log("============================");
+							}}
 							className={`block w-full pl-10 pr-3 py-2 border text-gray-700 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white ${getFieldBorderClass(
 								"sale_start"
 							)}`}
@@ -523,17 +599,56 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 									? (getFieldValue("sale_end") as string)
 									: newVariant.sale_end || ""
 							}
-							onChange={(e) =>
-								selectedVariant
-									? handleVariantFieldChange(
-											"sale_end",
-											e.target.value
-									  )
-									: handleNewVariantChangeString(
-											"sale_end",
-											e.target.value
-									  )
-							}
+							onChange={(e) => {
+								const value = e.target.value;
+								console.log("==== SALE END DATE CHANGE ====");
+								console.log(
+									"Current editedVariant:",
+									editedVariant
+								);
+								console.log(
+									"Date input changed for sale_end:",
+									value
+								);
+
+								if (selectedVariant) {
+									// ALWAYS track the date field change, even if empty
+									// Force the field to be considered changed
+									console.log(
+										"Adding sale_end to editedVariant:",
+										value
+									);
+
+									// Directly update the editedVariant state
+									setEditedVariant((prev) => {
+										const updated = {
+											...prev,
+											sale_end: value,
+										};
+										console.log(
+											"Updated editedVariant:",
+											updated
+										);
+										return updated;
+									});
+
+									// Mark the field as modified
+									setModifiedFields((prev) => {
+										const updated = new Set(prev);
+										updated.add("sale_end");
+										return updated;
+									});
+
+									// Set the component as updated
+									setIsUpdated(true);
+								} else {
+									handleNewVariantChangeString(
+										"sale_end",
+										value
+									);
+								}
+								console.log("============================");
+							}}
 							className={`block w-full pl-10 pr-3 py-2 border text-gray-700 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white ${getFieldBorderClass(
 								"sale_end"
 							)}`}

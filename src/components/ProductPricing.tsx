@@ -4,23 +4,42 @@ import { ChangeEvent, useState, useEffect } from "react";
 import { DollarSign, Tag, Calendar, Save } from "lucide-react";
 import { updateProduct } from "../lib/api_client/products";
 import Toast from "../components/Toast";
+import { Product } from "../types/Interfaces";
+
 export interface ProductPricingProps {
-	productId: string;
-	price: number;
-	salePrice?: number;
-	saleStart?: string;
-	saleEnd?: string;
+	product: Product;
 	onInputChange: (e: ChangeEvent<HTMLInputElement>) => void;
 }
 
 export function ProductPricing({
-	productId,
-	price,
-	salePrice,
-	saleStart,
-	saleEnd,
+	product,
 	onInputChange,
 }: ProductPricingProps) {
+	// Extract the relevant fields from the product
+	const {
+		id: productId,
+		price: basePrice,
+		sale_price: baseSalePrice,
+		sale_start: baseSaleStart,
+		sale_end: baseSaleEnd,
+	} = product;
+
+	console.log("baseSaleEnd:", baseSaleEnd);
+
+	// Convert to the expected types for the component
+	const price = basePrice ?? 0;
+	const salePrice = baseSalePrice ?? undefined;
+	const saleStart = baseSaleStart
+		? baseSaleStart instanceof Date
+			? baseSaleStart.toISOString()
+			: String(baseSaleStart)
+		: undefined;
+	const saleEnd = baseSaleEnd
+		? baseSaleEnd instanceof Date
+			? baseSaleEnd.toISOString()
+			: String(baseSaleEnd)
+		: undefined;
+
 	// Store the original pricing values when the component first mounts.
 	const [originalPricing, setOriginalPricing] = useState({
 		price,
@@ -59,7 +78,7 @@ export function ProductPricing({
 				sale_start?: string;
 				sale_end?: string;
 			} = {
-				id: productId,
+				id: productId.toString(),
 				price,
 			};
 
@@ -164,7 +183,7 @@ export function ProductPricing({
 						htmlFor="saleEnd"
 						className="block text-sm font-medium text-gray-700 dark:text-gray-300"
 					>
-						Sale End (optional)
+						Sale End (optional) {saleEnd}
 					</label>
 					<div className="mt-1 relative">
 						<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">

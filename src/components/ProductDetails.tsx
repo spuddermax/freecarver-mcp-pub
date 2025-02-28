@@ -5,25 +5,22 @@ import { Box, Barcode, FileText, Eye } from "lucide-react";
 import { updateProduct } from "../lib/api_client/products";
 import { Modal } from "../components/Modal";
 import Toast from "../components/Toast";
+import { Product } from "../types/Interfaces";
 
 export interface ProductDetailsProps {
-	productId: string;
-	productSKU: string;
-	name: string;
-	description: string;
+	product: Product;
 	onInputChange: (
 		e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
 	) => void;
-	// Optionally, add a callback prop to show a toast if needed.
 }
 
 export function ProductDetails({
-	productId,
-	productSKU,
-	name,
-	description,
+	product,
 	onInputChange,
 }: ProductDetailsProps) {
+	// Extract the relevant fields from the product
+	const { id: productId, sku: productSKU, name, description } = product;
+
 	// Store the original details on mount.
 	const [originalDetails, setOriginalDetails] = useState({
 		productSKU,
@@ -53,7 +50,7 @@ export function ProductDetails({
 		try {
 			// Call your API to update the product details.
 			await updateProduct({
-				id: productId,
+				id: productId.toString(),
 				name: name,
 				sku: productSKU,
 				description: description,

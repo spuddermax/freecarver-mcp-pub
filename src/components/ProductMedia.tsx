@@ -8,6 +8,7 @@ import { ProductMediaJsonEditor } from "./ProductMediaJsonEditor";
 import { updateProduct } from "../lib/api_client/products";
 import Toast from "../components/Toast";
 import { ThumbnailBar } from "./ProductMediaThumbnailBar";
+import { Product } from "../types/Interfaces";
 
 export interface ProductMediaItem {
 	media_id: string;
@@ -17,16 +18,19 @@ export interface ProductMediaItem {
 }
 
 export interface ProductMediaProps {
+	product: Product;
 	mediaItems: ProductMediaItem[];
 	setMediaItems: React.Dispatch<React.SetStateAction<ProductMediaItem[]>>;
-	productId: string;
 }
 
 export function ProductMedia({
+	product,
 	mediaItems,
 	setMediaItems,
-	productId,
 }: ProductMediaProps) {
+	// Extract the product ID
+	const productId = product.id.toString();
+
 	const [jsonPreviewOpen, setJsonPreviewOpen] = React.useState(false);
 	const [deleteIndex, setDeleteIndex] = React.useState<number | null>(null);
 	const [jsonText, setJsonText] = React.useState(

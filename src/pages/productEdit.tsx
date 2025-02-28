@@ -13,12 +13,10 @@ import {
 import { formatProduct } from "../utils/formatters";
 import { ProductDetails } from "../components/ProductDetails";
 import { ProductPricing } from "../components/ProductPricing";
-import { ProductMedia } from "../components/ProductMedia";
-import { ProductMediaItem } from "../components/ProductMedia";
+import { ProductMedia, ProductMediaItem } from "../components/ProductMedia";
 import Footer from "../components/Footer";
 import ProductOptions, { Option } from "../components/ProductOptions";
-import { ProductOption } from "../types/Interfaces";
-import { Product } from "../types/Interfaces";
+import { Product, ProductOption } from "../types/Interfaces";
 
 /**
  * Edit the product details.
@@ -246,78 +244,21 @@ export default function ProductEdit() {
 										</div>
 
 										<ProductDetails
-											productId={targetId ?? ""}
-											productSKU={productData.sku}
-											name={productData.name}
-											description={
-												productData.description
-											}
+											product={productData}
 											onInputChange={handleInputChange}
 										/>
 										<ProductPricing
-											productId={targetId ?? ""}
-											price={productData.price ?? 0}
-											salePrice={
-												productData.sale_price ?? 0
-											}
-											saleStart={
-												productData.sale_start
-													? productData.sale_start instanceof
-													  Date
-														? productData.sale_start.toISOString()
-														: String(
-																productData.sale_start
-														  )
-													: undefined
-											}
-											saleEnd={
-												productData.sale_end
-													? productData.sale_end instanceof
-													  Date
-														? productData.sale_end.toISOString()
-														: String(
-																productData.sale_end
-														  )
-													: undefined
-											}
+											product={productData}
 											onInputChange={handleInputChange}
 										/>
 										<ProductOptions
-											initialOptions={(
-												productData.options || []
-											).map((opt: ProductOption) => ({
-												option_id: opt.option_id,
-												option_name: opt.option_name,
-												variants:
-													opt.variants?.map((v) => ({
-														variant_id:
-															v.variant_id,
-														variant_name:
-															v.variant_name,
-														sku: v.sku,
-														price: v.price,
-														sale_price:
-															v.sale_price,
-														sale_start: v.sale_start
-															? v.sale_start.toISOString()
-															: "",
-														sale_end: v.sale_end
-															? v.sale_end.toISOString()
-															: "",
-														media: "",
-														created_at:
-															v.created_at,
-														updated_at:
-															v.updated_at,
-													})) || [],
-											}))}
+											product={productData}
 											onChange={handleOptionsChange}
-											productId={targetId ?? ""}
 										/>
 										<ProductMedia
+											product={productData}
 											mediaItems={mediaItems}
 											setMediaItems={setMediaItems}
-											productId={targetId ?? ""}
 										/>
 										<div className="flex justify-end space-x-4">
 											<button

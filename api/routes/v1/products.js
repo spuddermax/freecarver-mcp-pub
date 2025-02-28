@@ -68,6 +68,7 @@ router.get(
 				},
 				"Products retrieved successfully"
 			);
+			console.log(result.rows[0]);
 		} catch (error) {
 			logger.error("Error retrieving products list.", {
 				error: error.message,
@@ -503,12 +504,14 @@ router.put(
 						// Update or insert variants
 						for (const variant of option.variants) {
 							// Convert empty strings to null for date fields
-							const sale_start = variant.sale_start
-								? variant.sale_start
-								: null;
-							const sale_end = variant.sale_end
-								? variant.sale_end
-								: null;
+							const sale_start =
+								variant.sale_start === ""
+									? null
+									: variant.sale_start;
+							const sale_end =
+								variant.sale_end === ""
+									? null
+									: variant.sale_end;
 
 							// Convert empty string to valid JSON for media field
 							const media =

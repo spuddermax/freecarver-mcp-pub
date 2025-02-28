@@ -14,6 +14,7 @@ import { ProductOptionsJsonEditor } from "./ProductOptionsJsonEditor";
 import { Modal } from "../components/Modal";
 import Toast from "../components/Toast";
 import { updateProductOptionsAndVariants } from "../lib/api_client/productOptions";
+import { Product, ProductOption } from "../types/Interfaces";
 
 // Local interface definitions
 export interface Option {
@@ -39,17 +40,42 @@ export interface Variant {
 }
 
 export interface ProductOptionsProps {
-	initialOptions?: Option[];
+	product: Product;
 	onChange: (options: Option[]) => void;
-	productId?: string;
 }
 
 const ProductOptions: React.FC<ProductOptionsProps> = ({
-	initialOptions = [],
+	product,
 	onChange,
-	productId,
 }) => {
-	//console.log(initialOptions);
+	// Extract product ID and convert options to the local Option format
+	const productId = product.id.toString();
+	console.log("product:", product);
+	const initialOptions = (product.options || []).map(
+		(opt: ProductOption) => ({
+			option_id: opt.option_id,
+			option_name: opt.option_name,
+			variants:
+				opt.variants?.map((v) => ({
+					variant_id: v.variant_id,
+					variant_name: v.variant_name,
+					sku: v.sku,
+					price: v.price,
+					sale_price: v.sale_price,
+					sale_start: v.sale_start ? String(v.sale_start) : "",
+					sale_end: v.sale_end ? String(v.sale_end) : "",
+					// Convert media to string (our Variant interface expects a string)
+					media: Array.isArray(v.media)
+						? JSON.stringify(v.media)
+						: typeof v.media === "object" && v.media !== null
+						? JSON.stringify(v.media)
+						: v.media
+						? String(v.media)
+						: "",
+				})) || [],
+		})
+	);
+
 	const [options, setOptions] = useState<Option[]>(initialOptions);
 	const [newVariantInputs, setNewVariantInputs] = useState<{
 		[key: number]: string;
@@ -275,29 +301,74 @@ const ProductOptions: React.FC<ProductOptionsProps> = ({
 		field: string,
 		value: string | number
 	) => {
+		console.log(
+			`🔄 Variant change received: field=${field}, value=${value}, type=${typeof value}`
+		);
+
 		const updatedOptions = options.map((option, i) => {
 			if (i === optionIndex) {
 				const variantName = selectedVariants[optionIndex];
+
+				console.log(
+					`Finding variant with name "${variantName}" in option ${optionIndex}`
+				);
+
 				const variantIndex = option.variants.findIndex(
 					(v) => v.variant_name === variantName
 				);
 
 				if (variantIndex >= 0) {
 					const updatedVariants = [...option.variants];
+
+					// Enhanced logging for date fields
+					const isDateField =
+						field === "sale_start" || field === "sale_end";
+					if (isDateField) {
+						console.log(`📅 Updating date field: ${field}`);
+						console.log(
+							`  Previous value: "${
+								updatedVariants[variantIndex][
+									field as keyof Variant
+								]
+							}"`
+						);
+						console.log(`  New value: "${value}"`);
+					} else {
+						// Log before update for non-date fields
+						console.log(
+							`Updating variant[${variantIndex}].${field} from`,
+							updatedVariants[variantIndex][
+								field as keyof Variant
+							],
+							"to",
+							value
+						);
+					}
+
+					// Create a new variant object with the updated field
 					updatedVariants[variantIndex] = {
 						...updatedVariants[variantIndex],
 						[field]: value,
 					};
 
+					console.log(
+						`Updated variant ${variantIndex} in option ${optionIndex}`
+					);
+
 					return {
 						...option,
 						variants: updatedVariants,
 					};
+				} else {
+					console.warn(
+						`⚠️ Could not find variant with name "${variantName}" in option ${optionIndex}`
+					);
 				}
 			}
 			return option;
 		});
 
+		console.log("Calling updateOptions with updated variant data");
 		updateOptions(updatedOptions);
 	};
 
