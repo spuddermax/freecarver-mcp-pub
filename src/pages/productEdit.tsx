@@ -265,8 +265,20 @@ export default function ProductEdit() {
 												type="button"
 												onClick={handleDelete}
 												className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-700 hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+												disabled={isSaving}
 											>
-												Delete Product
+												{isSaving
+													? "Deleting..."
+													: "Delete Product"}
+											</button>
+											<button
+												type="submit"
+												className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-700 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+												disabled={isSaving}
+											>
+												{isSaving
+													? "Saving..."
+													: "Save Changes"}
 											</button>
 										</div>
 									</form>

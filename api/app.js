@@ -51,6 +51,15 @@ app.use(responseFormatter);
 // Apply the rate limiter to API calls starting with '/v1'
 app.use("/v1", apiLimiter);
 
+// Add configurable response delay for testing UI
+const responseDelay = parseInt(process.env.RESPONSE_DELAY_MS || "0");
+if (responseDelay > 0) {
+	app.use((req, res, next) => {
+		req.log("info", `Adding artificial delay of ${responseDelay}ms`);
+		setTimeout(next, responseDelay);
+	});
+}
+
 // If your API is behind a proxy, enable trust proxy for correct IP extraction.
 //app.set("trust proxy", true);
 
