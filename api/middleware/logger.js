@@ -63,7 +63,7 @@ const logFormat = winston.format.printf((info) => {
 
 	delete info._toStringify; // Remove the helper property
 
-	return `${ip} ${user} [${info.timestamp}] "${method} ${url}" ${status} - "${agent}" ${json}`;
+	return `${ip} ${user} [${info.timestamp}] "${method} ${url}" ${status} - "${agent}" ${json}\n`;
 });
 
 export const logger = winston.createLogger({

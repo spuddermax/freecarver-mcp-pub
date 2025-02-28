@@ -73,6 +73,43 @@ export async function fetchAdminUsers() {
 }
 
 /**
+ * Upload the admin user's avatar to Cloudflare Images with R2 storage
+ * @param file - The file to upload
+ * @param currentUrl - The current url of the avatar
+ * @returns The response from the Cloudflare avatar upload endpoint
+ */
+export async function uploadAvatarToCloudflare(
+	file: File,
+	currentUrl?: string
+): Promise<{ publicUrl: string }> {
+	const formData = new FormData();
+	formData.append("avatar", file);
+	if (currentUrl) {
+		formData.append("oldAvatarUrl", currentUrl);
+	}
+
+	// Add a field to indicate we want to use Cloudflare
+	formData.append("storage", "cloudflare");
+
+	const response = await fetch(
+		import.meta.env.VITE_API_URL + "/api/admin/cloudflare-avatar",
+		{
+			method: "POST",
+			headers: {
+				Authorization: `Bearer ${localStorage.getItem("jwtToken")}`,
+			},
+			body: formData,
+		}
+	);
+
+	if (!response.ok) {
+		const errorData = await response.json();
+		throw new Error(errorData.error || "Cloudflare avatar upload failed");
+	}
+	return response.json();
+}
+
+/**
  * Upload the admin user's avatar
  * @param file - The file to upload
  * @param currentUrl - The current url of the avatar

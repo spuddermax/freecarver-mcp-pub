@@ -19,6 +19,7 @@ import customersRoutes from "./routes/v1/customers.js";
 import ordersRoutes from "./routes/v1/orders.js";
 import inventoryRoutes from "./routes/v1/inventory.js";
 import shipmentsRoutes from "./routes/v1/shipments.js";
+import adminAvatarRoutes from "./routes/v1/adminAvatar.js";
 import responseFormatter from "./middleware/responseFormatter.js";
 
 dotenv.config();
@@ -84,6 +85,7 @@ app.use("/v1/customers", customersRoutes);
 app.use("/v1/orders", ordersRoutes);
 app.use("/v1/inventory", inventoryRoutes);
 app.use("/v1/shipments", shipmentsRoutes);
+app.use("/api/admin", adminAvatarRoutes);
 
 // Base health-check route
 app.get("/", (req, res) => {
