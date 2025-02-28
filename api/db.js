@@ -12,6 +12,22 @@ if (!process.env.DATABASE_URL) {
 }
 
 /**
+ * Custom JSON stringify function that preserves newlines and tabs
+ * @param {any} obj - Object to stringify
+ * @returns {string} - Stringified object with preserved newlines and tabs
+ */
+const customStringify = (obj) => {
+	return JSON.stringify(obj, (key, value) => {
+		// If this is a string with newlines or tabs, ensure they're preserved
+		if (typeof value === "string") {
+			// Convert literal \n and \t to actual newlines and tabs
+			return value.replace(/\\n/g, "\n").replace(/\\t/g, "\t");
+		}
+		return value;
+	});
+};
+
+/**
  * Create a new PostgreSQL connection pool.
  * Using a pool allows for efficient query handling and connection reuse.
  */
@@ -45,8 +61,11 @@ pool.on("error", (err) => {
 const formatQuery = (text, params) => {
 	if (!params || params.length === 0) return text;
 
+	// Ensure actual newlines and tabs are preserved
+	let queryText = text;
+
 	// Create a simple representation of the query with parameters
-	let formattedQuery = text;
+	let formattedQuery = queryText;
 	try {
 		// Replace $1, $2, etc. with actual parameter values
 		params.forEach((param, index) => {
@@ -113,6 +132,8 @@ const query = async (text, params) => {
 			params: params,
 			formatted_query: formatQuery(text, params),
 			ip: clientIp,
+			// Use custom stringify for objects with SQL that might contain newlines/tabs
+			_toStringify: customStringify,
 		});
 
 		// Execute the query
@@ -144,6 +165,7 @@ const query = async (text, params) => {
 					: [],
 			rows_count: result.rows ? result.rows.length : 0,
 			ip: clientIp,
+			_toStringify: customStringify,
 		});
 
 		return result;
@@ -172,6 +194,7 @@ const query = async (text, params) => {
 			},
 			duration,
 			ip: clientIp,
+			_toStringify: customStringify,
 		});
 
 		throw error;

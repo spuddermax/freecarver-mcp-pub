@@ -23,7 +23,46 @@ const logFormat = winston.format.printf((info) => {
 	const url = info.req?.url || "-";
 	const status = info.res?.statusCode || "-";
 	const agent = info.req?.headers?.["user-agent"] || "-";
-	const json = JSON.stringify(info);
+
+	// Process message to interpret escape sequences
+	let message = info.message;
+	if (typeof message === "string") {
+		// Convert literal \n and \t to actual newlines and tabs
+		message = message.replace(/\\n/g, "\n").replace(/\\t/g, "\t");
+	}
+	info.message = message;
+
+	// Process fields in objects that might contain formatted SQL
+	if (info.query) {
+		info.query =
+			typeof info.query === "string"
+				? info.query.replace(/\\n/g, "\n").replace(/\\t/g, "\t")
+				: info.query;
+	}
+
+	if (info.formatted_query) {
+		info.formatted_query =
+			typeof info.formatted_query === "string"
+				? info.formatted_query
+						.replace(/\\n/g, "\n")
+						.replace(/\\t/g, "\t")
+				: info.formatted_query;
+	}
+
+	// Use custom stringify function if provided
+	const json = info._toStringify
+		? info._toStringify(info)
+		: JSON.stringify(info, (key, value) => {
+				// If this is a string with newlines or tabs, ensure they're preserved
+				if (typeof value === "string") {
+					// Convert literal \n and \t to actual newlines and tabs
+					return value.replace(/\\n/g, "\n").replace(/\\t/g, "\t");
+				}
+				return value;
+		  });
+
+	delete info._toStringify; // Remove the helper property
+
 	return `${ip} ${user} [${info.timestamp}] "${method} ${url}" ${status} - "${agent}" ${json}`;
 });
 

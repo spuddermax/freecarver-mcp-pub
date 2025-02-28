@@ -386,6 +386,14 @@ router.put(
 			const { id } = req.params;
 			const { options } = req.body;
 
+			// Add debug logging
+			logger.debug("Updating product options", {
+				productId: id,
+				productIdType: typeof id,
+				numericProductId: Number(id),
+				options: JSON.stringify(options),
+			});
+
 			// Verify the product exists
 			const productResult = await query(
 				"SELECT id FROM products WHERE id = $1",
@@ -406,18 +414,61 @@ router.put(
 				// Process each option
 				for (const option of options) {
 					if (option.option_id) {
-						// Update existing option
-						await query(
-							"UPDATE product_options SET option_name = $1, updated_at = NOW() WHERE id = $2 AND product_id = $3",
-							[option.option_name, option.option_id, id]
+						// Check if the option exists first
+						const productId = Number(id);
+						const optionExists = await query(
+							"SELECT id FROM product_options WHERE id = $1 AND product_id = $2",
+							[option.option_id, productId]
 						);
+
+						if (optionExists.rows.length > 0) {
+							// Update existing option
+							await query(
+								"UPDATE product_options SET option_name = $1, updated_at = NOW() WHERE id = $2 AND product_id = $3",
+								[
+									option.option_name,
+									option.option_id,
+									productId,
+								]
+							);
+						} else {
+							// Option ID was provided but doesn't exist, so insert it with the provided ID
+							try {
+								await query(
+									"INSERT INTO product_options (id, product_id, option_name) VALUES ($1, $2, $3)",
+									[
+										option.option_id,
+										productId,
+										option.option_name,
+									]
+								);
+								logger.info(
+									`Created new product option with ID ${option.option_id} for product ${productId}`
+								);
+							} catch (error) {
+								logger.error(
+									`Failed to insert product option with ID ${option.option_id}`,
+									{
+										error: error.message,
+										productId,
+										optionId: option.option_id,
+										optionName: option.option_name,
+									}
+								);
+								throw error;
+							}
+						}
 					} else {
-						// Create new option
+						// Create new option with generated ID
+						const productId = Number(id);
 						const newOptionResult = await query(
 							"INSERT INTO product_options (product_id, option_name) VALUES ($1, $2) RETURNING id",
-							[id, option.option_name]
+							[productId, option.option_name]
 						);
 						option.option_id = newOptionResult.rows[0].id;
+						logger.info(
+							`Created new product option with ID ${option.option_id} for product ${productId}`
+						);
 					}
 
 					// Process variants for this option
@@ -425,14 +476,16 @@ router.put(
 						// Get existing variants for this option
 						const existingVariantsResult = await query(
 							"SELECT id FROM product_option_variants WHERE option_id = $1",
-							[option.option_id]
+							[Number(option.option_id)]
 						);
 
 						const existingVariantIds =
-							existingVariantsResult.rows.map((row) => row.id);
+							existingVariantsResult.rows.map((row) =>
+								Number(row.id)
+							);
 						const providedVariantIds = option.variants
 							.filter((v) => v.variant_id)
-							.map((v) => v.variant_id);
+							.map((v) => Number(v.variant_id));
 
 						// Find variants to delete (those in existingVariantIds but not in providedVariantIds)
 						const variantsToDelete = existingVariantIds.filter(
@@ -461,38 +514,99 @@ router.put(
 							const media =
 								variant.media === "" ? null : variant.media;
 
+							// Ensure price values are numbers
+							const price =
+								variant.price !== undefined
+									? Number(variant.price)
+									: 0;
+							const salePrice =
+								variant.sale_price !== undefined
+									? Number(variant.sale_price)
+									: 0;
+							// Ensure IDs are treated as numbers
+							const variantId = variant.variant_id
+								? Number(variant.variant_id)
+								: null;
+							const optionId = Number(option.option_id);
+							const productId = Number(id);
+
 							if (variant.variant_id) {
-								// Update existing variant
-								await query(
-									`UPDATE product_option_variants 
-								SET name = $1, sku = $2, price = $3, sale_price = $4, 
-								sale_start = $5, sale_end = $6, media = $7, updated_at = NOW()
-								WHERE id = $8 AND option_id = $9`,
-									[
-										variant.variant_name,
-										variant.sku,
-										variant.price,
-										variant.sale_price,
-										sale_start,
-										sale_end,
-										media,
-										variant.variant_id,
-										option.option_id,
-									]
+								// Check if variant exists
+								const variantExists = await query(
+									"SELECT id FROM product_option_variants WHERE id = $1",
+									[variantId]
 								);
+
+								if (variantExists.rows.length > 0) {
+									// Update existing variant
+									await query(
+										`UPDATE product_option_variants 
+										SET name = $1, sku = $2, price = $3, sale_price = $4, 
+										sale_start = $5, sale_end = $6, media = $7, updated_at = NOW()
+										WHERE id = $8 AND option_id = $9`,
+										[
+											variant.variant_name,
+											variant.sku,
+											price,
+											salePrice,
+											sale_start,
+											sale_end,
+											media,
+											variantId,
+											optionId,
+										]
+									);
+								} else {
+									// Variant ID was provided but doesn't exist, so insert it with the provided ID
+									try {
+										await query(
+											`INSERT INTO product_option_variants 
+											(id, option_id, product_id, name, sku, price, sale_price, sale_start, sale_end, media)
+											VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+											[
+												variantId,
+												optionId,
+												productId,
+												variant.variant_name,
+												variant.sku,
+												price,
+												salePrice,
+												sale_start,
+												sale_end,
+												media,
+											]
+										);
+										logger.info(
+											`Created new product option variant with ID ${variantId}`
+										);
+									} catch (error) {
+										logger.error(
+											`Failed to insert product option variant with ID ${variantId}`,
+											{
+												error: error.message,
+												productId,
+												optionId,
+												variantId,
+												variantName:
+													variant.variant_name,
+											}
+										);
+										throw error;
+									}
+								}
 							} else {
-								// Create new variant
+								// Create new variant with generated ID
 								await query(
 									`INSERT INTO product_option_variants 
-								(option_id, product_id, name, sku, price, sale_price, sale_start, sale_end, media)
-								VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+									(option_id, product_id, name, sku, price, sale_price, sale_start, sale_end, media)
+									VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
 									[
-										option.option_id,
-										id,
+										optionId,
+										productId,
 										variant.variant_name,
 										variant.sku,
-										variant.price,
-										variant.sale_price,
+										price,
+										salePrice,
 										sale_start,
 										sale_end,
 										media,
@@ -533,7 +647,7 @@ router.put(
 				WHERE po.product_id = $1
 				ORDER BY po.id, pov.id
 				`,
-					[id]
+					[Number(id)]
 				);
 
 				// Build options map like in the GET endpoint
