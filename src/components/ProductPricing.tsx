@@ -5,6 +5,7 @@ import { DollarSign, Tag, Calendar, Save } from "lucide-react";
 import { updateProduct } from "../lib/api_client/products";
 import Toast from "../components/Toast";
 import { Product } from "../types/Interfaces";
+import { LoadingModal } from "./LoadingModal";
 
 export interface ProductPricingProps {
 	product: Product;
@@ -48,6 +49,9 @@ export function ProductPricing({
 		saleEnd,
 	});
 
+	// Loading state for API operations
+	const [isLoading, setIsLoading] = useState(false);
+
 	// Toast state for showing notifications.
 	const [toast, setToast] = useState<{
 		message: string;
@@ -69,6 +73,7 @@ export function ProductPricing({
 	// otherwise, show an alert. After saving, update originalPricing.
 
 	const handleSavePricing = async () => {
+		setIsLoading(true);
 		try {
 			// Call your API to update the product details. Do not include empty optional fields.
 			const updateData: {
@@ -104,6 +109,8 @@ export function ProductPricing({
 				message: "Error updating product pricing: " + error.message,
 				type: "error",
 			});
+		} finally {
+			setIsLoading(false);
 		}
 	};
 
@@ -205,9 +212,9 @@ export function ProductPricing({
 				<button
 					type="button"
 					onClick={handleSavePricing}
-					disabled={isPricingUnchanged}
+					disabled={isPricingUnchanged || isLoading}
 					className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-						isPricingUnchanged
+						isPricingUnchanged || isLoading
 							? "text-gray-500 bg-blue-900 cursor-not-allowed"
 							: "text-white bg-blue-700 hover:bg-blue-600"
 					}`}
@@ -223,6 +230,11 @@ export function ProductPricing({
 					/>
 				)}
 			</div>
+			{/* Loading Modal */}
+			<LoadingModal
+				isOpen={isLoading}
+				message="Updating product pricing..."
+			/>
 		</fieldset>
 	);
 }

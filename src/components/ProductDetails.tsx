@@ -6,6 +6,7 @@ import { updateProduct } from "../lib/api_client/products";
 import { Modal } from "../components/Modal";
 import Toast from "../components/Toast";
 import { Product } from "../types/Interfaces";
+import { LoadingModal } from "./LoadingModal";
 
 export interface ProductDetailsProps {
 	product: Product;
@@ -34,6 +35,9 @@ export function ProductDetails({
 		type: "success" | "error";
 	} | null>(null);
 
+	// Loading state for API operations
+	const [isLoading, setIsLoading] = useState(false);
+
 	// Track whether to show the description preview modal.
 	const [showDescriptionPreview, setShowDescriptionPreview] = useState(false);
 
@@ -47,6 +51,7 @@ export function ProductDetails({
 		JSON.stringify({ productSKU, name, description });
 
 	const handleSaveDetails = async () => {
+		setIsLoading(true);
 		try {
 			// Call your API to update the product details.
 			await updateProduct({
@@ -66,6 +71,8 @@ export function ProductDetails({
 				message: "Error updating product details: " + error.message,
 				type: "error",
 			});
+		} finally {
+			setIsLoading(false);
 		}
 	};
 
@@ -161,9 +168,9 @@ export function ProductDetails({
 					<button
 						type="button"
 						onClick={handleSaveDetails}
-						disabled={detailsUnchanged}
+						disabled={detailsUnchanged || isLoading}
 						className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-							detailsUnchanged
+							detailsUnchanged || isLoading
 								? "text-gray-500 bg-blue-900 cursor-not-allowed"
 								: "text-white bg-blue-600 hover:bg-blue-700"
 						}`}
@@ -193,6 +200,11 @@ export function ProductDetails({
 					</div>
 				</Modal>
 			)}
+			{/* Loading Modal */}
+			<LoadingModal
+				isOpen={isLoading}
+				message="Updating product details..."
+			/>
 		</div>
 	);
 }

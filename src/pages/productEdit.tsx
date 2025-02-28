@@ -17,6 +17,7 @@ import { ProductMedia, ProductMediaItem } from "../components/ProductMedia";
 import Footer from "../components/Footer";
 import ProductOptions, { Option } from "../components/ProductOptions";
 import { Product, ProductOption } from "../types/Interfaces";
+import { LoadingModal } from "../components/LoadingModal";
 
 /**
  * Edit the product details.
@@ -231,9 +232,10 @@ export default function ProductEdit() {
 						<div className="bg-white dark:bg-gray-800 shadow rounded-lg">
 							<div className="p-6 space-y-8">
 								{loading ? (
-									<div className="text-sm text-gray-500 dark:text-gray-400">
-										Loading product details...
-									</div>
+									<LoadingModal
+										isOpen={loading}
+										message="Loading product..."
+									/>
 								) : (
 									<form
 										onSubmit={handleSubmit}
@@ -287,6 +289,12 @@ export default function ProductEdit() {
 						</div>
 					</div>
 				</div>
+
+				{/* Loading Modal - show for main form submit and delete */}
+				<LoadingModal
+					isOpen={isSaving}
+					message={isSaving ? "Updating product..." : ""}
+				/>
 			</Layout>
 			<Footer />
 		</div>

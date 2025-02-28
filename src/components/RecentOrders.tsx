@@ -1,12 +1,15 @@
 // RecentOrders.tsx
 import { useState, useEffect } from "react";
 import { fetchOrders, OrdersPaginationOptions } from "../lib/api_client/orders";
+import { Loader2 } from "lucide-react";
 
 function RecentOrders() {
 	const [orders, setOrders] = useState<any[]>([]);
+	const [loading, setLoading] = useState<boolean>(true);
 
 	useEffect(() => {
 		async function loadOrders() {
+			setLoading(true);
 			try {
 				const options: OrdersPaginationOptions = {
 					limit: 10,
@@ -17,6 +20,8 @@ function RecentOrders() {
 				setOrders(orders);
 			} catch (error) {
 				console.error("Failed to fetch recent orders", error);
+			} finally {
+				setLoading(false);
 			}
 		}
 		loadOrders();
@@ -81,15 +86,31 @@ function RecentOrders() {
 									</td>
 								</tr>
 							))}
-							{orders.length === 0 && (
+							{loading ? (
 								<tr>
 									<td
 										colSpan={5}
 										className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 text-center"
 									>
-										No recent orders found.
+										<div className="flex items-center justify-center">
+											<Loader2 className="h-5 w-5 text-blue-500 animate-spin mr-2" />
+											<span>
+												Loading recent orders...
+											</span>
+										</div>
 									</td>
 								</tr>
+							) : (
+								orders.length === 0 && (
+									<tr>
+										<td
+											colSpan={5}
+											className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 text-center"
+										>
+											No recent orders found.
+										</td>
+									</tr>
+								)
 							)}
 						</tbody>
 					</table>

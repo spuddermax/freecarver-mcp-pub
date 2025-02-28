@@ -9,6 +9,7 @@ import { updateProduct } from "../lib/api_client/products";
 import Toast from "../components/Toast";
 import { ThumbnailBar } from "./ProductMediaThumbnailBar";
 import { Product } from "../types/Interfaces";
+import { LoadingModal } from "./LoadingModal";
 
 export interface ProductMediaItem {
 	media_id: string;
@@ -41,6 +42,9 @@ export function ProductMedia({
 	const [originalMediaJSON, setOriginalMediaJSON] = React.useState(
 		JSON.stringify(mediaItems)
 	);
+
+	// Loading state for API operations
+	const [isLoading, setIsLoading] = useState(false);
 
 	// State for toast messages.
 	const [toast, setToast] = React.useState<{
@@ -98,6 +102,7 @@ export function ProductMedia({
 
 	// Save just the product_media field using the API client.
 	const handleSaveMedia = async () => {
+		setIsLoading(true);
 		try {
 			await updateProduct({ id: productId, product_media: mediaItems });
 			// Update the original media JSON after saving.
@@ -109,7 +114,12 @@ export function ProductMedia({
 			});
 		} catch (error: any) {
 			console.error("Error saving product media:", error);
-			alert("Error saving product media: " + error.message);
+			setToast({
+				message: "Error saving product media: " + error.message,
+				type: "error",
+			});
+		} finally {
+			setIsLoading(false);
 		}
 	};
 
@@ -181,9 +191,9 @@ export function ProductMedia({
 						type="button"
 						ref={saveButtonRef}
 						onClick={handleSaveMedia}
-						disabled={isMediaUnchanged}
+						disabled={isMediaUnchanged || isLoading}
 						className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium focus:outline-none focus:ring-2 focus:ring-purple-500 ${
-							isMediaUnchanged
+							isMediaUnchanged || isLoading
 								? "text-gray-500 bg-blue-900 cursor-not-allowed"
 								: "text-white bg-blue-600 hover:bg-blue-700"
 						}`}
@@ -251,8 +261,9 @@ export function ProductMedia({
 					<button
 						type="button"
 						onClick={handleSaveMedia}
+						disabled={isLoading}
 						className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-purple-500 ${
-							isMediaUnchanged
+							isLoading
 								? "bg-purple-300 cursor-not-allowed"
 								: "bg-blue-700 hover:bg-blue-600"
 						}`}
@@ -269,6 +280,11 @@ export function ProductMedia({
 					onClose={() => setToast(null)}
 				/>
 			)}
+			{/* Loading Modal */}
+			<LoadingModal
+				isOpen={isLoading}
+				message="Updating product media..."
+			/>
 		</fieldset>
 	);
 }

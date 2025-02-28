@@ -15,6 +15,7 @@ import { Modal } from "../components/Modal";
 import Toast from "../components/Toast";
 import { updateProductOptionsAndVariants } from "../lib/api_client/productOptions";
 import { Product, ProductOption } from "../types/Interfaces";
+import { LoadingModal } from "./LoadingModal";
 
 // Local interface definitions
 export interface Option {
@@ -104,6 +105,9 @@ const ProductOptions: React.FC<ProductOptionsProps> = ({
 		type: "success" | "error" | "info";
 	} | null>(null);
 
+	// Loading state for API operations
+	const [isLoading, setIsLoading] = useState(false);
+
 	// Update the JSON text when options change
 	useEffect(() => {
 		setJsonText(JSON.stringify(options, null, 2));
@@ -138,6 +142,7 @@ const ProductOptions: React.FC<ProductOptionsProps> = ({
 
 	// Handle saving options explicitly
 	const handleSaveOptions = async () => {
+		setIsLoading(true);
 		try {
 			// First, call onChange to notify parent of changes (local state update)
 			onChange(options);
@@ -162,6 +167,8 @@ const ProductOptions: React.FC<ProductOptionsProps> = ({
 				message: "Error saving options: " + error.message,
 				type: "error",
 			});
+		} finally {
+			setIsLoading(false);
 		}
 	};
 
@@ -607,9 +614,9 @@ const ProductOptions: React.FC<ProductOptionsProps> = ({
 						type="button"
 						ref={saveButtonRef}
 						onClick={handleSaveOptions}
-						disabled={isOptionsUnchanged}
+						disabled={isOptionsUnchanged || isLoading}
 						className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-							isOptionsUnchanged
+							isOptionsUnchanged || isLoading
 								? "text-gray-500 bg-blue-900 cursor-not-allowed"
 								: "text-white bg-blue-600 hover:bg-blue-700"
 						}`}
@@ -659,7 +666,12 @@ const ProductOptions: React.FC<ProductOptionsProps> = ({
 					<button
 						type="button"
 						onClick={handleSaveOptions}
-						className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-blue-500 bg-blue-700 hover:bg-blue-600"
+						disabled={isLoading}
+						className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+							isLoading
+								? "bg-blue-300 cursor-not-allowed"
+								: "bg-blue-700 hover:bg-blue-600"
+						}`}
 					>
 						<Save className="h-4 w-4 mr-1" />
 						Save Options
@@ -673,6 +685,12 @@ const ProductOptions: React.FC<ProductOptionsProps> = ({
 				onJsonTextChange={setJsonText}
 				onSave={handleSaveJson}
 				onClose={() => setJsonEditorOpen(false)}
+			/>
+
+			{/* Loading Modal */}
+			<LoadingModal
+				isOpen={isLoading}
+				message="Updating product options..."
 			/>
 
 			{toast && (

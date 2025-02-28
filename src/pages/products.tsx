@@ -14,6 +14,7 @@ import { Pagination } from "../components/Pagination";
 import { formatProduct } from "../utils/formatters";
 import { Product } from "../types/Interfaces";
 import { format } from "date-fns";
+import { LoadingModal } from "../components/LoadingModal";
 
 export default function Products() {
 	const navigate = useNavigate();
@@ -197,14 +198,10 @@ export default function Products() {
 								</thead>
 								<tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
 									{loading ? (
-										<tr>
-											<td
-												colSpan={3}
-												className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400"
-											>
-												Loading products...
-											</td>
-										</tr>
+										<LoadingModal
+											isOpen={loading}
+											message="Loading products..."
+										/>
 									) : filteredProducts.length === 0 ? (
 										<tr>
 											<td
