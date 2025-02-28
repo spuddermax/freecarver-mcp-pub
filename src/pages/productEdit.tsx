@@ -206,16 +206,6 @@ export default function ProductEdit() {
 		}));
 	};
 
-	// Handler for Save Options button
-	const handleSaveOptions = () => {
-		const updatePayload = {
-			productId: productData.id.toString(),
-			options: productData.options,
-		};
-		console.log("Update payload:", updatePayload);
-		// TODO: Update the database via an API call when ready.
-	};
-
 	// Render loading or form view.
 	return (
 		<div>
@@ -322,6 +312,7 @@ export default function ProductEdit() {
 													})) || [],
 											}))}
 											onChange={handleOptionsChange}
+											productId={targetId ?? ""}
 										/>
 										<ProductMedia
 											mediaItems={mediaItems}

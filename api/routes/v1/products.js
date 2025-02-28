@@ -1,7 +1,7 @@
 // /api/routes/v1/products.js
 
 import express from "express";
-import { pool } from "../../db.js";
+import { query } from "../../db.js";
 import { logger, logError } from "../../middleware/logger.js";
 import { verifyJWT } from "../../middleware/auth.js";
 import validateRequest from "../../middleware/validateRequest.js";
@@ -31,46 +31,41 @@ router.get(
 	validateRequest(productListSchema, "query"),
 	async (req, res) => {
 		try {
-			// Default pagination values
-			const page = parseInt(req.query.page, 10) || 1;
-			const limit = parseInt(req.query.limit, 10) || 20;
+			const {
+				page = 1,
+				limit = 20,
+				orderBy = "id",
+				order = "asc",
+			} = req.query;
 			const offset = (page - 1) * limit;
 
-			// Allowed columns for ordering
-			const allowedOrderColumns = [
-				"id",
-				"name",
-				"price",
-				"sale_price",
-				"created_at",
-				"updated_at",
-			];
-			const orderBy = allowedOrderColumns.includes(req.query.orderBy)
-				? req.query.orderBy
-				: "name";
-			const orderDirection =
-				req.query.order && req.query.order.toLowerCase() === "desc"
-					? "DESC"
-					: "ASC";
+			// Count total products for pagination
+			const countResult = await query("SELECT COUNT(*) FROM products");
+			const totalProducts = parseInt(countResult.rows[0].count);
 
-			// Query the total number of products
-			const countResult = await pool.query(
-				"SELECT COUNT(*) FROM products"
-			);
-			const total = parseInt(countResult.rows[0].count, 10);
+			// Get products for this page
+			const query_text = `SELECT * FROM products ORDER BY ${orderBy} ${order} LIMIT $1 OFFSET $2`;
+			const result = await query(query_text, [limit, offset]);
 
-			// Paginated query
-			const query = `SELECT * FROM products ORDER BY ${orderBy} ${orderDirection} LIMIT $1 OFFSET $2`;
-			const result = await pool.query(query, [limit, offset]);
-
-			logger.info("Retrieved products list with pagination.", {
+			logger.info(`Retrieved products list with pagination`, {
 				page,
 				limit,
 				orderBy,
-				orderDirection,
+				order,
+				totalProducts,
+				count: result.rows.length,
 			});
+
 			res.success(
-				{ total, products: result.rows },
+				{
+					products: result.rows,
+					pagination: {
+						page: parseInt(page),
+						limit: parseInt(limit),
+						total: totalProducts,
+						pages: Math.ceil(totalProducts / limit),
+					},
+				},
 				"Products retrieved successfully"
 			);
 		} catch (error) {
@@ -104,41 +99,26 @@ router.post(
 	async (req, res) => {
 		try {
 			const {
-				name,
 				sku,
+				name,
 				description,
 				price,
 				sale_price,
 				sale_start,
 				sale_end,
-				product_media,
+				product_media = [],
 			} = req.body;
 
-			// Validate required fields.
-			const errors = [];
-			if (!name) {
-				errors.push({ field: "name", message: "Name is required" });
-			}
-			if (price === undefined || price === null) {
-				errors.push({ field: "price", message: "Price is required" });
-			}
-			// Add further validations as needed.
-
-			// If validation errors exist, return them in an array.
-			if (errors.length > 0) {
-				return res.status(400).json({ error: errors });
-			}
-
-			// Insert the new product into the database.
 			const insertQuery = `
-        INSERT INTO products
-        (name, sku, description, price, sale_price, sale_start, sale_end, product_media)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8::json)
-        RETURNING *;
-      `;
-			const { rows } = await pool.query(insertQuery, [
-				name,
+			INSERT INTO products 
+			(sku, name, description, price, sale_price, sale_start, sale_end, product_media) 
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+			RETURNING *
+		`;
+
+			const { rows } = await query(insertQuery, [
 				sku,
+				name,
 				description,
 				price,
 				sale_price,
@@ -146,12 +126,13 @@ router.post(
 				sale_end,
 				product_media,
 			]);
-			const product = rows[0];
-			res.status(201).json({
-				status: "success",
-				message: "Product created successfully",
-				data: { product },
+
+			logger.info(`Created new product with ID ${rows[0].id}`, {
+				product_id: rows[0].id,
+				sku,
 			});
+
+			res.success(rows[0], "Product created successfully", 201);
 		} catch (error) {
 			logger.error("Error creating product", { error: error.message });
 			res.status(500).json({ error: "Internal server error" });
@@ -179,7 +160,7 @@ router.get("/:id", async (req, res) => {
 		}
 
 		// Retrieve the product.
-		const productResult = await pool.query(
+		const productResult = await query(
 			"SELECT * FROM products WHERE id = $1",
 			[id]
 		);
@@ -191,7 +172,7 @@ router.get("/:id", async (req, res) => {
 
 		// Retrieve the product options along with their variants.
 		// New schema joins product_options with product_option_variants.
-		const optionsResult = await pool.query(
+		const optionsResult = await query(
 			`
 			SELECT 
 			  po.id AS option_id,
@@ -279,6 +260,333 @@ router.get("/:id", async (req, res) => {
 });
 
 /**
+ * @route GET /v1/products/:id/options
+ * @description Retrieve all options and their variants for a specific product.
+ * @access Protected
+ * @param {string} req.params.id - The ID of the product.
+ * @returns {Response} 200 - JSON object containing an array of options with their variants.
+ * @returns {Response} 404 - Not found if the product does not exist.
+ * @returns {Response} 500 - Internal server error.
+ */
+router.get(
+	"/:id/options",
+	validateRequest(productIdSchema, "params"),
+	async (req, res) => {
+		try {
+			const { id } = req.params;
+
+			// Verify the product exists
+			const productResult = await query(
+				"SELECT id FROM products WHERE id = $1",
+				[id]
+			);
+
+			if (productResult.rows.length === 0) {
+				logger.error(
+					`Product with ID ${id} not found for retrieving options.`
+				);
+				return res.error("Product not found.", 404);
+			}
+
+			// Retrieve the product options along with their variants.
+			const optionsResult = await query(
+				`
+			SELECT 
+			  po.id AS option_id,
+			  po.option_name,
+			  pov.id AS variant_id,
+			  pov.name AS variant_name,
+			  pov.sku,
+			  pov.price,
+			  pov.sale_price,
+			  pov.sale_start,
+			  pov.sale_end,
+			  pov.media,
+			  pov.created_at,
+			  pov.updated_at
+			FROM product_options po
+			LEFT JOIN product_option_variants pov 
+			  ON pov.option_id = po.id AND pov.product_id = po.product_id
+			WHERE po.product_id = $1
+			ORDER BY po.id, pov.id
+			`,
+				[id]
+			);
+
+			// Build options map
+			const optionsMap = {};
+			optionsResult.rows.forEach((row) => {
+				// Skip if this is a left join with no variants
+				if (!row.variant_id) {
+					// If no variants yet, still include the option with empty variants array
+					if (!optionsMap[row.option_id]) {
+						optionsMap[row.option_id] = {
+							option_id: row.option_id,
+							option_name: row.option_name,
+							variants: [],
+						};
+					}
+					return;
+				}
+
+				if (!optionsMap[row.option_id]) {
+					optionsMap[row.option_id] = {
+						option_id: row.option_id,
+						option_name: row.option_name,
+						variants: [],
+					};
+				}
+
+				optionsMap[row.option_id].variants.push({
+					variant_id: row.variant_id,
+					variant_name: row.variant_name,
+					sku: row.sku,
+					price: row.price,
+					sale_price: row.sale_price,
+					sale_start: row.sale_start,
+					sale_end: row.sale_end,
+					media: row.media,
+					created_at: row.created_at,
+					updated_at: row.updated_at,
+				});
+			});
+
+			const options = Object.values(optionsMap);
+
+			logger.info(`Retrieved options for product ID ${id}.`);
+			res.success({ options }, "Product options retrieved successfully");
+		} catch (error) {
+			logger.error(
+				`Error retrieving options for product ID ${req.params.id}.`,
+				{
+					error: error.message,
+				}
+			);
+			res.error(`Internal server error: ${error.message}`, 500);
+		}
+	}
+);
+
+/**
+ * @route PUT /v1/products/:id/options
+ * @description Update all product options and variants for a product in a single operation.
+ * @access Protected
+ * @param {string} req.params.id - The ID of the product.
+ * @param {Object} req.body - The request body.
+ * @param {Array} req.body.options - Array of option objects with their variants.
+ * @returns {Response} 200 - JSON object containing the updated product with options.
+ * @returns {Response} 404 - Not found if the product does not exist.
+ * @returns {Response} 500 - Internal server error.
+ */
+router.put(
+	"/:id/options",
+	validateRequest(productIdSchema, "params"),
+	async (req, res) => {
+		try {
+			const { id } = req.params;
+			const { options } = req.body;
+
+			// Verify the product exists
+			const productResult = await query(
+				"SELECT id FROM products WHERE id = $1",
+				[id]
+			);
+
+			if (productResult.rows.length === 0) {
+				logger.error(
+					`Product with ID ${id} not found for updating options.`
+				);
+				return res.error("Product not found.", 404);
+			}
+
+			// Begin transaction
+			await query("BEGIN");
+
+			try {
+				// Process each option
+				for (const option of options) {
+					if (option.option_id) {
+						// Update existing option
+						await query(
+							"UPDATE product_options SET option_name = $1, updated_at = NOW() WHERE id = $2 AND product_id = $3",
+							[option.option_name, option.option_id, id]
+						);
+					} else {
+						// Create new option
+						const newOptionResult = await query(
+							"INSERT INTO product_options (product_id, option_name) VALUES ($1, $2) RETURNING id",
+							[id, option.option_name]
+						);
+						option.option_id = newOptionResult.rows[0].id;
+					}
+
+					// Process variants for this option
+					if (option.variants && Array.isArray(option.variants)) {
+						// Get existing variants for this option
+						const existingVariantsResult = await query(
+							"SELECT id FROM product_option_variants WHERE option_id = $1",
+							[option.option_id]
+						);
+
+						const existingVariantIds =
+							existingVariantsResult.rows.map((row) => row.id);
+						const providedVariantIds = option.variants
+							.filter((v) => v.variant_id)
+							.map((v) => v.variant_id);
+
+						// Find variants to delete (those in existingVariantIds but not in providedVariantIds)
+						const variantsToDelete = existingVariantIds.filter(
+							(id) => !providedVariantIds.includes(id)
+						);
+
+						// Delete variants that are no longer in the list
+						if (variantsToDelete.length > 0) {
+							await query(
+								`DELETE FROM product_option_variants WHERE id = ANY($1::bigint[])`,
+								[variantsToDelete]
+							);
+						}
+
+						// Update or insert variants
+						for (const variant of option.variants) {
+							// Convert empty strings to null for date fields
+							const sale_start = variant.sale_start
+								? variant.sale_start
+								: null;
+							const sale_end = variant.sale_end
+								? variant.sale_end
+								: null;
+
+							// Convert empty string to valid JSON for media field
+							const media =
+								variant.media === "" ? null : variant.media;
+
+							if (variant.variant_id) {
+								// Update existing variant
+								await query(
+									`UPDATE product_option_variants 
+								SET name = $1, sku = $2, price = $3, sale_price = $4, 
+								sale_start = $5, sale_end = $6, media = $7, updated_at = NOW()
+								WHERE id = $8 AND option_id = $9`,
+									[
+										variant.variant_name,
+										variant.sku,
+										variant.price,
+										variant.sale_price,
+										sale_start,
+										sale_end,
+										media,
+										variant.variant_id,
+										option.option_id,
+									]
+								);
+							} else {
+								// Create new variant
+								await query(
+									`INSERT INTO product_option_variants 
+								(option_id, product_id, name, sku, price, sale_price, sale_start, sale_end, media)
+								VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+									[
+										option.option_id,
+										id,
+										variant.variant_name,
+										variant.sku,
+										variant.price,
+										variant.sale_price,
+										sale_start,
+										sale_end,
+										media,
+									]
+								);
+							}
+						}
+					}
+				}
+
+				// Commit transaction
+				await query("COMMIT");
+
+				logger.info(
+					`Product options updated successfully for product ID ${id}.`
+				);
+
+				// Fetch updated product with options for response
+				// Similar to GET /:id route
+				const optionsResult = await query(
+					`
+				SELECT 
+				  po.id AS option_id,
+				  po.option_name,
+				  pov.id AS variant_id,
+				  pov.name AS variant_name,
+				  pov.sku,
+				  pov.price,
+				  pov.sale_price,
+				  pov.sale_start,
+				  pov.sale_end,
+				  pov.media,
+				  pov.created_at,
+				  pov.updated_at
+				FROM product_options po
+				LEFT JOIN product_option_variants pov 
+				  ON pov.option_id = po.id AND pov.product_id = po.product_id
+				WHERE po.product_id = $1
+				ORDER BY po.id, pov.id
+				`,
+					[id]
+				);
+
+				// Build options map like in the GET endpoint
+				const optionsMap = {};
+				optionsResult.rows.forEach((row) => {
+					if (!row.variant_id) return; // Skip if no variant (null join)
+
+					if (!optionsMap[row.option_id]) {
+						optionsMap[row.option_id] = {
+							option_id: row.option_id,
+							option_name: row.option_name,
+							variants: [],
+						};
+					}
+
+					optionsMap[row.option_id].variants.push({
+						variant_id: row.variant_id,
+						variant_name: row.variant_name,
+						sku: row.sku,
+						price: row.price,
+						sale_price: row.sale_price,
+						sale_start: row.sale_start,
+						sale_end: row.sale_end,
+						media: row.media,
+						created_at: row.created_at,
+						updated_at: row.updated_at,
+					});
+				});
+
+				const updatedOptions = Object.values(optionsMap);
+
+				res.success(
+					{ options: updatedOptions },
+					"Product options updated successfully"
+				);
+			} catch (error) {
+				// Rollback transaction on error
+				await query("ROLLBACK");
+				throw error;
+			}
+		} catch (error) {
+			logger.error(
+				`Error updating options for product ID ${req.params.id}.`,
+				{
+					error: error.message,
+				}
+			);
+			res.error(`Internal server error: ${error.message}`, 500);
+		}
+	}
+);
+
+/**
  * @route PUT /v1/products/:id
  * @description Update an existing product.
  * @access Protected
@@ -356,7 +664,7 @@ router.put(
       RETURNING *;
     `;
 			console.log(queryText, values);
-			const result = await pool.query(queryText, values);
+			const result = await query(queryText, values);
 			if (result.rows.length === 0) {
 				logger.error(`Product with ID ${id} not found for update.`);
 				return res.error("Product not found.", 404);
@@ -394,7 +702,7 @@ router.delete(
 	async (req, res) => {
 		try {
 			const { id } = req.params;
-			const result = await pool.query(
+			const result = await query(
 				"DELETE FROM products WHERE id = $1 RETURNING id",
 				[id]
 			);

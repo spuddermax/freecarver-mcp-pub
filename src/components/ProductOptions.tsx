@@ -13,6 +13,7 @@ import ProductOptionVariant from "./ProductOptionVariant";
 import { ProductOptionsJsonEditor } from "./ProductOptionsJsonEditor";
 import { Modal } from "../components/Modal";
 import Toast from "../components/Toast";
+import { updateProductOptionsAndVariants } from "../lib/api_client/productOptions";
 
 // Local interface definitions
 export interface Option {
@@ -112,8 +113,14 @@ const ProductOptions: React.FC<ProductOptionsProps> = ({
 	// Handle saving options explicitly
 	const handleSaveOptions = async () => {
 		try {
-			// Call onChange to notify parent of changes
+			// First, call onChange to notify parent of changes (local state update)
 			onChange(options);
+
+			// If we have a productId, save to the backend
+			if (productId) {
+				// Save to the backend using the API client
+				await updateProductOptionsAndVariants(productId, options);
+			}
 
 			// Update the original options JSON after saving
 			setOriginalOptionsJSON(JSON.stringify(options));
