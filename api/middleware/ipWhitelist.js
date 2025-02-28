@@ -19,15 +19,10 @@ function ipWhitelistMiddleware(req, res, next) {
 		clientIp = clientIp.substring(7);
 	}
 
-	// Define the allowed IPs.
-	// You can load these values from a configuration file or environment variables as needed.
-	// Should also accept all ips in the 192.168.0.0/24 range
-	const allowedIps = [
-		"127.0.0.1",
-		"73.124.213.245",
-		"64.72.222.107",
-		"192.168.0.0/24",
-	];
+	// Read allowed IPs from environment variable
+	// Default to localhost if not defined
+	const allowedIpsString = process.env.ALLOWED_IPS || "127.0.0.1";
+	const allowedIps = allowedIpsString.split(",").map((ip) => ip.trim());
 
 	// Check if the client IP is allowed
 	const isAllowed = allowedIps.some((allowedIp) => {
