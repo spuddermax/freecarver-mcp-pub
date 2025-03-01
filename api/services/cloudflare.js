@@ -118,8 +118,9 @@ export async function uploadToCloudflare(buffer, options) {
 			})
 		);
 
-		// Generate a public URL for the R2 object
-		const publicUrl = `https://${bucketName}.${process.env.CLOUDFLARE_ACCOUNT_ID}.r2.cloudflarestorage.com/${r2Key}`;
+		// Generate a public URL for the R2 object using env variable
+		const publicDomain = process.env.CLOUDFLARE_PUBLIC_DOMAIN;
+		const publicUrl = `https://${publicDomain}/${r2Key}`;
 
 		return {
 			publicUrl,

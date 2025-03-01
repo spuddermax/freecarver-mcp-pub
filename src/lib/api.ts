@@ -75,18 +75,23 @@ export async function fetchAdminUsers() {
 /**
  * Upload the admin user's avatar to Cloudflare Images with R2 storage
  * @param file - The file to upload
+ * @param userId - The ID of the user whose avatar is being updated
  * @param currentUrl - The current url of the avatar
  * @returns The response from the Cloudflare avatar upload endpoint
  */
 export async function uploadAvatarToCloudflare(
 	file: File,
+	userId: number,
 	currentUrl?: string
-): Promise<{ publicUrl: string }> {
+): Promise<{ status: string; message: string; data: { publicUrl: string } }> {
 	const formData = new FormData();
 	formData.append("avatar", file);
 	if (currentUrl) {
 		formData.append("oldAvatarUrl", currentUrl);
 	}
+
+	// Always include userId in the request
+	formData.append("userId", userId.toString());
 
 	// Add a field to indicate we want to use Cloudflare
 	formData.append("storage", "cloudflare");

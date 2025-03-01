@@ -171,6 +171,7 @@ export default function UserEdit() {
 												avatarUrl: url,
 											}))
 										}
+										userId={parseInt(userData.id, 10)}
 									/>
 
 									<UserPassword

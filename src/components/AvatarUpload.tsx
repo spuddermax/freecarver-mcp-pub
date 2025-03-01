@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { Upload, X, Loader2 } from "lucide-react";
 import { uploadAvatarToCloudflare } from "../lib/api";
 
@@ -6,11 +6,22 @@ interface AvatarUploadProps {
 	url: string;
 	onUpload: (url: string) => void;
 	size?: number;
+	userId: number;
 }
 
-export function AvatarUpload({ url, onUpload, size = 150 }: AvatarUploadProps) {
+export function AvatarUpload({
+	url,
+	onUpload,
+	size = 150,
+	userId,
+}: AvatarUploadProps) {
 	const [uploading, setUploading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const [localUrl, setLocalUrl] = useState<string>(url);
+
+	useEffect(() => {
+		setLocalUrl(url);
+	}, [url]);
 
 	const handleUpload = useCallback(
 		async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -38,9 +49,33 @@ export function AvatarUpload({ url, onUpload, size = 150 }: AvatarUploadProps) {
 					throw new Error("File type must be JPEG, PNG, or WebP");
 				}
 
+				// Ensure userId is provided
+				if (!userId) {
+					throw new Error("User ID is required for avatar upload");
+				}
+
 				// Use the Cloudflare upload function instead of the regular one
-				const result = await uploadAvatarToCloudflare(file, url);
-				onUpload(result.publicUrl);
+				const result = await uploadAvatarToCloudflare(
+					file,
+					userId,
+					localUrl
+				);
+
+				// Set local URL first to ensure the component shows the new image
+				if (result && result.data && result.data.publicUrl) {
+					console.log(
+						"Setting new avatar URL:",
+						result.data.publicUrl
+					);
+					setLocalUrl(result.data.publicUrl + "?" + Date.now());
+					onUpload(result.data.publicUrl + "?" + Date.now());
+				} else {
+					console.error(
+						"Upload succeeded but no publicUrl returned:",
+						result
+					);
+					throw new Error("No URL returned from upload");
+				}
 			} catch (err: any) {
 				console.error("Error uploading avatar to Cloudflare:", err);
 				setError(
@@ -52,7 +87,7 @@ export function AvatarUpload({ url, onUpload, size = 150 }: AvatarUploadProps) {
 				setUploading(false);
 			}
 		},
-		[onUpload, url]
+		[onUpload, localUrl, userId]
 	);
 
 	return (
@@ -61,9 +96,9 @@ export function AvatarUpload({ url, onUpload, size = 150 }: AvatarUploadProps) {
 				className="relative group"
 				style={{ width: size, height: size }}
 			>
-				{url ? (
+				{localUrl ? (
 					<img
-						src={url}
+						src={localUrl}
 						alt="Avatar"
 						className="rounded-full object-cover w-full h-full"
 						style={{ width: size, height: size }}
