@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Trash2 } from "lucide-react";
 import { deleteAdminUser } from "../lib/api_client/adminUsers";
 
@@ -44,7 +44,11 @@ export function UserDelete({ userId, onMessage, onDelete }: UserDeleteProps) {
 	};
 
 	return (
-		<div>
+		<fieldset className="border rounded-lg p-4 border-gray-200 dark:border-gray-700">
+			<legend className="text-lg font-medium text-gray-700 dark:text-gray-300 px-2">
+				Delete Account
+			</legend>
+
 			<button
 				type="button"
 				onClick={handleDelete}
@@ -56,6 +60,6 @@ export function UserDelete({ userId, onMessage, onDelete }: UserDeleteProps) {
 				<Trash2 className="h-4 w-4 mr-2" />
 				{loading ? "Deleting..." : "Delete Account"}
 			</button>
-		</div>
+		</fieldset>
 	);
 }
