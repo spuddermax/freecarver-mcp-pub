@@ -17,10 +17,10 @@ interface UserData {
 	id: string;
 	email: string;
 	role: string;
-	firstName: string;
-	lastName: string;
-	avatarUrl: string;
-	createdAt: string;
+	first_name: string;
+	last_name: string;
+	avatar_url: string;
+	created_at: string;
 }
 
 export default function Users() {
@@ -67,12 +67,12 @@ export default function Users() {
 		const searchLower = searchQuery.toLowerCase();
 		if (!searchLower) return users;
 		return users.filter((user) => {
-			const fullName = `${user.firstName} ${user.lastName}`.toLowerCase();
+			const fullName = `${user.first_name} ${user.last_name}`.toLowerCase();
 			return (
 				user.email.toLowerCase().includes(searchLower) ||
 				fullName.includes(searchLower) ||
-				user.firstName.toLowerCase().includes(searchLower) ||
-				user.lastName.toLowerCase().includes(searchLower)
+				user.first_name.toLowerCase().includes(searchLower) ||
+				user.last_name.toLowerCase().includes(searchLower)
 			);
 		});
 	};
@@ -229,10 +229,10 @@ export default function Users() {
 											>
 												<td className="px-6 py-4 whitespace-nowrap">
 													<div className="flex items-center">
-														{user.avatarUrl ? (
+														{user.avatar_url ? (
 															<img
 																src={
-																	user.avatarUrl
+																	user.avatar_url
 																}
 																alt=""
 																className="h-8 w-8 rounded-full"
@@ -244,8 +244,8 @@ export default function Users() {
 														)}
 														<div className="ml-4">
 															<div className="text-sm font-medium text-gray-900 dark:text-white">
-																{user.firstName}{" "}
-																{user.lastName}
+																{user.first_name}{" "}
+																{user.last_name}
 															</div>
 														</div>
 													</div>
@@ -266,30 +266,8 @@ export default function Users() {
 													</span>
 												</td>
 												<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-													{user.createdAt}
+													{user.created_at}
 												</td>
-												{/* <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-													<div className="flex items-center justify-end space-x-3">
-														<button
-															onClick={() =>
-																navigate(
-																	`/userEdit/${user.id}`
-																)
-															}
-															className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300"
-														>
-															<EditIcon className="h-4 w-4" />
-														</button>
-														<button
-															onClick={() => {
-																// Delete user logic: ideally call an API function from your client library here
-															}}
-															className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
-														>
-															<Trash2Icon className="h-4 w-4" />
-														</button>
-													</div>
-												</td> */}
 											</tr>
 										))
 									)}

@@ -16,7 +16,7 @@ export function formatUser(user: any): any {
 		timezone: user.timezone,
 		mfa_enabled: user.mfa_enabled,
 		mfa_method: user.mfa_method,
-		createdAt: user.created_at,
+		created_at: user.created_at,
 	};
 }
 
