@@ -1,6 +1,7 @@
 import "react";
 import { AvatarUpload } from "./AvatarUpload";
 import { useState, useEffect } from "react";
+import { useUserContext } from "../lib/userContext";
 
 interface UserPictureProps {
 	avatarUrl: string;
@@ -17,6 +18,7 @@ export function UserPicture({
 	const [displayUrl, setDisplayUrl] = useState(
 		avatarUrl ? `${avatarUrl}?t=${Date.now()}` : ""
 	);
+	const { updateUserSettings } = useUserContext();
 
 	// Update display URL whenever the base URL changes
 	useEffect(() => {
@@ -24,6 +26,13 @@ export function UserPicture({
 			setDisplayUrl(`${avatarUrl}?t=${Date.now()}`);
 		}
 	}, [avatarUrl]);
+
+	// Handle avatar changes with context updates
+	const handleAvatarChange = (url: string) => {
+		onAvatarChange(url);
+		// Also update the user context
+		updateUserSettings({ avatarUrl: url });
+	};
 
 	return (
 		<fieldset className="border rounded-lg p-4 border-gray-200 dark:border-gray-700">
@@ -33,7 +42,7 @@ export function UserPicture({
 			<div className="space-y-2">
 				<AvatarUpload
 					url={displayUrl}
-					onUpload={onAvatarChange}
+					onUpload={handleAvatarChange}
 					size={120}
 					userId={userId}
 				/>

@@ -6,7 +6,7 @@ import { useTheme } from "../lib/theme";
 import { useGrid } from "../lib/grid";
 import { TronGrid } from "./TronGrid/index";
 import NavMenu from "./NavMenu";
-import { decodeJWT } from "../lib/helpers";
+import { useUserContext } from "../lib/userContext";
 
 interface PageInfo {
 	title: string;
@@ -33,43 +33,13 @@ export default function Layout({
 	const navigate = useNavigate();
 	const location = useLocation();
 	const [notifications] = useState(3);
-	const [userMySettings, setUserMySettings] = useState({
-		adminFirstName: "",
-		adminLastName: "",
-		adminRoleName: "",
-		adminId: "",
-		avatarUrl: "",
-	});
+	const { userMySettings } = useUserContext();
 	const [showNavMenu, setShowNavMenu] = useState(false);
 	const { theme, setTheme } = useTheme();
 	const isDark = theme === "dark";
 	const { showGrid, setShowGrid, animateGrid, setAnimateGrid } = useGrid();
 	const menuRef = useRef<HTMLDivElement>(null);
 	const buttonRef = useRef<HTMLButtonElement>(null);
-
-	useEffect(() => {
-		async function getUserMySettings() {
-			const token = localStorage.getItem("jwtToken");
-			if (token) {
-				const decoded = decodeJWT(token);
-				//console.log(decoded);
-				if (decoded && decoded.adminId) {
-					try {
-						setUserMySettings({
-							adminId: decoded.adminId || "",
-							adminFirstName: decoded.adminFirstName || "",
-							adminLastName: decoded.adminLastName || "",
-							adminRoleName: decoded.adminRoleName || "",
-							avatarUrl: decoded.adminAvatarUrl || "",
-						});
-					} catch (err) {
-						console.error("Error fetching user data:", err);
-					}
-				}
-			}
-		}
-		getUserMySettings();
-	}, [navigate]);
 
 	useEffect(() => {
 		function handleClickOutside(event: MouseEvent) {
