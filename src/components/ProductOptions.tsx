@@ -16,7 +16,7 @@ import Toast from "../components/Toast";
 import { updateProductOptionsAndVariants } from "../lib/api_client/productOptions";
 import { Product, ProductOption } from "../types/Interfaces";
 import { LoadingModal } from "./LoadingModal";
-
+import { formatDate } from "../utils/formatters";
 // Local interface definitions
 export interface Option {
 	option_id: number;
@@ -51,7 +51,10 @@ const ProductOptions: React.FC<ProductOptionsProps> = ({
 }) => {
 	// Extract product ID and convert options to the local Option format
 	const productId = product.id.toString();
-	console.log("product:", product);
+	// console.log("product:", product);
+	// console.log("product.sale_start:", product.sale_end);
+	// console.log("product.sale_end:", formatDate(product.sale_end));
+
 	const initialOptions = (product.options || []).map(
 		(opt: ProductOption) => ({
 			option_id: opt.option_id,

@@ -67,7 +67,7 @@ export default function ProductEdit() {
 				const data = await fetchProduct(targetId);
 				// Use our formatter to ensure field names match the interface.
 				const formattedProduct: Product = formatProduct(data);
-				console.log(formattedProduct);
+				//console.log(formattedProduct);
 				setProductData(formattedProduct);
 				// Parse the productMedia JSON string into mediaItems array.
 				if (

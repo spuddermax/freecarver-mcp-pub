@@ -11,6 +11,7 @@ import {
 	Type,
 } from "lucide-react";
 import { Variant } from "./ProductOptions";
+import { formatDate } from "../utils/formatters";
 
 interface ProductOptionVariantProps {
 	index: number;
@@ -79,6 +80,27 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 	const [previousVariantId, setPreviousVariantId] = useState<number | null>(
 		null
 	);
+
+	// Add state for tracking raw date input values
+	const [dateInputs, setDateInputs] = useState({
+		sale_start: selectedVariant?.sale_start ? formatDate(selectedVariant.sale_start, "html-datetime") || "" : "",
+		sale_end: selectedVariant?.sale_end ? formatDate(selectedVariant.sale_end, "html-datetime") || "" : ""
+	});
+
+	// Update dateInputs when selectedVariant changes
+	useEffect(() => {
+		if (selectedVariant) {
+			setDateInputs({
+				sale_start: selectedVariant.sale_start ? formatDate(selectedVariant.sale_start, "html-datetime") || "" : "",
+				sale_end: selectedVariant.sale_end ? formatDate(selectedVariant.sale_end, "html-datetime") || "" : ""
+			});
+		} else {
+			setDateInputs({
+				sale_start: "",
+				sale_end: ""
+			});
+		}
+	}, [selectedVariant]);
 
 	// Update function for string fields
 	const handleNewVariantChangeString = (field: string, value: string) => {
@@ -182,6 +204,36 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 		}
 	};
 
+	// Handle date input changes separately
+	const handleDateChange = (field: string, value: string) => {
+		// Update the display value immediately
+		setDateInputs(prev => ({
+			...prev,
+			[field]: value
+		}));
+		
+		// Mark field as modified
+		if (selectedVariant) {
+			// Special handling for date fields
+			setIsUpdated(true);
+			setModifiedFields((prev) => {
+				const updated = new Set(prev);
+				updated.add(field);
+				return updated;
+			});
+			
+			// Store the raw value in editedVariant
+			setEditedVariant((prev) => ({
+				...prev,
+				[field]: value ? formatDate(value, "iso") || "" : "",
+			}));
+		} else {
+			// For new variant, ensure we're setting strings not null
+			const formattedDate = value ? (formatDate(value, "iso") || "") : "";
+			handleNewVariantChangeString(field, formattedDate);
+		}
+	};
+
 	const handleAddVariant = () => {
 		if (newVariant.variant_name && newVariant.variant_name.trim()) {
 			// Prepare the complete variant data to pass to the parent
@@ -212,50 +264,34 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 		}
 	};
 
-	// Function to explicitly save all variant data
+	// Update saveVariant method to use formatDate for dates
 	const saveVariant = () => {
-		if (selectedVariant && Object.keys(editedVariant).length > 0) {
-			// Create a formatted version of editedVariant for submission
-			// This ensures date fields are properly formatted
-			const formattedEditedVariant = { ...editedVariant };
+		if (!selectedVariant) return;
 
-			// Special handling for date fields - ensure proper ISO format for dates
-			if ("sale_start" in editedVariant) {
-				const saleStartValue = editedVariant.sale_start as string;
-				if (saleStartValue && saleStartValue.trim() !== "") {
-					// Format the date in ISO format
-					try {
-						const date = new Date(saleStartValue);
-						formattedEditedVariant.sale_start = date.toISOString();
-					} catch (e) {
-						console.error("Error formatting sale_start date:", e);
-					}
+		// Prepare changes with modified fields
+		const changes: Record<string, string | number> = {};
+		for (const field of modifiedFields) {
+			if (field in editedVariant) {
+				// Format dates when sending to API
+				if (field === "sale_start" || field === "sale_end") {
+					const dateValue = editedVariant[field];
+					changes[field] = typeof dateValue === "string" ? dateValue : "";
+				} else {
+					changes[field] = editedVariant[field];
 				}
 			}
-
-			if ("sale_end" in editedVariant) {
-				const saleEndValue = editedVariant.sale_end as string;
-				if (saleEndValue && saleEndValue.trim() !== "") {
-					// Format the date in ISO format
-					try {
-						const date = new Date(saleEndValue);
-						formattedEditedVariant.sale_end = date.toISOString();
-					} catch (e) {
-						console.error("Error formatting sale_end date:", e);
-					}
-				}
-			}
-
-			// Apply all edited fields to the parent component
-			Object.entries(formattedEditedVariant).forEach(([field, value]) => {
-				onVariantChange(index, field, value);
-			});
-
-			// Reset state after saving
-			setIsUpdated(false);
-			setModifiedFields(new Set());
-			setEditedVariant({});
 		}
+
+		// If we have modified fields, notify parent
+		if (Object.keys(changes).length > 0) {
+			for (const [field, value] of Object.entries(changes)) {
+				onVariantChange(index, field, value);
+			}
+		}
+		
+		setIsUpdated(false);
+		setModifiedFields(new Set());
+		setEditedVariant({});
 	};
 
 	// Function to add the current variant data as a new variant
@@ -510,10 +546,10 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 					</div>
 				</div>
 
-				{/* Sale Start */}
+				{/* Sale Start Date */}
 				<div>
 					<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-						Sale Start
+						Sale Start Date (optional)
 					</label>
 					<div className="mt-1 relative">
 						<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -521,72 +557,25 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 						</div>
 						<input
 							type="datetime-local"
-							value={
-								selectedVariant
-									? (getFieldValue("sale_start") as string)
-									: newVariant.sale_start || ""
-							}
+							value={selectedVariant ? dateInputs.sale_start : newVariant.sale_start || ""}
 							onChange={(e) => {
-								const value = e.target.value;
-								console.log("==== SALE START DATE CHANGE ====");
-								console.log(
-									"Current editedVariant:",
-									editedVariant
-								);
-								console.log(
-									"Date input changed for sale_start:",
-									value
-								);
-
 								if (selectedVariant) {
-									// ALWAYS track the date field change, even if empty
-									// Force the field to be considered changed
-									console.log(
-										"Adding sale_start to editedVariant:",
-										value
-									);
-
-									// Directly update the editedVariant state
-									setEditedVariant((prev) => {
-										const updated = {
-											...prev,
-											sale_start: value,
-										};
-										console.log(
-											"Updated editedVariant:",
-											updated
-										);
-										return updated;
-									});
-
-									// Mark the field as modified
-									setModifiedFields((prev) => {
-										const updated = new Set(prev);
-										updated.add("sale_start");
-										return updated;
-									});
-
-									// Set the component as updated
-									setIsUpdated(true);
+									handleDateChange("sale_start", e.target.value);
 								} else {
-									handleNewVariantChangeString(
-										"sale_start",
-										value
-									);
+									handleNewVariantChangeString("sale_start", e.target.value);
 								}
-								console.log("============================");
 							}}
-							className={`block w-full pl-10 pr-3 py-2 border text-gray-700 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white ${getFieldBorderClass(
-								"sale_start"
-							)}`}
+							className={`block w-full pl-10 pr-3 py-2 border text-gray-700 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white ${
+								getFieldBorderClass("sale_start")
+							}`}
 						/>
 					</div>
 				</div>
 
-				{/* Sale End */}
+				{/* Sale End Date */}
 				<div>
 					<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-						Sale End
+						Sale End Date (optional)
 					</label>
 					<div className="mt-1 relative">
 						<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -594,64 +583,17 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 						</div>
 						<input
 							type="datetime-local"
-							value={
-								selectedVariant
-									? (getFieldValue("sale_end") as string)
-									: newVariant.sale_end || ""
-							}
+							value={selectedVariant ? dateInputs.sale_end : newVariant.sale_end || ""}
 							onChange={(e) => {
-								const value = e.target.value;
-								console.log("==== SALE END DATE CHANGE ====");
-								console.log(
-									"Current editedVariant:",
-									editedVariant
-								);
-								console.log(
-									"Date input changed for sale_end:",
-									value
-								);
-
 								if (selectedVariant) {
-									// ALWAYS track the date field change, even if empty
-									// Force the field to be considered changed
-									console.log(
-										"Adding sale_end to editedVariant:",
-										value
-									);
-
-									// Directly update the editedVariant state
-									setEditedVariant((prev) => {
-										const updated = {
-											...prev,
-											sale_end: value,
-										};
-										console.log(
-											"Updated editedVariant:",
-											updated
-										);
-										return updated;
-									});
-
-									// Mark the field as modified
-									setModifiedFields((prev) => {
-										const updated = new Set(prev);
-										updated.add("sale_end");
-										return updated;
-									});
-
-									// Set the component as updated
-									setIsUpdated(true);
+									handleDateChange("sale_end", e.target.value);
 								} else {
-									handleNewVariantChangeString(
-										"sale_end",
-										value
-									);
+									handleNewVariantChangeString("sale_end", e.target.value);
 								}
-								console.log("============================");
 							}}
-							className={`block w-full pl-10 pr-3 py-2 border text-gray-700 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white ${getFieldBorderClass(
-								"sale_end"
-							)}`}
+							className={`block w-full pl-10 pr-3 py-2 border text-gray-700 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white ${
+								getFieldBorderClass("sale_end")
+							}`}
 						/>
 					</div>
 				</div>

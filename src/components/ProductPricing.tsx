@@ -6,6 +6,7 @@ import { updateProduct } from "../lib/api_client/products";
 import Toast from "../components/Toast";
 import { Product } from "../types/Interfaces";
 import { LoadingModal } from "./LoadingModal";
+import { formatDate } from "../utils/formatters";
 
 export interface ProductPricingProps {
 	product: Product;
@@ -25,20 +26,14 @@ export function ProductPricing({
 		sale_end: baseSaleEnd,
 	} = product;
 
-	console.log("baseSaleEnd:", baseSaleEnd);
-
 	// Convert to the expected types for the component
 	const price = basePrice ?? 0;
 	const salePrice = baseSalePrice ?? undefined;
-	const saleStart = baseSaleStart
-		? baseSaleStart instanceof Date
-			? baseSaleStart.toISOString()
-			: String(baseSaleStart)
+	const saleStart = formatDate(baseSaleStart)
+		? formatDate(baseSaleStart)
 		: undefined;
-	const saleEnd = baseSaleEnd
-		? baseSaleEnd instanceof Date
-			? baseSaleEnd.toISOString()
-			: String(baseSaleEnd)
+	const saleEnd = formatDate(baseSaleEnd)
+		? formatDate(baseSaleEnd)
 		: undefined;
 
 	// Store the original pricing values when the component first mounts.
@@ -58,15 +53,49 @@ export function ProductPricing({
 		type: "success" | "error";
 	} | null>(null);
 
+	// Add state for tracking raw input values during editing
+	const [dateInputs, setDateInputs] = useState({
+		saleStart: saleStart ? formatDate(saleStart, "html-datetime") || "" : "",
+		saleEnd: saleEnd ? formatDate(saleEnd, "html-datetime") || "" : ""
+	});
+
+	// Add a state to track if pricing has changed
+	const [hasChanges, setHasChanges] = useState(false);
+
+	// Keep dateInputs in sync with props
+	useEffect(() => {
+		setDateInputs({
+			saleStart: saleStart ? formatDate(saleStart, "html-datetime") || "" : "",
+			saleEnd: saleEnd ? formatDate(saleEnd, "html-datetime") || "" : ""
+		});
+	}, [saleStart, saleEnd]);
+
 	// Optionally, capture initial pricing only on mount.
 	useEffect(() => {
 		setOriginalPricing({ price, salePrice, saleStart, saleEnd });
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
-	// Determine if there are any changes compared to the original pricing.
-	const isPricingUnchanged =
-		JSON.stringify(originalPricing) ===
+	// Handle date input changes separately
+	const handleDateChange = (e: ChangeEvent<HTMLInputElement>) => {
+		const { name, value } = e.target;
+		
+		// Update the display value immediately
+		setDateInputs(prev => ({
+			...prev,
+			[name]: value
+		}));
+		
+		// Mark as changed
+		setHasChanges(true);
+		
+		// Pass the event to parent
+		onInputChange(e);
+	};
+
+	// Override isPricingUnchanged with hasChanges
+	const isPricingChanged = hasChanges || 
+		JSON.stringify(originalPricing) !== 
 		JSON.stringify({ price, salePrice, saleStart, saleEnd });
 
 	// Handle saving pricing. If onSavePricing is provided, call it;
@@ -90,21 +119,30 @@ export function ProductPricing({
 			if (salePrice) {
 				updateData.sale_price = salePrice;
 			}
-			if (saleStart) {
-				updateData.sale_start = saleStart;
+			
+			// Parse dateInputs and convert to ISO 8601 for API
+			if (dateInputs.saleStart) {
+				const formattedStartDate = formatDate(dateInputs.saleStart, "iso");
+				if (formattedStartDate) {
+					updateData.sale_start = formattedStartDate;
+				}
 			}
-			if (saleEnd) {
-				updateData.sale_end = saleEnd;
+			
+			if (dateInputs.saleEnd) {
+				const formattedEndDate = formatDate(dateInputs.saleEnd, "iso");
+				if (formattedEndDate) {
+					updateData.sale_end = formattedEndDate;
+				}
 			}
 
 			await updateProduct(updateData);
 			setOriginalPricing({ price, salePrice, saleStart, saleEnd });
+			setHasChanges(false); // Reset the change tracking
 			setToast({
 				message: "Product pricing updated successfully.",
 				type: "success",
 			});
 		} catch (error: any) {
-			console.error("Error updating product pricing", error);
 			setToast({
 				message: "Error updating product pricing: " + error.message,
 				type: "error",
@@ -179,8 +217,8 @@ export function ProductPricing({
 							type="datetime-local"
 							name="saleStart"
 							id="saleStart"
-							value={saleStart || ""}
-							onChange={onInputChange}
+							value={dateInputs.saleStart}
+							onChange={handleDateChange}
 							className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
 						/>
 					</div>
@@ -190,7 +228,7 @@ export function ProductPricing({
 						htmlFor="saleEnd"
 						className="block text-sm font-medium text-gray-700 dark:text-gray-300"
 					>
-						Sale End (optional) {saleEnd}
+						Sale End (optional)
 					</label>
 					<div className="mt-1 relative">
 						<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -200,8 +238,8 @@ export function ProductPricing({
 							type="datetime-local"
 							name="saleEnd"
 							id="saleEnd"
-							value={saleEnd || ""}
-							onChange={onInputChange}
+							value={dateInputs.saleEnd}
+							onChange={handleDateChange}
 							className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
 						/>
 					</div>
@@ -212,9 +250,9 @@ export function ProductPricing({
 				<button
 					type="button"
 					onClick={handleSavePricing}
-					disabled={isPricingUnchanged || isLoading}
+					disabled={!isPricingChanged || isLoading}
 					className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-						isPricingUnchanged || isLoading
+						!isPricingChanged || isLoading
 							? "text-gray-500 bg-blue-900 cursor-not-allowed"
 							: "text-white bg-blue-700 hover:bg-blue-600"
 					}`}
