@@ -6,7 +6,7 @@ import { updateProduct } from "../lib/api_client/products";
 import Toast from "../components/Toast";
 import { Product } from "../types/Interfaces";
 import { LoadingModal } from "./LoadingModal";
-import { formatDate } from "../utils/formatters";
+import { format } from "date-fns";
 
 export interface ProductPricingProps {
 	product: Product;
@@ -29,11 +29,13 @@ export function ProductPricing({
 	// Convert to the expected types for the component
 	const price = basePrice ?? 0;
 	const salePrice = baseSalePrice ?? undefined;
-	const saleStart = formatDate(baseSaleStart)
-		? formatDate(baseSaleStart)
+	
+	// Use format() for string representations of dates
+	const saleStart = baseSaleStart && new Date(baseSaleStart).toString() !== "Invalid Date" 
+		? format(new Date(baseSaleStart), "MM/dd/yyyy, HH:mm:ss")
 		: undefined;
-	const saleEnd = formatDate(baseSaleEnd)
-		? formatDate(baseSaleEnd)
+	const saleEnd = baseSaleEnd && new Date(baseSaleEnd).toString() !== "Invalid Date" 
+		? format(new Date(baseSaleEnd), "MM/dd/yyyy, HH:mm:ss")
 		: undefined;
 
 	// Store the original pricing values when the component first mounts.
@@ -55,8 +57,12 @@ export function ProductPricing({
 
 	// Add state for tracking raw input values during editing
 	const [dateInputs, setDateInputs] = useState({
-		saleStart: saleStart ? formatDate(saleStart, "html-datetime") || "" : "",
-		saleEnd: saleEnd ? formatDate(saleEnd, "html-datetime") || "" : ""
+		saleStart: baseSaleStart && new Date(baseSaleStart).toString() !== "Invalid Date" 
+			? format(new Date(baseSaleStart), "yyyy-MM-dd'T'HH:mm")
+			: "",
+		saleEnd: baseSaleEnd && new Date(baseSaleEnd).toString() !== "Invalid Date" 
+			? format(new Date(baseSaleEnd), "yyyy-MM-dd'T'HH:mm")
+			: ""
 	});
 
 	// Add a state to track if pricing has changed
@@ -65,10 +71,14 @@ export function ProductPricing({
 	// Keep dateInputs in sync with props
 	useEffect(() => {
 		setDateInputs({
-			saleStart: saleStart ? formatDate(saleStart, "html-datetime") || "" : "",
-			saleEnd: saleEnd ? formatDate(saleEnd, "html-datetime") || "" : ""
+			saleStart: baseSaleStart && new Date(baseSaleStart).toString() !== "Invalid Date" 
+				? format(new Date(baseSaleStart), "yyyy-MM-dd'T'HH:mm")
+				: "",
+			saleEnd: baseSaleEnd && new Date(baseSaleEnd).toString() !== "Invalid Date" 
+				? format(new Date(baseSaleEnd), "yyyy-MM-dd'T'HH:mm") 
+				: ""
 		});
-	}, [saleStart, saleEnd]);
+	}, [baseSaleStart, baseSaleEnd]);
 
 	// Optionally, capture initial pricing only on mount.
 	useEffect(() => {
@@ -122,16 +132,16 @@ export function ProductPricing({
 			
 			// Parse dateInputs and convert to ISO 8601 for API
 			if (dateInputs.saleStart) {
-				const formattedStartDate = formatDate(dateInputs.saleStart, "iso");
-				if (formattedStartDate) {
-					updateData.sale_start = formattedStartDate;
+				const startDate = new Date(dateInputs.saleStart);
+				if (startDate.toString() !== "Invalid Date") {
+					updateData.sale_start = startDate.toISOString();
 				}
 			}
 			
 			if (dateInputs.saleEnd) {
-				const formattedEndDate = formatDate(dateInputs.saleEnd, "iso");
-				if (formattedEndDate) {
-					updateData.sale_end = formattedEndDate;
+				const endDate = new Date(dateInputs.saleEnd);
+				if (endDate.toString() !== "Invalid Date") {
+					updateData.sale_end = endDate.toISOString();
 				}
 			}
 

@@ -11,7 +11,7 @@ import {
 	Type,
 } from "lucide-react";
 import { Variant } from "./ProductOptions";
-import { formatDate } from "../utils/formatters";
+import { format } from "date-fns";
 
 interface ProductOptionVariantProps {
 	index: number;
@@ -81,18 +81,26 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 		null
 	);
 
-	// Add state for tracking raw date input values
+	// Update the dateInputs state to use format() from date-fns
 	const [dateInputs, setDateInputs] = useState({
-		sale_start: selectedVariant?.sale_start ? formatDate(selectedVariant.sale_start, "html-datetime") || "" : "",
-		sale_end: selectedVariant?.sale_end ? formatDate(selectedVariant.sale_end, "html-datetime") || "" : ""
+		sale_start: selectedVariant?.sale_start ? 
+			(new Date(selectedVariant.sale_start).toString() !== "Invalid Date" ? 
+				format(new Date(selectedVariant.sale_start), "yyyy-MM-dd'T'HH:mm") : "") : "",
+		sale_end: selectedVariant?.sale_end ? 
+			(new Date(selectedVariant.sale_end).toString() !== "Invalid Date" ? 
+				format(new Date(selectedVariant.sale_end), "yyyy-MM-dd'T'HH:mm") : "") : ""
 	});
 
-	// Update dateInputs when selectedVariant changes
+	// Update the useEffect that syncs dateInputs with selectedVariant
 	useEffect(() => {
 		if (selectedVariant) {
 			setDateInputs({
-				sale_start: selectedVariant.sale_start ? formatDate(selectedVariant.sale_start, "html-datetime") || "" : "",
-				sale_end: selectedVariant.sale_end ? formatDate(selectedVariant.sale_end, "html-datetime") || "" : ""
+				sale_start: selectedVariant.sale_start ? 
+					(new Date(selectedVariant.sale_start).toString() !== "Invalid Date" ? 
+						format(new Date(selectedVariant.sale_start), "yyyy-MM-dd'T'HH:mm") : "") : "",
+				sale_end: selectedVariant.sale_end ? 
+					(new Date(selectedVariant.sale_end).toString() !== "Invalid Date" ? 
+						format(new Date(selectedVariant.sale_end), "yyyy-MM-dd'T'HH:mm") : "") : ""
 			});
 		} else {
 			setDateInputs({
@@ -204,7 +212,7 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 		}
 	};
 
-	// Handle date input changes separately
+	// Update the handleDateChange function
 	const handleDateChange = (field: string, value: string) => {
 		// Update the display value immediately
 		setDateInputs(prev => ({
@@ -222,15 +230,33 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 				return updated;
 			});
 			
-			// Store the raw value in editedVariant
-			setEditedVariant((prev) => ({
-				...prev,
-				[field]: value ? formatDate(value, "iso") || "" : "",
-			}));
+			// Store the ISO string in editedVariant for API
+			if (value) {
+				const dateObj = new Date(value);
+				if (dateObj.toString() !== "Invalid Date") {
+					setEditedVariant((prev) => ({
+						...prev,
+						[field]: dateObj.toISOString(),
+					}));
+				}
+			} else {
+				setEditedVariant((prev) => ({
+					...prev,
+					[field]: "",
+				}));
+			}
 		} else {
-			// For new variant, ensure we're setting strings not null
-			const formattedDate = value ? (formatDate(value, "iso") || "") : "";
-			handleNewVariantChangeString(field, formattedDate);
+			// For new variant, if there's a valid date, convert to ISO string
+			if (value) {
+				const dateObj = new Date(value);
+				if (dateObj.toString() !== "Invalid Date") {
+					handleNewVariantChangeString(field, dateObj.toISOString());
+				} else {
+					handleNewVariantChangeString(field, "");
+				}
+			} else {
+				handleNewVariantChangeString(field, "");
+			}
 		}
 	};
 
@@ -598,8 +624,8 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 					</div>
 				</div>
 
-				{/* Media URL */}
-				<div className="col-span-1 md:col-span-2">
+				{/* Media URL: TODO: Add this back in if we want to allow media items for variants */}
+				{/* <div className="col-span-1 md:col-span-2">
 					<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
 						Media URL
 					</label>
@@ -631,7 +657,7 @@ const ProductOptionVariant: React.FC<ProductOptionVariantProps> = ({
 							)}`}
 						/>
 					</div>
-				</div>
+				</div> */}
 			</div>
 
 			{/* Action Buttons */}

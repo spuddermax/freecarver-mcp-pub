@@ -16,7 +16,7 @@ import Toast from "../components/Toast";
 import { updateProductOptionsAndVariants } from "../lib/api_client/productOptions";
 import { Product, ProductOption } from "../types/Interfaces";
 import { LoadingModal } from "./LoadingModal";
-import { formatDate } from "../utils/formatters";
+
 // Local interface definitions
 export interface Option {
 	option_id: number;
