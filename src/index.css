@@ -48,3 +48,16 @@ body {
 .toast-exit {
   animation: fadeOut 1s ease-in forwards;
 }
+
+/* In your global CSS */
+.ql-container {
+  @apply border border-gray-300 dark:border-gray-600 rounded-b-md;
+}
+
+.ql-toolbar {
+  @apply border border-gray-300 dark:border-gray-600 rounded-t-md bg-white dark:bg-gray-700;
+}
+
+.ql-editor {
+  @apply min-h-[8rem];
+}
