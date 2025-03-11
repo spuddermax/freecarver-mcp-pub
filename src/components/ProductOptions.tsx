@@ -53,30 +53,34 @@ const ProductOptions: React.FC<ProductOptionsProps> = ({
 	const productId = product.id.toString();
 	// console.log("product:", product);
 	// console.log("product.sale_start:", product.sale_end);
-	// console.log("product.sale_end:", formatDate(product.sale_end));
+	// console.log("product.options.variants:", product.options[0].variants);
 
 	const initialOptions = (product.options || []).map(
 		(opt: ProductOption) => ({
 			option_id: opt.option_id,
 			option_name: opt.option_name,
-			variants:
-				opt.variants?.map((v) => ({
-					variant_id: v.variant_id,
-					variant_name: v.variant_name,
-					sku: v.sku,
-					price: v.price,
-					sale_price: v.sale_price,
-					sale_start: v.sale_start ? String(v.sale_start) : "",
-					sale_end: v.sale_end ? String(v.sale_end) : "",
-					// Convert media to string (our Variant interface expects a string)
-					media: Array.isArray(v.media)
-						? JSON.stringify(v.media)
-						: typeof v.media === "object" && v.media !== null
-						? JSON.stringify(v.media)
-						: v.media
-						? String(v.media)
-						: "",
-				})) || [],
+			variants: Array.isArray(opt.variants) 
+				? opt.variants
+					// Filter out any variant with null variant_id
+					.filter(v => v.variant_id !== null) 
+					.map((v) => ({
+						variant_id: v.variant_id,
+						variant_name: v.variant_name,
+						sku: v.sku,
+						price: v.price,
+						sale_price: v.sale_price,
+						sale_start: v.sale_start ? String(v.sale_start) : "",
+						sale_end: v.sale_end ? String(v.sale_end) : "",
+						// Convert media to string (our Variant interface expects a string)
+						media: Array.isArray(v.media)
+							? JSON.stringify(v.media)
+							: typeof v.media === "object" && v.media !== null
+							? JSON.stringify(v.media)
+							: v.media
+							? String(v.media)
+							: "",
+					}))
+				: [],
 		})
 	);
 
@@ -110,6 +114,10 @@ const ProductOptions: React.FC<ProductOptionsProps> = ({
 
 	// Loading state for API operations
 	const [isLoading, setIsLoading] = useState(false);
+
+	// Add these state variables after other useState declarations
+	const [showDeleteOptionModal, setShowDeleteOptionModal] = useState(false);
+	const [optionToDeleteIndex, setOptionToDeleteIndex] = useState<number | null>(null);
 
 	// Update the JSON text when options change
 	useEffect(() => {
@@ -237,8 +245,27 @@ const ProductOptions: React.FC<ProductOptionsProps> = ({
 	};
 
 	const handleRemoveOption = (index: number) => {
+		const optionToRemove = options[index];
+		
+		// Check if the option has variants
+		if (optionToRemove.variants && optionToRemove.variants.length > 0) {
+			// Show the confirmation modal
+			setOptionToDeleteIndex(index);
+			setShowDeleteOptionModal(true);
+		} else {
+			// No variants, delete directly without confirmation
+			deleteOption(index);
+		}
+	};
+
+	// Add this function to handle the actual deletion
+	const deleteOption = (index: number) => {
 		const updatedOptions = options.filter((_, i) => i !== index);
 		updateOptions(updatedOptions);
+		
+		// Reset the state
+		setOptionToDeleteIndex(null);
+		setShowDeleteOptionModal(false);
 	};
 
 	const handleRemoveVariant = (optionIndex: number, variantIndex: number) => {
@@ -702,6 +729,51 @@ const ProductOptions: React.FC<ProductOptionsProps> = ({
 					type={toast.type}
 					onClose={() => setToast(null)}
 				/>
+			)}
+
+			{showDeleteOptionModal && optionToDeleteIndex !== null && (
+				<Modal
+					isOpen={showDeleteOptionModal}
+					title="Confirm Deletion"
+					onClose={() => setShowDeleteOptionModal(false)}
+				>
+					<div className="p-5 space-y-4">
+						<p className="text-gray-700 dark:text-gray-300">
+							Are you sure you want to delete the option "
+							<span className="font-semibold">{options[optionToDeleteIndex].option_name}</span>"?
+						</p>
+						<p className="text-gray-700 dark:text-gray-300">
+							This will delete all {options[optionToDeleteIndex].variants.length} variants 
+							associated with this option.
+						</p>
+						<div className="bg-yellow-50 dark:bg-yellow-900/30 border-l-4 border-yellow-400 p-4 my-3">
+							<div className="flex">
+								<div className="ml-3">
+									<p className="text-sm text-yellow-700 dark:text-yellow-200">
+										You must click "Save Options" after removing this option to permanently 
+										delete it from the database.
+									</p>
+								</div>
+							</div>
+						</div>
+						<div className="flex justify-end space-x-3 mt-4">
+							<button
+								type="button"
+								onClick={() => setShowDeleteOptionModal(false)}
+								className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700"
+							>
+								Cancel
+							</button>
+							<button
+								type="button"
+								onClick={() => deleteOption(optionToDeleteIndex)}
+								className="px-4 py-2 border border-transparent rounded shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+							>
+								Delete
+							</button>
+						</div>
+					</div>
+				</Modal>
 			)}
 		</>
 	);

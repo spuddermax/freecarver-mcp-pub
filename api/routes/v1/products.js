@@ -412,6 +412,33 @@ router.put(
 			await query("BEGIN");
 
 			try {
+				// Get existing options for this product
+				const existingOptionsResult = await query(
+					"SELECT id FROM product_options WHERE product_id = $1",
+					[Number(id)]
+				);
+
+				const existingOptionIds = existingOptionsResult.rows.map((row) =>
+					Number(row.id)
+				);
+				const providedOptionIds = options
+					.filter((o) => o.option_id)
+					.map((o) => Number(o.option_id));
+
+				// Find options to delete (those in existingOptionIds but not in providedOptionIds)
+				const optionsToDelete = existingOptionIds.filter(
+					(id) => !providedOptionIds.includes(id)
+				);
+
+				// Delete options that are no longer in the list (this will cascade to delete their variants)
+				if (optionsToDelete.length > 0) {
+					logger.info(`Deleting product options: ${optionsToDelete.join(', ')}`);
+					await query(
+						`DELETE FROM product_options WHERE id = ANY($1::bigint[])`,
+						[optionsToDelete]
+					);
+				}
+
 				// Process each option
 				for (const option of options) {
 					if (option.option_id) {
@@ -656,7 +683,18 @@ router.put(
 				// Build options map like in the GET endpoint
 				const optionsMap = {};
 				optionsResult.rows.forEach((row) => {
-					if (!row.variant_id) return; // Skip if no variant (null join)
+					// Skip if this is a left join with no variants
+					if (!row.variant_id) {
+						// If no variants yet, still include the option with empty variants array
+						if (!optionsMap[row.option_id]) {
+							optionsMap[row.option_id] = {
+								option_id: row.option_id,
+								option_name: row.option_name,
+								variants: [],
+							};
+						}
+						return;
+					}
 
 					if (!optionsMap[row.option_id]) {
 						optionsMap[row.option_id] = {

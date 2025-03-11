@@ -52,6 +52,10 @@ export function ProductDetails({
 	const [linkUrl, setLinkUrl] = useState('');
 	const [isProcessingLink, setIsProcessingLink] = useState(false);
 
+	// Add a new state to track the editing mode
+	const [isHtmlMode, setIsHtmlMode] = useState(false);
+	const [htmlContent, setHtmlContent] = useState('');
+
 	useEffect(() => {
 		setOriginalDetails({ productSKU, name, description });
 		// eslint-disable-next-line react-hooks/exhaustive-deps
@@ -61,17 +65,22 @@ export function ProductDetails({
 		JSON.stringify(originalDetails) ===
 		JSON.stringify({ productSKU, name, description });
 
+	// Update the handleSaveDetails function to ensure no sanitization happens
 	const handleSaveDetails = async () => {
 		setIsLoading(true);
 		try {
-			// Call your API to update the product details.
+			// Get the raw HTML directly, bypassing any potential sanitization
+			// Use the HTML mode content directly if in HTML mode
+			const rawDescription = isHtmlMode ? htmlContent : description;
+			
 			await updateProduct({
 				id: productId.toString(),
 				name: name,
 				sku: productSKU,
-				description: description,
+				// Use the raw HTML directly without any processing
+				description: rawDescription,
 			});
-			setOriginalDetails({ productSKU, name, description });
+			setOriginalDetails({ productSKU, name, description: rawDescription });
 			setToast({
 				message: "Product details updated successfully.",
 				type: "success",
@@ -89,7 +98,9 @@ export function ProductDetails({
 
 	const editor = useEditor({
 		extensions: [
-			StarterKit,
+			StarterKit.configure({
+				// Use standard configuration, we'll disable sanitization at other layers
+			}),
 			Link.configure({
 				openOnClick: false,
 				HTMLAttributes: {
@@ -110,6 +121,9 @@ export function ProductDetails({
 			Underline,
 		],
 		content: description,
+		// Disable paste and input rules to preserve HTML structure
+		enablePasteRules: false,
+		enableInputRules: false,
 		onUpdate: ({ editor }) => {
 			const html = editor.getHTML();
 			// Create a synthetic event to work with existing onInputChange
@@ -121,14 +135,202 @@ export function ProductDetails({
 			} as React.ChangeEvent<HTMLTextAreaElement>;
 			onInputChange(e);
 		},
+		editorProps: {
+			// Allow any HTML content
+			attributes: {
+				class: 'prose prose-sm max-w-full min-h-[8rem] focus:outline-none dark:bg-gray-700 dark:text-white'
+			}
+		},
 	});
 
-	// Update the editor when description changes from outside
-	useEffect(() => {
-		if (editor && description !== editor.getHTML()) {
-			editor.commands.setContent(description);
+	// Add a utility function to set HTML content without sanitization
+	const setRawHtmlContent = (editor: any, html: string) => {
+		// Use a workaround to prevent TipTap from sanitizing HTML
+		// This bypasses the normal content setting mechanism
+		if (editor && editor.view && editor.view.dom) {
+			// Store selection
+			const selection = window.getSelection();
+			const range = selection?.rangeCount ? selection.getRangeAt(0) : null;
+			
+			// Set the HTML directly in the DOM
+			editor.view.dom.innerHTML = html;
+			
+			// Force editor to sync its state with DOM
+			setTimeout(() => {
+				editor.commands.focus();
+				if (range) {
+					try {
+						selection?.removeAllRanges();
+						selection?.addRange(range);
+					} catch (e) {
+						// Ignore selection errors
+					}
+				}
+			}, 10);
+			
+			return true;
 		}
-	}, [description, editor]);
+		return false;
+	};
+
+	// Update the editor when description changes from outside and not in HTML mode
+	useEffect(() => {
+		if (!isHtmlMode && editor && description !== editor.getHTML()) {
+			// Try to use the direct HTML insertion method first
+			const success = setRawHtmlContent(editor, description);
+			if (!success) {
+				// Fallback to the standard method with sanitization disabled
+				editor.commands.setContent(description, false);
+			}
+		}
+		
+		// Update HTML content when editor initializes or when description changes from outside
+		// But ONLY when not in HTML mode to preserve user formatting
+		if (!isHtmlMode) {
+			if (editor) {
+				setHtmlContent(editor.getHTML());
+			} else if (description) {
+				setHtmlContent(description);
+			}
+		}
+	}, [description, editor, isHtmlMode]);
+
+	// Add a function to handle HTML content changes
+	const handleHtmlChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+		const newHtml = e.target.value;
+		setHtmlContent(newHtml);
+		
+		// Create a synthetic event to pass to onInputChange
+		const syntheticEvent = {
+			target: {
+				name: 'description',
+				value: newHtml
+			}
+		} as React.ChangeEvent<HTMLTextAreaElement>;
+		onInputChange(syntheticEvent);
+	};
+
+	// Add a helper function to format HTML with proper indentation
+	const formatHTML = (html: string): string => {
+		// Special case for SVG or other specialized content
+		// Check for common patterns that might indicate custom HTML that should be preserved
+		if (html.includes('<svg') || html.includes('data-') || html.includes('<!--')) {
+			// Use a more gentle formatting approach that preserves all elements
+			return formatHTMLPreserveAll(html);
+		}
+
+		// Create a temporary div to parse the HTML
+		const tempDiv = document.implementation.createHTMLDocument("").createElement("div");
+		tempDiv.innerHTML = html.trim();
+		
+		// Format the HTML with indentation
+		const formatNode = (node: Node, level: number): string => {
+			const indentation = "  ".repeat(level);
+			
+			if (node.nodeType === Node.TEXT_NODE) {
+				const text = node.textContent?.trim() || "";
+				return text ? indentation + text + "\n" : "";
+			}
+			
+			if (node.nodeType === Node.ELEMENT_NODE) {
+				const element = node as Element;
+				const tagName = element.tagName.toLowerCase();
+				
+				// Skip formatting for inline elements to keep them on a single line
+				const isInlineElement = ["a", "span", "strong", "em", "b", "i", "u", "code", "br"].includes(tagName);
+				
+				// For empty elements or inline elements with simple content
+				if (element.children.length === 0 || 
+					(isInlineElement && element.textContent?.trim() && !element.children.length)) {
+					return indentation + element.outerHTML + "\n";
+				}
+				
+				let result = indentation + `<${tagName}${getAttributes(element)}>\n`;
+				
+				for (let i = 0; i < element.childNodes.length; i++) {
+					result += formatNode(element.childNodes[i], level + 1);
+				}
+				
+				result += indentation + `</${tagName}>\n`;
+				return result;
+			}
+			
+			return "";
+		};
+		
+		const getAttributes = (element: Element): string => {
+			let attrs = "";
+			for (let i = 0; i < element.attributes.length; i++) {
+				const attr = element.attributes[i];
+				attrs += ` ${attr.name}="${attr.value}"`;
+			}
+			return attrs;
+		};
+		
+		let formattedHTML = "";
+		for (let i = 0; i < tempDiv.childNodes.length; i++) {
+			formattedHTML += formatNode(tempDiv.childNodes[i], 0);
+		}
+		
+		return formattedHTML.trim();
+	};
+
+	// Add a more careful formatter that preserves all custom HTML
+	const formatHTMLPreserveAll = (html: string): string => {
+		// Simple regex-based formatting that won't modify element structure
+		// This is safer for custom HTML like SVG
+		
+		// First, normalize line breaks
+		let formatted = html.replace(/>\s*</g, '>\n<');
+		
+		// Then add indentation
+		let indent = 0;
+		const lines = formatted.split('\n');
+		formatted = lines.map(line => {
+			// Trim the line
+			let trimmed = line.trim();
+			if (!trimmed) return '';
+			
+			// Calculate the indentation for this line
+			if (trimmed.match(/<\/[^>]+>/) && !trimmed.match(/<[^/][^>]*>/)) {
+				// Closing tag without opening tag on same line
+				indent = Math.max(0, indent - 1);
+			}
+			
+			// Add the indentation
+			const result = '  '.repeat(indent) + trimmed;
+			
+			// Adjust indent for next line
+			if (trimmed.match(/<[^/][^>]*[^/]>/) && !trimmed.match(/<\/[^>]+>/) && 
+				!trimmed.match(/<[^>]+\/>/)) {
+				// Opening tag without closing tag on same line
+				indent++;
+			}
+			
+			return result;
+		}).join('\n');
+		
+		return formatted;
+	};
+
+	// Add a function to handle toggle between modes
+	const toggleEditingMode = () => {
+		if (!isHtmlMode && editor) {
+			// Switching to HTML mode, update the HTML content with proper formatting
+			const rawHtml = editor.getHTML();
+			const formattedHtml = formatHTML(rawHtml);
+			setHtmlContent(formattedHtml);
+		} else if (isHtmlMode && editor) {
+			// Switching to visual mode, update the editor content
+			// Use direct content setting to preserve custom HTML
+			const success = setRawHtmlContent(editor, htmlContent);
+			if (!success) {
+				// Fallback if direct insertion fails
+				editor.commands.setContent(htmlContent, false);
+			}
+		}
+		setIsHtmlMode(!isHtmlMode);
+	};
 
 	// Add handleLinkSubmit function
 	const handleLinkSubmit = (e: React.FormEvent) => {
@@ -219,178 +421,245 @@ export function ProductDetails({
 						<div className="mt-1 relative">
 							<div className="border border-gray-300 dark:border-gray-600 rounded-md overflow-hidden">
 								<div className="flex flex-wrap gap-1 p-2 bg-gray-50 dark:bg-gray-800 border-b border-gray-300 dark:border-gray-600">
+									{/* Add HTML/Visual toggle at the start of the toolbar */}
 									<button
 										type="button"
-										className={`p-1 rounded ${editor?.isActive('bold') ? 'bg-gray-200 dark:bg-gray-700' : 'hover:bg-gray-200 dark:hover:bg-gray-700'}`}
-										onClick={() => editor?.chain().focus().toggleBold().run()}
-										title="Bold"
+										className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center"
+										onClick={toggleEditingMode}
+										title={isHtmlMode ? "Switch to Visual Editor" : "Switch to HTML Editor"}
 									>
 										<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-											<path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"></path>
-											<path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"></path>
+											{isHtmlMode ? (
+												// Visual editor icon (eye)
+												<>
+													<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+													<circle cx="12" cy="12" r="3"></circle>
+												</>
+											) : (
+												// HTML code icon (code brackets)
+												<>
+													<polyline points="16 18 22 12 16 6"></polyline>
+													<polyline points="8 6 2 12 8 18"></polyline>
+												</>
+											)}
 										</svg>
+										<span className="ml-1 text-xs">{isHtmlMode ? "Visual" : "HTML"}</span>
 									</button>
-									<button
-										type="button"
-										className={`p-1 rounded ${editor?.isActive('italic') ? 'bg-gray-200 dark:bg-gray-700' : 'hover:bg-gray-200 dark:hover:bg-gray-700'}`}
-										onClick={() => editor?.chain().focus().toggleItalic().run()}
-										title="Italic"
-									>
-										<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-											<line x1="19" y1="4" x2="10" y2="4"></line>
-											<line x1="14" y1="20" x2="5" y2="20"></line>
-											<line x1="15" y1="4" x2="9" y2="20"></line>
-										</svg>
-									</button>
-									<button
-										type="button"
-										className={`p-1 rounded ${editor?.isActive('underline') ? 'bg-gray-200 dark:bg-gray-700' : 'hover:bg-gray-200 dark:hover:bg-gray-700'}`}
-										onClick={() => editor?.chain().focus().toggleUnderline().run()}
-										title="Underline"
-									>
-										<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-											<path d="M6 3v7a6 6 0 0 0 6 6 6 6 0 0 0 6-6V3"></path>
-											<line x1="4" y1="21" x2="20" y2="21"></line>
-										</svg>
-									</button>
-									<div className="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1"></div>
-									<div className="relative">
-										<button
-											type="button"
-											className={`p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center`}
-											onClick={() => {
-												const menu = document.getElementById('heading-menu');
-												menu?.classList.toggle('hidden');
-											}}
-											title="Headings"
-										>
-											<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-												<path d="M6 12h12"></path>
-												<path d="M6 4h12"></path>
-												<path d="M6 20h12"></path>
-											</svg>
-											<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="ml-1">
-												<polyline points="6 9 12 15 18 9"></polyline>
-											</svg>
-										</button>
-										<div id="heading-menu" className="absolute z-10 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-lg hidden">
+									
+									{/* Show rest of toolbar only in visual mode */}
+									{!isHtmlMode && (
+										<>
+											{/* Bold button */}
 											<button
 												type="button"
-												className={`w-full px-3 py-1 text-left ${editor?.isActive('heading', { level: 1 }) ? 'bg-gray-100 dark:bg-gray-700' : 'hover:bg-gray-100 dark:hover:bg-gray-700'}`}
-												onClick={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()}
+												className={`p-1 rounded ${editor?.isActive('bold') ? 'bg-gray-200 dark:bg-gray-700' : 'hover:bg-gray-200 dark:hover:bg-gray-700'}`}
+												onClick={() => editor?.chain().focus().toggleBold().run()}
+												title="Bold (Ctrl+B)"
 											>
-												<span className="text-xl font-bold">Heading 1</span>
+												<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+													<path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"></path>
+													<path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"></path>
+												</svg>
+											</button>
+											
+											{/* Italic button */}
+											<button
+												type="button"
+												className={`p-1 rounded ${editor?.isActive('italic') ? 'bg-gray-200 dark:bg-gray-700' : 'hover:bg-gray-200 dark:hover:bg-gray-700'}`}
+												onClick={() => editor?.chain().focus().toggleItalic().run()}
+												title="Italic (Ctrl+I)"
+											>
+												<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+													<line x1="19" y1="4" x2="10" y2="4"></line>
+													<line x1="14" y1="20" x2="5" y2="20"></line>
+													<line x1="15" y1="4" x2="9" y2="20"></line>
+												</svg>
+											</button>
+											
+											{/* Underline button */}
+											<button
+												type="button"
+												className={`p-1 rounded ${editor?.isActive('underline') ? 'bg-gray-200 dark:bg-gray-700' : 'hover:bg-gray-200 dark:hover:bg-gray-700'}`}
+												onClick={() => editor?.chain().focus().toggleUnderline().run()}
+												title="Underline (Ctrl+U)"
+											>
+												<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+													<path d="M6 3v7a6 6 0 0 0 6 6 6 6 0 0 0 6-6V3"></path>
+													<line x1="4" y1="21" x2="20" y2="21"></line>
+												</svg>
+											</button>
+											
+											{/* Divider */}
+											<div className="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1"></div>
+											
+											{/* Heading dropdown */}
+											<div className="relative">
+												<button
+													type="button"
+													className={`p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center`}
+													onClick={() => {
+														const menu = document.getElementById('heading-menu');
+														menu?.classList.toggle('hidden');
+													}}
+													title="Headings"
+												>
+													<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+														<path d="M6 12h12"></path>
+														<path d="M6 4h12"></path>
+														<path d="M6 20h12"></path>
+													</svg>
+													<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="ml-1">
+														<polyline points="6 9 12 15 18 9"></polyline>
+													</svg>
+												</button>
+												<div id="heading-menu" className="absolute z-10 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-lg hidden">
+													<button
+														type="button"
+														className={`w-full px-3 py-1 text-left ${editor?.isActive('heading', { level: 1 }) ? 'bg-gray-100 dark:bg-gray-700' : 'hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+														onClick={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()}
+													>
+														<span className="text-xl font-bold">Heading 1</span>
+													</button>
+													<button
+														type="button"
+														className={`w-full px-3 py-1 text-left ${editor?.isActive('heading', { level: 2 }) ? 'bg-gray-100 dark:bg-gray-700' : 'hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+														onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}
+													>
+														<span className="text-lg font-bold">Heading 2</span>
+													</button>
+													<button
+														type="button"
+														className={`w-full px-3 py-1 text-left ${editor?.isActive('heading', { level: 3 }) ? 'bg-gray-100 dark:bg-gray-700' : 'hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+														onClick={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()}
+													>
+														<span className="text-base font-bold">Heading 3</span>
+													</button>
+													<button
+														type="button"
+														className={`w-full px-3 py-1 text-left ${editor?.isActive('paragraph') ? 'bg-gray-100 dark:bg-gray-700' : 'hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+														onClick={() => editor?.chain().focus().setParagraph().run()}
+													>
+														<span className="text-sm">Normal text</span>
+													</button>
+												</div>
+											</div>
+											
+											{/* Divider */}
+											<div className="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1"></div>
+											
+											{/* Text alignment buttons */}
+											<button
+												type="button"
+												className={`p-1 rounded ${editor?.isActive({ textAlign: 'left' }) ? 'bg-gray-200 dark:bg-gray-700' : 'hover:bg-gray-200 dark:hover:bg-gray-700'}`}
+												onClick={() => editor?.chain().focus().setTextAlign('left').run()}
+												title="Align Left (Ctrl+Shift+L)"
+											>
+												<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+													<line x1="17" y1="10" x2="3" y2="10"></line>
+													<line x1="21" y1="6" x2="3" y2="6"></line>
+													<line x1="21" y1="14" x2="3" y2="14"></line>
+													<line x1="17" y1="18" x2="3" y2="18"></line>
+												</svg>
 											</button>
 											<button
 												type="button"
-												className={`w-full px-3 py-1 text-left ${editor?.isActive('heading', { level: 2 }) ? 'bg-gray-100 dark:bg-gray-700' : 'hover:bg-gray-100 dark:hover:bg-gray-700'}`}
-												onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}
+												className={`p-1 rounded ${editor?.isActive({ textAlign: 'center' }) ? 'bg-gray-200 dark:bg-gray-700' : 'hover:bg-gray-200 dark:hover:bg-gray-700'}`}
+												onClick={() => editor?.chain().focus().setTextAlign('center').run()}
+												title="Align Center (Ctrl+Shift+E)"
 											>
-												<span className="text-lg font-bold">Heading 2</span>
+												<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+													<line x1="18" y1="10" x2="6" y2="10"></line>
+													<line x1="21" y1="6" x2="3" y2="6"></line>
+													<line x1="21" y1="14" x2="3" y2="14"></line>
+													<line x1="18" y1="18" x2="6" y2="18"></line>
+												</svg>
 											</button>
 											<button
 												type="button"
-												className={`w-full px-3 py-1 text-left ${editor?.isActive('heading', { level: 3 }) ? 'bg-gray-100 dark:bg-gray-700' : 'hover:bg-gray-100 dark:hover:bg-gray-700'}`}
-												onClick={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()}
+												className={`p-1 rounded ${editor?.isActive({ textAlign: 'right' }) ? 'bg-gray-200 dark:bg-gray-700' : 'hover:bg-gray-200 dark:hover:bg-gray-700'}`}
+												onClick={() => editor?.chain().focus().setTextAlign('right').run()}
+												title="Align Right (Ctrl+Shift+R)"
 											>
-												<span className="text-base font-bold">Heading 3</span>
+												<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+													<line x1="21" y1="10" x2="7" y2="10"></line>
+													<line x1="21" y1="6" x2="3" y2="6"></line>
+													<line x1="21" y1="14" x2="3" y2="14"></line>
+													<line x1="21" y1="18" x2="7" y2="18"></line>
+												</svg>
 											</button>
+											
+											{/* Divider */}
+											<div className="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1"></div>
+											
+											{/* Bullet list button */}
 											<button
 												type="button"
-												className={`w-full px-3 py-1 text-left ${editor?.isActive('paragraph') ? 'bg-gray-100 dark:bg-gray-700' : 'hover:bg-gray-100 dark:hover:bg-gray-700'}`}
-												onClick={() => editor?.chain().focus().setParagraph().run()}
+												className={`p-1 rounded ${editor?.isActive('bulletList') ? 'bg-gray-200 dark:bg-gray-700' : 'hover:bg-gray-200 dark:hover:bg-gray-700'}`}
+												onClick={() => editor?.chain().focus().toggleBulletList().run()}
+												title="Bullet List (Ctrl+Shift+8)"
 											>
-												<span className="text-sm">Normal text</span>
+												<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+													<line x1="8" y1="6" x2="21" y2="6"></line>
+													<line x1="8" y1="12" x2="21" y2="12"></line>
+													<line x1="8" y1="18" x2="21" y2="18"></line>
+													<line x1="3" y1="6" x2="3.01" y2="6"></line>
+													<line x1="3" y1="12" x2="3.01" y2="12"></line>
+													<line x1="3" y1="18" x2="3.01" y2="18"></line>
+												</svg>
 											</button>
-										</div>
-									</div>
-									<div className="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1"></div>
-									<button
-										type="button"
-										className={`p-1 rounded ${editor?.isActive({ textAlign: 'left' }) ? 'bg-gray-200 dark:bg-gray-700' : 'hover:bg-gray-200 dark:hover:bg-gray-700'}`}
-										onClick={() => editor?.chain().focus().setTextAlign('left').run()}
-										title="Align Left"
-									>
-										<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-											<line x1="17" y1="10" x2="3" y2="10"></line>
-											<line x1="21" y1="6" x2="3" y2="6"></line>
-											<line x1="21" y1="14" x2="3" y2="14"></line>
-											<line x1="17" y1="18" x2="3" y2="18"></line>
-										</svg>
-									</button>
-									<button
-										type="button"
-										className={`p-1 rounded ${editor?.isActive({ textAlign: 'center' }) ? 'bg-gray-200 dark:bg-gray-700' : 'hover:bg-gray-200 dark:hover:bg-gray-700'}`}
-										onClick={() => editor?.chain().focus().setTextAlign('center').run()}
-										title="Align Center"
-									>
-										<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-											<line x1="18" y1="10" x2="6" y2="10"></line>
-											<line x1="21" y1="6" x2="3" y2="6"></line>
-											<line x1="21" y1="14" x2="3" y2="14"></line>
-											<line x1="18" y1="18" x2="6" y2="18"></line>
-										</svg>
-									</button>
-									<button
-										type="button"
-										className={`p-1 rounded ${editor?.isActive({ textAlign: 'right' }) ? 'bg-gray-200 dark:bg-gray-700' : 'hover:bg-gray-200 dark:hover:bg-gray-700'}`}
-										onClick={() => editor?.chain().focus().setTextAlign('right').run()}
-										title="Align Right"
-									>
-										<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-											<line x1="21" y1="10" x2="7" y2="10"></line>
-											<line x1="21" y1="6" x2="3" y2="6"></line>
-											<line x1="21" y1="14" x2="3" y2="14"></line>
-											<line x1="21" y1="18" x2="7" y2="18"></line>
-										</svg>
-									</button>
-									<div className="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1"></div>
-									<button
-										type="button"
-										className={`p-1 rounded ${editor?.isActive('bulletList') ? 'bg-gray-200 dark:bg-gray-700' : 'hover:bg-gray-200 dark:hover:bg-gray-700'}`}
-										onClick={() => editor?.chain().focus().toggleBulletList().run()}
-										title="Bullet List"
-									>
-										<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-											<line x1="8" y1="6" x2="21" y2="6"></line>
-											<line x1="8" y1="12" x2="21" y2="12"></line>
-											<line x1="8" y1="18" x2="21" y2="18"></line>
-											<line x1="3" y1="6" x2="3.01" y2="6"></line>
-											<line x1="3" y1="12" x2="3.01" y2="12"></line>
-											<line x1="3" y1="18" x2="3.01" y2="18"></line>
-										</svg>
-									</button>
-									<button
-										type="button"
-										className={`p-1 rounded ${editor?.isActive('orderedList') ? 'bg-gray-200 dark:bg-gray-700' : 'hover:bg-gray-200 dark:hover:bg-gray-700'}`}
-										onClick={() => editor?.chain().focus().toggleOrderedList().run()}
-										title="Ordered List"
-									>
-										<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-											<line x1="10" y1="6" x2="21" y2="6"></line>
-											<line x1="10" y1="12" x2="21" y2="12"></line>
-											<line x1="10" y1="18" x2="21" y2="18"></line>
-											<path d="M4 6h1v4"></path>
-											<path d="M4 10h2"></path>
-											<path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"></path>
-										</svg>
-									</button>
-									<button
-										type="button"
-										className={`p-1 rounded ${editor?.isActive('link') ? 'bg-gray-200 dark:bg-gray-700' : 'hover:bg-gray-200 dark:hover:bg-gray-700'}`}
-										onClick={() => setLinkModalOpen(true)}
-										title="Link"
-									>
-										<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-											<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
-											<path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
-										</svg>
-									</button>
+											
+											{/* Ordered list button */}
+											<button
+												type="button"
+												className={`p-1 rounded ${editor?.isActive('orderedList') ? 'bg-gray-200 dark:bg-gray-700' : 'hover:bg-gray-200 dark:hover:bg-gray-700'}`}
+												onClick={() => editor?.chain().focus().toggleOrderedList().run()}
+												title="Ordered List (Ctrl+Shift+7)"
+											>
+												<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+													<line x1="10" y1="6" x2="21" y2="6"></line>
+													<line x1="10" y1="12" x2="21" y2="12"></line>
+													<line x1="10" y1="18" x2="21" y2="18"></line>
+													<path d="M4 6h1v4"></path>
+													<path d="M4 10h2"></path>
+													<path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"></path>
+												</svg>
+											</button>
+											
+											{/* Link button */}
+											<button
+												type="button"
+												className={`p-1 rounded ${editor?.isActive('link') ? 'bg-gray-200 dark:bg-gray-700' : 'hover:bg-gray-200 dark:hover:bg-gray-700'}`}
+												onClick={() => setLinkModalOpen(true)}
+												title="Insert Link (Ctrl+K)"
+											>
+												<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+													<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+													<path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+												</svg>
+											</button>
+										</>
+									)}
 								</div>
-								<EditorContent 
-									editor={editor} 
-									className="p-4 prose prose-sm max-w-full min-h-[8rem] focus:outline-none dark:bg-gray-700 dark:text-white [&_.is-editor-empty]:before:text-gray-400 [&_.is-editor-empty]:before:content-[attr(data-placeholder)] [&_.is-editor-empty]:before:float-left [&_.is-editor-empty]:before:pointer-events-none [&_p]:my-1 [&_h1]:text-2xl [&_h1]:font-bold [&_h2]:text-xl [&_h2]:font-bold [&_h3]:text-lg [&_h3]:font-semibold [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:text-blue-500 [&_a]:underline [&_u]:underline [&_blockquote]:border-l-4 [&_blockquote]:border-gray-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_img]:max-w-full [&_img]:h-auto [&_.text-left]:text-left [&_.text-center]:text-center [&_.text-right]:text-right"
-								/>
+								
+								{/* Render either the visual editor or the HTML editor based on mode */}
+								{isHtmlMode ? (
+									<textarea
+										name="html-editor"
+										id="html-editor"
+										value={htmlContent}
+										onChange={handleHtmlChange}
+										className="w-full p-4 min-h-[20rem] font-mono text-sm dark:bg-gray-800 dark:text-gray-100 focus:outline-none"
+										placeholder="Enter HTML content..."
+										spellCheck="false"
+										autoComplete="off"
+										wrap="off"
+									/>
+								) : (
+									<EditorContent 
+										editor={editor} 
+										className="p-4 prose prose-sm max-w-full min-h-[8rem] focus:outline-none dark:bg-gray-700 dark:text-white [&_.is-editor-empty]:before:text-gray-400 [&_.is-editor-empty]:before:content-[attr(data-placeholder)] [&_.is-editor-empty]:before:float-left [&_.is-editor-empty]:before:pointer-events-none [&_p]:my-1 [&_h1]:text-2xl [&_h1]:font-bold [&_h2]:text-xl [&_h2]:font-bold [&_h3]:text-lg [&_h3]:font-semibold [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:text-blue-500 [&_a]:underline [&_u]:underline [&_blockquote]:border-l-4 [&_blockquote]:border-gray-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_img]:max-w-full [&_img]:h-auto [&_.text-left]:text-left [&_.text-center]:text-center [&_.text-right]:text-right"
+									/>
+								)}
 							</div>
 						</div>
 					</div>
@@ -427,7 +696,9 @@ export function ProductDetails({
 				>
 					<div className="p-4 max-h-[80vh] overflow-y-auto">
 						<div
-							dangerouslySetInnerHTML={{ __html: description }}
+							dangerouslySetInnerHTML={{ 
+								__html: isHtmlMode ? htmlContent : description 
+							}}
 						/>
 					</div>
 				</Modal>
