@@ -246,7 +246,10 @@ export default function ProductCategories() {
 										{node.name}
 									</div>
 									{node.description && (
-										<div className="text-xs text-gray-500 dark:text-gray-400">
+										<div 
+											className="text-xs text-gray-500 dark:text-gray-400"
+											title={node.description}
+										>
 											{node.description.length > 50
 												? `${node.description.substring(0, 50)}...`
 												: node.description}
