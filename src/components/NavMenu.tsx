@@ -8,6 +8,8 @@ import {
 	Pause,
 	Play,
 	LogOut,
+	Package as PackageIcon,
+	Folder as FolderIcon,
 } from "lucide-react";
 
 export interface NavMenuProps {
@@ -84,6 +86,30 @@ const NavMenu = forwardRef<HTMLDivElement, NavMenuProps>(
 							)}
 						</div>
 					</button>
+					<button
+						onClick={onUsersClick}
+						className="w-full flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+						role="menuitem"
+					>
+						<UsersIcon className="h-4 w-4 mr-2" />
+						Manage Users
+					</button>
+					<a
+						href="/products"
+						className="w-full flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+						role="menuitem"
+					>
+						<PackageIcon className="h-4 w-4 mr-2" />
+						Manage Products
+					</a>
+					<a
+						href="/productCategories"
+						className="w-full flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+						role="menuitem"
+					>
+						<FolderIcon className="h-4 w-4 mr-2" />
+						Manage Categories
+					</a>
 					<button
 						onClick={onLogout}
 						className="w-full flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"

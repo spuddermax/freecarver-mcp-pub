@@ -68,3 +68,19 @@ export function formatProductOption(option: any): any {
 		price: option.price,
 	};
 }
+
+/**
+ * Formats a product category object as needed.
+ * @param category - The product category object to format.
+ * @returns The formatted product category object.
+ */
+export function formatProductCategory(category: any): any {
+	return {
+		id: category.id,
+		name: category.name,
+		description: category.description,
+		parent_category_id: category.parent_category_id,
+		created_at: category.created_at,
+		updated_at: category.updated_at,
+	};
+}
