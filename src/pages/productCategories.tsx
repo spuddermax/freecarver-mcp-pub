@@ -1,10 +1,13 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
 	Folder as FolderIcon,
 	Search as SearchIcon,
 	Plus as PlusIcon,
 	Loader2 as Loader2Icon,
+	ChevronRight,
+	ChevronDown,
+	Edit as EditIcon,
 } from "lucide-react";
 import Layout from "../components/Layout";
 import { Toast } from "../components/Toast";
@@ -13,6 +16,12 @@ import { formatProductCategory } from "../utils/formatters";
 import { ProductCategory } from "../types/Interfaces";
 import { format } from "date-fns";
 import { LoadingModal } from "../components/LoadingModal";
+
+// Structure to keep track of expanded state
+interface CategoryTreeNode extends ProductCategory {
+	children: CategoryTreeNode[];
+	isExpanded?: boolean;
+}
 
 export default function ProductCategories() {
 	const navigate = useNavigate();
@@ -24,10 +33,14 @@ export default function ProductCategories() {
 		type: "success" | "error";
 		text: string;
 	} | null>(null);
+	// Track which node is being toggled
+	const [togglingNodeId, setTogglingNodeId] = useState<number | null>(null);
+	// Tree structure for categories
+	const [categoryTree, setCategoryTree] = useState<CategoryTreeNode[]>([]);
 	// Pagination state
 	const [currentPage, setCurrentPage] = useState<number>(1);
 	const [totalPages, setTotalPages] = useState<number>(1);
-	const limit = 20; // Always fetch 20 categories per page
+	const limit = 100; // Increased to accommodate tree view
 
 	useEffect(() => {
 		loadCategories();
@@ -40,6 +53,11 @@ export default function ProductCategories() {
 		}, 300);
 		return () => clearTimeout(timer);
 	}, [searchQuery]);
+
+	// Effect to build the tree structure whenever categories change
+	useEffect(() => {
+		buildCategoryTree();
+	}, [categories]);
 
 	async function loadCategories() {
 		setLoading(true);
@@ -77,22 +95,201 @@ export default function ProductCategories() {
 		}
 	}
 
-	const filterCategories = () => {
-		const searchLower = searchQuery.toLowerCase();
-		if (!searchLower) return categories;
-		return categories.filter((category) =>
-			category.name.toLowerCase().includes(searchLower)
-		);
+	// Function to build the tree structure from flat categories array
+	const buildCategoryTree = () => {
+		if (!categories.length) return;
+
+		// First, create all nodes with empty children array
+		const nodes: { [key: number]: CategoryTreeNode } = {};
+		categories.forEach(category => {
+			nodes[category.id] = { ...category, children: [], isExpanded: false };
+		});
+
+		// Then, build the tree by adding children to their parents
+		const rootNodes: CategoryTreeNode[] = [];
+		Object.values(nodes).forEach(node => {
+			if (node.parent_category_id === null) {
+				rootNodes.push(node);
+			} else if (nodes[node.parent_category_id]) {
+				nodes[node.parent_category_id].children.push(node);
+			} else {
+				// If parent doesn't exist, treat as root
+				rootNodes.push(node);
+			}
+		});
+
+		// Sort the root nodes
+		rootNodes.sort((a, b) => a.name.localeCompare(b.name));
+		
+		// Sort children of each node
+		const sortChildren = (node: CategoryTreeNode) => {
+			node.children.sort((a, b) => a.name.localeCompare(b.name));
+			node.children.forEach(sortChildren);
+		};
+		
+		rootNodes.forEach(sortChildren);
+		
+		setCategoryTree(rootNodes);
 	};
 
-	const filteredCategories = filterCategories();
+	// Toggle the expanded state of a category
+	const toggleExpand = (nodeId: number, e: React.MouseEvent) => {
+		// Stop event propagation to prevent row click
+		e.stopPropagation();
+		
+		// Set the toggling node ID to show loading indicator
+		setTogglingNodeId(nodeId);
+		
+		// Use setTimeout to ensure the UI updates with the loading state before performing the potentially expensive operation
+		setTimeout(() => {
+			setCategoryTree(prevTree => {
+				// Create a deep copy function for the tree nodes
+				const deepCopyNode = (node: CategoryTreeNode): CategoryTreeNode => {
+					return {
+						...node,
+						children: node.children.map(child => deepCopyNode(child))
+					};
+				};
+				
+				// Create a deep copy of the entire tree
+				const newTree = prevTree.map(node => deepCopyNode(node));
+				
+				// Function to find and toggle the specific node
+				const toggleNode = (nodes: CategoryTreeNode[]): boolean => {
+					for (let i = 0; i < nodes.length; i++) {
+						if (nodes[i].id === nodeId) {
+							nodes[i].isExpanded = !nodes[i].isExpanded;
+							console.log(`Toggled node ${nodes[i].name} to ${nodes[i].isExpanded ? 'expanded' : 'collapsed'}`);
+							return true;
+						}
+						if (nodes[i].children.length > 0) {
+							if (toggleNode(nodes[i].children)) {
+								return true;
+							}
+						}
+					}
+					return false;
+				};
+				
+				toggleNode(newTree);
+				return newTree;
+			});
+			
+			// Clear the toggling node ID after the state update
+			setTogglingNodeId(null);
+		}, 100);
+	};
+
+	// Handle searching in tree structure
+	const filterCategories = () => {
+		if (!searchQuery.trim()) return categoryTree;
+		
+		const searchLower = searchQuery.toLowerCase();
+		
+		// Flatten the tree for searching
+		const flattenTree = (nodes: CategoryTreeNode[]): CategoryTreeNode[] => {
+			let result: CategoryTreeNode[] = [];
+			nodes.forEach(node => {
+				if (node.name.toLowerCase().includes(searchLower) || 
+					(node.description && node.description.toLowerCase().includes(searchLower))) {
+					result.push({...node, children: flattenTree(node.children)});
+				} else if (node.children.length > 0) {
+					const filteredChildren = flattenTree(node.children);
+					if (filteredChildren.length > 0) {
+						result.push({...node, children: filteredChildren, isExpanded: true});
+					}
+				}
+			});
+			return result;
+		};
+		
+		return flattenTree(categoryTree);
+	};
+
+	const filteredCategoryTree = filterCategories();
+
+	// Recursive component to render the category tree
+	const renderCategoryNode = (node: CategoryTreeNode, depth: number = 0) => {
+		const hasChildren = node.children && node.children.length > 0;
+		
+		return (
+			<React.Fragment key={node.id}>
+				<tr className="hover:bg-gray-100 dark:hover:bg-gray-700">
+					<td className="px-6 py-4 whitespace-nowrap">
+						<div className="flex items-center">
+							<div 
+								style={{ paddingLeft: `${depth * 20}px` }}
+								className="flex items-center"
+							>
+								{hasChildren ? (
+									<button 
+										onClick={(e) => toggleExpand(node.id, e)}
+										className="mr-2 focus:outline-none"
+										disabled={togglingNodeId === node.id}
+									>
+										{togglingNodeId === node.id ? (
+											<Loader2Icon className="h-4 w-4 text-green-500 animate-spin" />
+										) : node.isExpanded ? (
+											<ChevronDown className="h-4 w-4 text-gray-500" />
+										) : (
+											<ChevronRight className="h-4 w-4 text-gray-500" />
+										)}
+									</button>
+								) : (
+									<div className="w-4 mr-2"></div>
+								)}
+								<div className="h-8 w-8 rounded bg-green-100 dark:bg-green-900 flex items-center justify-center">
+									<FolderIcon className="h-4 w-4 text-green-600 dark:text-green-400" />
+								</div>
+								<div className="ml-4">
+									<div className="text-sm font-medium text-gray-900 dark:text-white">
+										{node.name}
+									</div>
+									{node.description && (
+										<div className="text-xs text-gray-500 dark:text-gray-400">
+											{node.description.length > 50
+												? `${node.description.substring(0, 50)}...`
+												: node.description}
+										</div>
+									)}
+								</div>
+							</div>
+						</div>
+					</td>
+					<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+						{node.parent_category_id 
+							? categories.find(c => c.id === node.parent_category_id)?.name || "Unknown"
+							: "None"}
+					</td>
+					<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+						{format(
+							new Date(node.created_at),
+							"MM/dd/yyyy"
+						)}
+					</td>
+					<td className="px-6 py-4 whitespace-nowrap text-sm text-center">
+						<button
+							onClick={() => navigate(`/productCategoryEdit/${node.id}`)}
+							className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300 focus:outline-none"
+							title="Edit Category"
+						>
+							<EditIcon className="h-5 w-5" />
+						</button>
+					</td>
+				</tr>
+				{node.isExpanded && node.children.map(child => 
+					renderCategoryNode(child, depth + 1)
+				)}
+			</React.Fragment>
+		);
+	};
 
 	return (
 		<Layout
 			pageInfo={{
 				title: "Manage Product Categories",
 				icon: FolderIcon,
-				iconColor: "text-blue-600 dark:text-blue-600",
+				iconColor: "text-green-600 dark:text-green-500",
 			}}
 			breadcrumbs={[
 				{ label: "Dashboard", link: "/dashboard" },
@@ -160,7 +357,7 @@ export default function ProductCategories() {
 										)}
 									</div>
 									<button
-										className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+										className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
 										onClick={() =>
 											navigate("/productCategoryCreate")
 										}
@@ -172,12 +369,14 @@ export default function ProductCategories() {
 							</div>
 						</div>
 
-						<Pagination
-							currentPage={currentPage}
-							onPageChange={setCurrentPage}
-							canPaginateNext={currentPage < totalPages}
-							totalPages={totalPages}
-						/>
+						{totalPages > 1 && (
+							<Pagination
+								currentPage={currentPage}
+								onPageChange={setCurrentPage}
+								canPaginateNext={currentPage < totalPages}
+								totalPages={totalPages}
+							/>
+						)}
 
 						<div className="overflow-x-auto">
 							<table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
@@ -192,6 +391,9 @@ export default function ProductCategories() {
 										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 											Created
 										</th>
+										<th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+											Actions
+										</th>
 									</tr>
 								</thead>
 								<tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
@@ -200,69 +402,32 @@ export default function ProductCategories() {
 											isOpen={loading}
 											message="Loading categories..."
 										/>
-									) : filteredCategories.length === 0 ? (
+									) : filteredCategoryTree.length === 0 ? (
 										<tr>
 											<td
-												colSpan={3}
+												colSpan={4}
 												className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400"
 											>
 												No categories found
 											</td>
 										</tr>
 									) : (
-										filteredCategories.map((category) => (
-											<tr
-												key={category.id}
-												className="hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
-												onClick={() =>
-													navigate(
-														`/productCategoryEdit/${category.id}`
-													)
-												}
-											>
-												<td className="px-6 py-4 whitespace-nowrap">
-													<div className="flex items-center">
-														<div className="h-8 w-8 rounded bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
-															<FolderIcon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-														</div>
-														<div className="ml-4">
-															<div className="text-sm font-medium text-gray-900 dark:text-white">
-																{category.name}
-															</div>
-															{category.description && (
-																<div className="text-xs text-gray-500 dark:text-gray-400">
-																	{category.description.length > 50
-																		? `${category.description.substring(0, 50)}...`
-																		: category.description}
-																</div>
-															)}
-														</div>
-													</div>
-												</td>
-												<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-													{category.parent_category_id 
-														? categories.find(c => c.id === category.parent_category_id)?.name || "Unknown"
-														: "None"}
-												</td>
-												<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-													{format(
-														new Date(category.created_at),
-														"MM/dd/yyyy"
-													)}
-												</td>
-											</tr>
-										))
+										filteredCategoryTree.map(category => 
+											renderCategoryNode(category)
+										)
 									)}
 								</tbody>
 							</table>
 						</div>
 
-						<Pagination
-							currentPage={currentPage}
-							onPageChange={setCurrentPage}
-							canPaginateNext={currentPage < totalPages}
-							totalPages={totalPages}
-						/>
+						{totalPages > 1 && (
+							<Pagination
+								currentPage={currentPage}
+								onPageChange={setCurrentPage}
+								canPaginateNext={currentPage < totalPages}
+								totalPages={totalPages}
+							/>
+						)}
 					</div>
 				</div>
 			</div>
