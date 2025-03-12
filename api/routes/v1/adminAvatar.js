@@ -20,40 +20,35 @@ const upload = multer({
 });
 
 /**
- * @api {post} /api/admin/cloudflare-avatar Upload admin avatar to Cloudflare R2
- * @apiName UploadCloudflareAvatar
+ * @api {post} /api/admin/cloudflare-avatar Upload images to Cloudflare R2
+ * @apiName UploadCloudflareImage
  * @apiGroup Admin
- * @apiDescription Uploads an admin user's avatar image to Cloudflare R2 storage and updates the admin's profile with the new avatar URL
+ * @apiDescription Uploads images (avatars, category hero images, etc.) to Cloudflare R2 storage and updates the associated database record
  *
  * @apiHeader {String} Authorization JWT token in format: Bearer [token]
  *
  * @apiParam (Request body) {File} avatar The image file to upload (required, max 2MB)
- * @apiParam (Request body) {String} [oldAvatarUrl] URL of the previous avatar to delete
- * @apiParam (Request body) {Number} [userId] ID of the user being edited (if different from logged-in admin)
+ * @apiParam (Request body) {String} [oldAvatarUrl] URL of the previous image to delete
+ * @apiParam (Request body) {Number} [userId] ID of the user or entity being edited
+ * @apiParam (Request body) {String} [imageType] Type of image ('avatar', 'category_hero', etc.) - defaults to 'avatar'
+ * @apiParam (Request body) {Number} [categoryId] ID of the category when uploading category hero images
  *
- * @apiSuccess {String} publicUrl Public URL of the uploaded avatar image
+ * @apiSuccess {String} publicUrl Public URL of the uploaded image
  * @apiSuccess {String} message Success message
  *
  * @apiSuccessExample {json} Success-Response:
  *     HTTP/1.1 200 OK
  *     {
  *       "status": "success",
- *       "message": "Avatar uploaded successfully to Cloudflare",
+ *       "message": "Image uploaded successfully to Cloudflare",
  *       "data": {
- *         "publicUrl": "https://bucket-name.account-id.r2.cloudflarestorage.com/avatars/1.jpg"
+ *         "publicUrl": "https://bucket-name.account-id.r2.cloudflarestorage.com/images/cat-hero-5.jpg"
  *       }
  *     }
  *
  * @apiError (Error 400) BadRequest No file uploaded or invalid file
  * @apiError (Error 401) Unauthorized Authentication failed or token expired
  * @apiError (Error 500) ServerError Error uploading to Cloudflare or updating database
- *
- * @apiErrorExample {json} Error-Response:
- *     HTTP/1.1 400 Bad Request
- *     {
- *       "status": "error",
- *       "message": "No file uploaded"
- *     }
  */
 router.post(
 	"/cloudflare-avatar",
@@ -76,65 +71,84 @@ router.post(
 				authHeader: req.headers.authorization?.substring(0, 20) + "...", // Log just beginning of token for security
 			});
 
-			// For direct user edits, extract userId from URL if available
-			// Example: if the request path includes a user ID like /users/5/avatar
-			let extractedUserId;
-			const urlMatch = req.originalUrl.match(/\/users\/(\d+)/);
-			if (urlMatch && urlMatch[1]) {
-				extractedUserId = parseInt(urlMatch[1], 10);
-				req.log(
-					"debug",
-					`Extracted userId ${extractedUserId} from URL`
-				);
-			}
-
-			// Get the user ID from the request body or URL
-			const userId = req.body.userId || extractedUserId;
-
-			// Require a valid user ID
-			if (!userId || isNaN(parseInt(userId, 10))) {
-				req.log("error", "No valid userId provided for avatar upload");
-				return res.error("User ID is required for avatar upload", 400);
+			// Get image type - default to 'avatar' for backward compatibility
+			const imageType = req.body.imageType || 'avatar';
+			
+			// Handle ID based on image type
+			let entityId;
+			if (imageType === 'category_hero') {
+				// For category hero images, use categoryId if provided, otherwise userId
+				entityId = req.body.categoryId || req.body.userId;
+				if (!entityId || isNaN(parseInt(entityId, 10))) {
+					req.log("error", "No valid categoryId provided for category hero upload");
+					return res.error("Category ID is required for category hero upload", 400);
+				}
+			} else {
+				// For avatars, extract from URL if available
+				let extractedUserId;
+				const urlMatch = req.originalUrl.match(/\/users\/(\d+)/);
+				if (urlMatch && urlMatch[1]) {
+					extractedUserId = parseInt(urlMatch[1], 10);
+					req.log("debug", `Extracted userId ${extractedUserId} from URL`);
+				}
+				
+				// Use userId from body or URL
+				entityId = req.body.userId || extractedUserId;
+				if (!entityId || isNaN(parseInt(entityId, 10))) {
+					req.log("error", "No valid userId provided for avatar upload");
+					return res.error("User ID is required for avatar upload", 400);
+				}
 			}
 
 			// Convert to integer to ensure consistency
-			const effectiveUserId = parseInt(userId, 10);
+			const effectiveEntityId = parseInt(entityId, 10);
 
-			req.log(
-				"info",
-				`Using user ID: ${effectiveUserId} for avatar upload`
-			);
+			req.log("info", `Using ${imageType === 'category_hero' ? 'category' : 'user'} ID: ${effectiveEntityId} for ${imageType} upload`);
 
-			// Get old avatar URL if provided
-			const oldAvatarUrl = req.body.oldAvatarUrl;
+			// Get old image URL if provided
+			const oldImageUrl = req.body.oldAvatarUrl;
+
+			// Determine filename based on image type
+			let filename;
+			switch(imageType) {
+				case 'category_hero':
+					filename = `cat-hero-${effectiveEntityId}.${req.file.mimetype.split("/")[1]}`;
+					break;
+				case 'avatar':
+				default:
+					filename = `user-${effectiveEntityId}.${req.file.mimetype.split("/")[1]}`;
+			}
 
 			// Upload to Cloudflare Images
 			const result = await uploadToCloudflare(req.file.buffer, {
-				// Use a specific naming convention with the user ID
-				filename: `user-${effectiveUserId}.${
-					req.file.mimetype.split("/")[1]
-				}`,
+				filename: filename,
 				adminId: adminId,
-				oldImageUrl: oldAvatarUrl,
-				userId: effectiveUserId,
+				oldImageUrl: oldImageUrl,
+				// Pass appropriate ID based on image type
+				userId: effectiveEntityId,
 			});
 
-			// Update admin profile with new avatar URL in database
+			// Update database based on image type
 			try {
-				// Use the imported pool instead of req.db
-				await pool.query(
-					"UPDATE admin_users SET avatar_url = $1 WHERE id = $2",
-					[result.publicUrl, effectiveUserId]
-				);
-
-				req.log(
-					"info",
-					`Updated avatar URL for admin ID ${effectiveUserId}`
-				);
+				if (imageType === 'category_hero') {
+					// Update product_categories table for category hero images
+					await pool.query(
+						"UPDATE product_categories SET hero_image = $1 WHERE id = $2",
+						[result.publicUrl, effectiveEntityId]
+					);
+					req.log("info", `Updated hero_image URL for product category ID ${effectiveEntityId}`);
+				} else {
+					// Default behavior: update admin_users table for avatars
+					await pool.query(
+						"UPDATE admin_users SET avatar_url = $1 WHERE id = $2",
+						[result.publicUrl, effectiveEntityId]
+					);
+					req.log("info", `Updated avatar URL for admin ID ${effectiveEntityId}`);
+				}
 			} catch (dbError) {
 				req.log(
 					"error",
-					`Error updating admin user avatar in DB: ${dbError.message}`,
+					`Error updating ${imageType} in DB: ${dbError.message}`,
 					{ error: dbError }
 				);
 				// Continue even if DB update fails - we'll still return the URL
@@ -144,7 +158,7 @@ router.post(
 				{
 					publicUrl: result.publicUrl,
 				},
-				"Avatar uploaded successfully to Cloudflare"
+				`${imageType === 'avatar' ? 'Avatar' : 'Image'} uploaded successfully to Cloudflare`
 			);
 		} catch (error) {
 			req.log(
@@ -152,7 +166,97 @@ router.post(
 				`Error uploading to Cloudflare: ${error.message}`,
 				{ error }
 			);
-			return res.error(error.message || "Error uploading avatar", 500);
+			return res.error(error.message || "Error uploading image", 500);
+		}
+	}
+);
+
+/**
+ * @api {delete} /api/admin/cloudflare-image Delete image from Cloudflare R2
+ * @apiName DeleteCloudflareImage
+ * @apiGroup Admin
+ * @apiDescription Deletes an image from Cloudflare R2 storage without uploading a replacement
+ *
+ * @apiHeader {String} Authorization JWT token in format: Bearer [token]
+ *
+ * @apiParam (Request body) {String} imageUrl URL of the image to delete
+ * @apiParam (Request body) {String} [imageType] Type of image ('avatar', 'category_hero', etc.)
+ * @apiParam (Request body) {Number} [entityId] ID of the user or category
+ *
+ * @apiSuccess {Object} result Success status and message
+ *
+ * @apiSuccessExample {json} Success-Response:
+ *     HTTP/1.1 200 OK
+ *     {
+ *       "status": "success",
+ *       "message": "Image deleted successfully from Cloudflare"
+ *     }
+ *
+ * @apiError (Error 400) BadRequest Missing image URL
+ * @apiError (Error 401) Unauthorized Authentication failed or token expired
+ * @apiError (Error 500) ServerError Error deleting from Cloudflare or updating database
+ */
+router.delete(
+	"/cloudflare-image",
+	authenticate,
+	async (req, res) => {
+		try {
+			const { imageUrl, imageType, entityId } = req.body;
+
+			// Check if image URL is provided
+			if (!imageUrl) {
+				return res.error("Image URL is required", 400);
+			}
+
+			// Extract the admin ID from the auth token
+			const adminId = req.admin?.id;
+
+			req.log("info", `Deleting image: ${imageUrl}`);
+
+			// Delete from Cloudflare R2
+			await deleteFromCloudflare(imageUrl);
+
+			// If entityId is provided, update the appropriate table
+			if (entityId && !isNaN(parseInt(entityId, 10))) {
+				const effectiveEntityId = parseInt(entityId, 10);
+				
+				try {
+					if (imageType === 'category_hero') {
+						// Update product_categories table for category hero images
+						await pool.query(
+							"UPDATE product_categories SET hero_image = NULL WHERE id = $1",
+							[effectiveEntityId]
+						);
+						req.log("info", `Cleared hero_image for product category ID ${effectiveEntityId}`);
+					} else if (imageType === 'avatar') {
+						// Update admin_users table for avatars
+						await pool.query(
+							"UPDATE admin_users SET avatar_url = NULL WHERE id = $1",
+							[effectiveEntityId]
+						);
+						req.log("info", `Cleared avatar_url for admin ID ${effectiveEntityId}`);
+					}
+				} catch (dbError) {
+					req.log(
+						"error",
+						`Error updating database after image deletion: ${dbError.message}`,
+						{ error: dbError }
+					);
+					// Continue even if DB update fails
+				}
+			}
+
+			return res.success(
+				{},
+				"Image deleted successfully from Cloudflare"
+			);
+		} catch (error) {
+			req.log(
+				"error",
+				`Error deleting from Cloudflare: ${error.message}`,
+				{ error }
+			);
+			return res.error(error.message || "Error deleting image", 500);
 		}
 	}
 );

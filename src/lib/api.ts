@@ -115,6 +115,58 @@ export async function uploadAvatarToCloudflare(
 }
 
 /**
+ * Upload a category hero image to Cloudflare R2 storage
+ * @param file - The image file to upload
+ * @param categoryId - The ID of the category for which the hero image is being uploaded
+ * @param currentUrl - The current url of the hero image, if exists
+ * @returns The response with the public URL of the uploaded image
+ */
+export async function uploadCategoryHeroToCloudflare(
+	file: File,
+	categoryId: number,
+	currentUrl?: string
+): Promise<{ status: string; message: string; data: { publicUrl: string } }> {
+	const formData = new FormData();
+	// Use "avatar" field name as that's what the endpoint expects
+	formData.append("avatar", file);
+	
+	if (currentUrl) {
+		formData.append("oldAvatarUrl", currentUrl);
+	}
+
+	// Include categoryId in the request (use userId parameter of the existing endpoint)
+	// This will be used in the filename on the server
+	formData.append("userId", categoryId.toString());
+	
+	// Add a field to indicate we want to use Cloudflare
+	formData.append("storage", "cloudflare");
+	
+	// IMPORTANT: Specify this is a category hero image, not a user avatar
+	// This is required for the backend to use the correct naming convention and database update
+	formData.append("imageType", "category_hero");
+
+	const response = await fetch(
+		import.meta.env.VITE_API_URL + "/api/admin/cloudflare-avatar",
+		{
+			method: "POST",
+			headers: {
+				Authorization: `Bearer ${localStorage.getItem("jwtToken")}`,
+			},
+			body: formData,
+		}
+	);
+
+	if (!response.ok) {
+		const errorData = await response.json();
+		throw new Error(errorData.error || "Cloudflare hero image upload failed");
+	}
+	
+	// After uploading with the standard endpoint, we need to update the product_categories table
+	// with the new URL. We'll do this in the component that calls this function.
+	return response.json();
+}
+
+/**
  * Upload the admin user's avatar
  * @param file - The file to upload
  * @param currentUrl - The current url of the avatar
@@ -273,4 +325,40 @@ export async function updateUserEmail(email: string): Promise<void> {
 		const errorData = await response.json();
 		throw new Error(errorData.error || "Failed to update email");
 	}
+}
+
+/**
+ * Delete an image from Cloudflare R2 storage
+ * @param imageUrl - The URL of the image to delete
+ * @param imageType - The type of image ('avatar', 'category_hero', etc.)
+ * @param entityId - ID of the associated entity (user ID, category ID, etc.)
+ * @returns The response from the delete operation
+ */
+export async function deleteImageFromCloudflare(
+	imageUrl: string,
+	imageType: string,
+	entityId: number
+): Promise<{ status: string; message: string }> {
+	const response = await fetch(
+		import.meta.env.VITE_API_URL + "/api/admin/cloudflare-image",
+		{
+			method: "DELETE",
+			headers: {
+				"Content-Type": "application/json",
+				Authorization: `Bearer ${localStorage.getItem("jwtToken")}`,
+			},
+			body: JSON.stringify({
+				imageUrl,
+				imageType,
+				entityId
+			}),
+		}
+	);
+
+	if (!response.ok) {
+		const errorData = await response.json();
+		throw new Error(errorData.error || "Cloudflare image deletion failed");
+	}
+	
+	return response.json();
 }

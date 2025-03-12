@@ -123,6 +123,7 @@ export interface ProductCategory {
 	name: string;
 	description: string;
 	parent_category_id: number | null;
+	hero_image: string | null;
 	created_at: Date;
 	updated_at: Date;
 }

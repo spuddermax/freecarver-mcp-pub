@@ -80,6 +80,7 @@ export function formatProductCategory(category: any): any {
 		name: category.name,
 		description: category.description,
 		parent_category_id: category.parent_category_id,
+		hero_image: category.hero_image || null,
 		created_at: category.created_at,
 		updated_at: category.updated_at,
 	};
