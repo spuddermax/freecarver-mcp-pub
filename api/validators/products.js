@@ -31,3 +31,8 @@ export const createOrUpdateProductSchema = Joi.object({
 export const productIdSchema = Joi.object({
 	id: Joi.number().integer().required(),
 });
+
+// Schema for product category assignments
+export const productCategoryAssignmentSchema = Joi.object({
+	category_ids: Joi.array().items(Joi.number().integer().required()).min(0).required(),
+});

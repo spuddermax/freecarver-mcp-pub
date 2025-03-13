@@ -9,6 +9,7 @@ import {
 	productListSchema,
 	createOrUpdateProductSchema,
 	productIdSchema,
+	productCategoryAssignmentSchema,
 } from "../../validators/products.js";
 
 const router = express.Router();
@@ -872,6 +873,353 @@ router.delete(
 				error: error.message,
 			});
 			res.error("Internal server error", 500);
+		}
+	}
+);
+
+/**
+ * @route PUT /v1/products/:id/categories
+ * @description Update categories assigned to a product by replacing all existing assignments.
+ * @access Protected
+ * @param {string} req.params.id - The ID of the product to update categories for.
+ * @param {Object} req.body - The request body.
+ * @param {Array<number>} req.body.category_ids - Array of category IDs to assign to the product.
+ * @returns {Response} 200 - Success message on successful update.
+ * @returns {Response} 404 - Not found if the product does not exist.
+ * @returns {Response} 400 - Bad request if any category ID doesn't exist.
+ * @returns {Response} 500 - Internal server error.
+ */
+router.put(
+	"/:id/categories",
+	validateRequest(productIdSchema, "params"),
+	validateRequest(productCategoryAssignmentSchema, "body"),
+	async (req, res) => {
+		try {
+			const { id } = req.params;
+			const { category_ids } = req.body;
+			
+			// First verify that the product exists
+			const productCheck = await query(
+				"SELECT id FROM products WHERE id = $1",
+				[id]
+			);
+			
+			if (productCheck.rows.length === 0) {
+				logger.error(`Product with ID ${id} not found for category update.`);
+				return res.error("Product not found.", 404);
+			}
+			
+			// If there are category IDs to assign, validate they exist
+			if (category_ids && category_ids.length > 0) {
+				// Create a comma-separated list of category IDs for the query
+				const categoryList = category_ids.join(',');
+				
+				// Check if all provided category IDs exist
+				const categoryCheck = await query(
+					`SELECT id FROM product_categories WHERE id IN (${category_ids.map((_, idx) => '$' + (idx + 1)).join(',')})`,
+					category_ids
+				);
+				
+				// If the number of found categories doesn't match the input array length,
+				// some categories don't exist
+				if (categoryCheck.rows.length !== category_ids.length) {
+					// Find which category IDs don't exist
+					const foundIds = new Set(categoryCheck.rows.map(row => row.id));
+					const missingIds = category_ids.filter(id => !foundIds.has(parseInt(id)));
+					
+					logger.error(`Some category IDs do not exist: ${missingIds.join(', ')}`);
+					return res.error(`The following category IDs do not exist: ${missingIds.join(', ')}`, 400);
+				}
+			}
+			
+			// Use a transaction to ensure atomicity
+			await query("BEGIN");
+			
+			try {
+				// Delete all existing category assignments for this product
+				await query(
+					"DELETE FROM product_category_assignments WHERE product_id = $1",
+					[id]
+				);
+				
+				// If there are category IDs to assign, insert them
+				if (category_ids && category_ids.length > 0) {
+					// Prepare values for bulk insert
+					const values = [];
+					const placeholders = [];
+					let placeholderIndex = 1;
+					
+					category_ids.forEach(categoryId => {
+						values.push(id, categoryId);
+						placeholders.push(`($${placeholderIndex}, $${placeholderIndex + 1})`);
+						placeholderIndex += 2;
+					});
+					
+					// Insert all new category assignments in one query
+					const insertQuery = `
+						INSERT INTO product_category_assignments (product_id, category_id)
+						VALUES ${placeholders.join(", ")}
+						ON CONFLICT (product_id, category_id) DO NOTHING
+					`;
+					
+					await query(insertQuery, values);
+				}
+				
+				// Commit the transaction
+				await query("COMMIT");
+				
+				logger.info(`Categories updated for product with ID ${id}.`, {
+					product_id: id,
+					category_count: category_ids ? category_ids.length : 0
+				});
+				
+				res.success(
+					{ 
+						product_id: parseInt(id),
+						assigned_categories: category_ids || []
+					},
+					"Product categories updated successfully",
+					200
+				);
+			} catch (error) {
+				// Rollback in case of error
+				await query("ROLLBACK");
+				throw error;
+			}
+		} catch (error) {
+			logger.error(
+				`Error updating categories for product with ID ${req.params.id}.`,
+				{ error: error.message }
+			);
+			res.error("Internal server error: " + error.message, 500);
+		}
+	}
+);
+
+/**
+ * @route GET /v1/products/:id/categories
+ * @description Get all categories assigned to a product.
+ * @access Protected
+ * @param {string} req.params.id - The ID of the product to get categories for.
+ * @returns {Response} 200 - JSON object containing an array of categories.
+ * @returns {Response} 404 - Not found if the product does not exist.
+ * @returns {Response} 500 - Internal server error.
+ */
+router.get(
+	"/:id/categories",
+	validateRequest(productIdSchema, "params"),
+	async (req, res) => {
+		try {
+			const { id } = req.params;
+			
+			// First verify that the product exists
+			const productCheck = await query(
+				"SELECT id FROM products WHERE id = $1",
+				[id]
+			);
+			
+			if (productCheck.rows.length === 0) {
+				logger.error(`Product with ID ${id} not found for retrieving categories.`);
+				return res.error("Product not found.", 404);
+			}
+			
+			// Get all categories assigned to this product
+			const result = await query(
+				`SELECT pc.* 
+				FROM product_categories pc
+				JOIN product_category_assignments pca ON pc.id = pca.category_id
+				WHERE pca.product_id = $1
+				ORDER BY pc.name`,
+				[id]
+			);
+			
+			logger.info(`Retrieved categories for product with ID ${id}.`);
+			res.success(
+				{ categories: result.rows },
+				"Product categories retrieved successfully",
+				200
+			);
+		} catch (error) {
+			logger.error(
+				`Error retrieving categories for product with ID ${req.params.id}.`,
+				{ error: error.message }
+			);
+			res.error("Internal server error: " + error.message, 500);
+		}
+	}
+);
+
+/**
+ * @route POST /v1/products/:id/categories
+ * @description Add category assignments to a product without removing existing ones.
+ * @access Protected
+ * @param {string} req.params.id - The ID of the product to add categories to.
+ * @param {Object} req.body - The request body.
+ * @param {Array<number>} req.body.category_ids - Array of category IDs to assign to the product.
+ * @returns {Response} 200 - Success message on successful update.
+ * @returns {Response} 404 - Not found if the product does not exist.
+ * @returns {Response} 400 - Bad request if any category ID doesn't exist.
+ * @returns {Response} 500 - Internal server error.
+ */
+router.post(
+	"/:id/categories",
+	validateRequest(productIdSchema, "params"),
+	validateRequest(productCategoryAssignmentSchema, "body"),
+	async (req, res) => {
+		try {
+			const { id } = req.params;
+			const { category_ids } = req.body;
+			
+			// Skip if no categories provided
+			if (!category_ids || category_ids.length === 0) {
+				return res.success(
+					{ product_id: parseInt(id), added_categories: [] },
+					"No categories provided to add",
+					200
+				);
+			}
+			
+			// First verify that the product exists
+			const productCheck = await query(
+				"SELECT id FROM products WHERE id = $1",
+				[id]
+			);
+			
+			if (productCheck.rows.length === 0) {
+				logger.error(`Product with ID ${id} not found for adding categories.`);
+				return res.error("Product not found.", 404);
+			}
+			
+			// Validate that all category IDs exist
+			if (category_ids.length > 0) {
+				// Check if all provided category IDs exist
+				const categoryCheck = await query(
+					`SELECT id FROM product_categories WHERE id IN (${category_ids.map((_, idx) => '$' + (idx + 1)).join(',')})`,
+					category_ids
+				);
+				
+				// If the number of found categories doesn't match the input array length,
+				// some categories don't exist
+				if (categoryCheck.rows.length !== category_ids.length) {
+					// Find which category IDs don't exist
+					const foundIds = new Set(categoryCheck.rows.map(row => row.id));
+					const missingIds = category_ids.filter(id => !foundIds.has(parseInt(id)));
+					
+					logger.error(`Some category IDs do not exist: ${missingIds.join(', ')}`);
+					return res.error(`The following category IDs do not exist: ${missingIds.join(', ')}`, 400);
+				}
+			}
+			
+			// Use a transaction to ensure atomicity
+			await query("BEGIN");
+			
+			try {
+				// Prepare values for bulk insert
+				const values = [];
+				const placeholders = [];
+				let placeholderIndex = 1;
+				
+				category_ids.forEach(categoryId => {
+					values.push(id, categoryId);
+					placeholders.push(`($${placeholderIndex}, $${placeholderIndex + 1})`);
+					placeholderIndex += 2;
+				});
+				
+				// Insert new category assignments in one query, using ON CONFLICT DO NOTHING
+				// to handle the case where some assignments already exist
+				const insertQuery = `
+					INSERT INTO product_category_assignments (product_id, category_id)
+					VALUES ${placeholders.join(", ")}
+					ON CONFLICT (product_id, category_id) DO NOTHING
+				`;
+				
+				await query(insertQuery, values);
+				
+				// Commit the transaction
+				await query("COMMIT");
+				
+				logger.info(`Categories added to product with ID ${id}.`, {
+					product_id: id,
+					category_count: category_ids.length
+				});
+				
+				res.success(
+					{ 
+						product_id: parseInt(id),
+						added_categories: category_ids
+					},
+					"Categories added to product successfully",
+					200
+				);
+			} catch (error) {
+				// Rollback in case of error
+				await query("ROLLBACK");
+				throw error;
+			}
+		} catch (error) {
+			logger.error(
+				`Error adding categories to product with ID ${req.params.id}.`,
+				{ error: error.message }
+			);
+			res.error("Internal server error: " + error.message, 500);
+		}
+	}
+);
+
+/**
+ * @route DELETE /v1/products/:id/categories/:categoryId
+ * @description Remove a specific category assignment from a product.
+ * @access Protected
+ * @param {string} req.params.id - The ID of the product.
+ * @param {string} req.params.categoryId - The ID of the category to remove.
+ * @returns {Response} 200 - Success message on successful removal.
+ * @returns {Response} 404 - Not found if the product or assignment does not exist.
+ * @returns {Response} 500 - Internal server error.
+ */
+router.delete(
+	"/:id/categories/:categoryId",
+	validateRequest(productIdSchema, "params"),
+	async (req, res) => {
+		try {
+			const { id, categoryId } = req.params;
+			
+			// First verify that the product exists
+			const productCheck = await query(
+				"SELECT id FROM products WHERE id = $1",
+				[id]
+			);
+			
+			if (productCheck.rows.length === 0) {
+				logger.error(`Product with ID ${id} not found for category removal.`);
+				return res.error("Product not found.", 404);
+			}
+			
+			// Delete the specific category assignment
+			const result = await query(
+				"DELETE FROM product_category_assignments WHERE product_id = $1 AND category_id = $2 RETURNING product_id",
+				[id, categoryId]
+			);
+			
+			if (result.rows.length === 0) {
+				logger.error(`Category assignment not found for product ID ${id} and category ID ${categoryId}.`);
+				return res.error("Category assignment not found.", 404);
+			}
+			
+			logger.info(`Category ${categoryId} removed from product with ID ${id}.`);
+			res.success(
+				{ 
+					product_id: parseInt(id),
+					removed_category_id: parseInt(categoryId)
+				},
+				"Category removed from product successfully",
+				200
+			);
+		} catch (error) {
+			logger.error(
+				`Error removing category from product with ID ${req.params.id}.`,
+				{ error: error.message }
+			);
+			res.error("Internal server error: " + error.message, 500);
 		}
 	}
 );
