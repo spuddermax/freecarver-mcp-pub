@@ -263,6 +263,23 @@ export default function ProductCategoryEdit() {
     
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
+      
+      // Check file size - 2MB limit
+      const fileSize = file.size;
+      const maxSize = 2 * 1024 * 1024; // 2MB in bytes
+      
+      if (fileSize > maxSize) {
+        // Show error message
+        setMessage({
+          type: "error",
+          text: "Image is too large. Maximum size is 2MB."
+        });
+        
+        // Reset the file input
+        e.target.value = '';
+        return;
+      }
+      
       setImageFile(file);
       setImageJustUploaded(false); // Reset the flag when a new image is selected
       
@@ -330,6 +347,16 @@ export default function ProductCategoryEdit() {
   // Update function to use API client
   const uploadImage = async (): Promise<string | null> => {
     if (!imageFile || (!isEditing && !category.id)) return null;
+    
+    // Double-check file size before uploading
+    const maxSize = 2 * 1024 * 1024; // 2MB in bytes
+    if (imageFile.size > maxSize) {
+      setMessage({
+        type: "error",
+        text: "Image is too large. Maximum size is 2MB."
+      });
+      return null;
+    }
     
     setIsUploading(true);
     try {
@@ -766,7 +793,7 @@ export default function ProductCategoryEdit() {
                             <p className="pl-1">or drag and drop</p>
                           </div>
                           <p className="text-xs text-gray-500 dark:text-gray-400">
-                            PNG, JPG, GIF up to 10MB
+                            PNG, JPG, GIF up to <span className="font-semibold">2MB</span>
                           </p>
                         </div>
                       </div>
@@ -780,7 +807,7 @@ export default function ProductCategoryEdit() {
                           className="cursor-pointer inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 shadow-sm text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none"
                         >
                           <ImageIcon className="h-4 w-4 mr-2" />
-                          Change Image
+                          Change Image <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">(max 2MB)</span>
                           <input
                             id="hero-image-change"
                             name="hero-image-change"
