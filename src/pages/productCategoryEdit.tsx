@@ -130,9 +130,12 @@ export default function ProductCategoryEdit() {
 
   // Calculate if button should pulse (enabled and has changes)
   const shouldPulse = useMemo(() => {
-    if (!isEditing) return true; // New category always pulses
+    // For new categories, only pulse if a name is provided
+    if (!isEditing) return category.name.trim() !== '';
+    
+    // For existing categories, pulse if there are changes and not in a loading state
     return hasChanges && !saving && !loading && !isUploading;
-  }, [hasChanges, saving, loading, isUploading, isEditing]);
+  }, [hasChanges, saving, loading, isUploading, isEditing, category.name]);
 
   useEffect(() => {
     // Always fetch all categories to populate the parent category dropdown
@@ -611,7 +614,7 @@ export default function ProductCategoryEdit() {
                 {/* Replace the custom button with PulseUpdateButton */}
                 <PulseUpdateButton
                   onClick={handleSubmit}
-                  disabled={saving || loading || (isEditing && !hasChanges) || isUploading}
+                  disabled={saving || loading || (isEditing && !hasChanges) || isUploading || (!isEditing && category.name.trim() === '')}
                   showPulse={shouldPulse}
                   label={isEditing ? "Update Category" : "Create Category"}
                   icon={<SaveIcon className="h-4 w-4" />}

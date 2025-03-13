@@ -269,6 +269,9 @@ export async function updateCategoryHeroImage(
   try {
     const token = localStorage.getItem("jwtToken");
     
+    // First fetch the current category data to get the name
+    const currentCategory = await fetchCategoryById(categoryId.toString());
+    
     const response = await fetch(
       `${import.meta.env.VITE_API_URL}/v1/product_categories/${categoryId}`,
       {
@@ -277,7 +280,11 @@ export async function updateCategoryHeroImage(
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ hero_image: heroImageUrl })
+        // Include the name field to satisfy validation requirements
+        body: JSON.stringify({ 
+          name: currentCategory.name,
+          hero_image: heroImageUrl 
+        })
       }
     );
     
