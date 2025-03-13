@@ -19,7 +19,7 @@ export async function fetchProductCategories(productId: string | number): Promis
     
     // Make sure the URL contains the required /v1/products prefix
     const apiUrl = `${baseUrl}/v1/products/${productId}/categories`;
-    console.log("Making request to:", apiUrl);
+    // console.log("Making request to:", apiUrl);
     
     const response = await fetch(
       apiUrl,
@@ -31,7 +31,7 @@ export async function fetchProductCategories(productId: string | number): Promis
     );
     
     // Log response status for debugging
-    console.log(`Category fetch response status: ${response.status}`);
+    // console.log(`Category fetch response status: ${response.status}`);
     
     if (!response.ok) {
       const errorData = await response.json();
@@ -75,7 +75,7 @@ export async function assignCategoriesToProduct(
     
     // Make sure the URL contains the required /v1/products prefix
     const apiUrl = `${baseUrl}/v1/products/${productId}/categories`;
-    console.log("Making request to:", apiUrl);
+    // console.log("Making request to:", apiUrl);
     
     const response = await fetch(
       apiUrl,
@@ -90,7 +90,7 @@ export async function assignCategoriesToProduct(
     );
     
     // Log response status for debugging
-    console.log(`Category assignment response status: ${response.status}`);
+    // console.log(`Category assignment response status: ${response.status}`);
     
     if (!response.ok) {
       const errorData = await response.json();
@@ -125,7 +125,7 @@ export async function updateProductCategories(
     
     // Make sure the URL contains the required /v1/products prefix
     const apiUrl = `${baseUrl}/v1/products/${productId}/categories`;
-    console.log("Making request to:", apiUrl);
+    // console.log("Making request to:", apiUrl);
     
     const response = await fetch(
       apiUrl,
@@ -140,7 +140,7 @@ export async function updateProductCategories(
     );
     
     // Log response status for debugging
-    console.log(`Category update response status: ${response.status}`);
+    // console.log(`Category update response status: ${response.status}`);
     
     if (!response.ok) {
       const errorData = await response.json();
@@ -175,7 +175,7 @@ export async function removeCategoryFromProduct(
     
     // Make sure the URL contains the required /v1/products prefix
     const apiUrl = `${baseUrl}/v1/products/${productId}/categories/${categoryId}`;
-    console.log("Making request to:", apiUrl);
+    // console.log("Making request to:", apiUrl);
     
     const response = await fetch(
       apiUrl,
@@ -188,7 +188,7 @@ export async function removeCategoryFromProduct(
     );
     
     // Log response status for debugging
-    console.log(`Category removal response status: ${response.status}`);
+    // console.log(`Category removal response status: ${response.status}`);
     
     if (!response.ok) {
       const errorData = await response.json();
