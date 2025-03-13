@@ -18,6 +18,7 @@ import {
   deleteCategory
 } from "../lib/api_client/productCategories";
 import PulseUpdateButton, { pulseAnimationCSS } from "../components/PulseUpdateButton";
+import { ImageUpload } from '../components/ImageUpload';
 
 export default function ProductCategoryEdit() {
   const { targetId } = useParams<{ targetId: string }>();
@@ -27,7 +28,7 @@ export default function ProductCategoryEdit() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [message, setMessage] = useState<{ type: "success" | "error" | "info"; text: string } | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleteImageConfirmOpen, setDeleteImageConfirmOpen] = useState(false);
   const [availableParentCategories, setAvailableParentCategories] = useState<ProductCategory[]>([]);
@@ -91,7 +92,9 @@ export default function ProductCategoryEdit() {
     }
     
     // Check if hero_image field has changed (for cases where it was removed)
-    if (category.hero_image !== originalCategory.hero_image) return true;
+    if (category.hero_image !== originalCategory.hero_image) {
+      return true;
+    }
     
     return false;
   }, [category, originalCategory, imageFile, isEditing, imageJustUploaded, justCreated]);
@@ -469,6 +472,79 @@ export default function ProductCategoryEdit() {
         }
       }
       
+      // Check if only the hero_image has changed
+      const onlyHeroImageChanged = isEditing && 
+        originalCategory && 
+        category.name === originalCategory.name && 
+        category.description === originalCategory.description && 
+        category.parent_category_id === originalCategory.parent_category_id && 
+        category.hero_image !== originalCategory.hero_image;
+      
+      if (isEditing && onlyHeroImageChanged) {
+        // Use the dedicated function for updating hero images
+        try {
+          await updateCategoryHeroImage(targetId as string, heroImageUrl);
+          
+          // Verify the update
+          setTimeout(async () => {
+            try {
+              const updatedCategory = await fetchCategoryById(targetId as string);
+              
+              // If still not updated, try a direct API call as a last resort
+              if (category.hero_image !== updatedCategory.hero_image) {
+                try {
+                  const token = localStorage.getItem("jwtToken");
+                  const directResponse = await fetch(
+                    `${import.meta.env.VITE_API_URL}/v1/product_categories/${targetId}`,
+                    {
+                      method: 'PUT',
+                      headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                      },
+                      body: JSON.stringify({
+                        name: category.name,
+                        description: category.description || "",
+                        parent_category_id: category.parent_category_id !== null ? category.parent_category_id : undefined,
+                        hero_image: heroImageUrl
+                      })
+                    }
+                  );
+                  
+                  setTimeout(async () => {
+                    const finalCheckCategory = await fetchCategoryById(targetId as string);
+                  }, 1000);
+                } catch (directError) {
+                  console.error('DEBUG: Direct fetch error:', directError);
+                }
+              }
+            } catch (error) {
+              console.error('DEBUG: Error fetching category after hero image update:', error);
+            }
+          }, 1000);
+          
+          // Update the original category to reflect the change
+          setOriginalCategory(prev => {
+            if (!prev) return null;
+            return {
+              ...prev,
+              hero_image: heroImageUrl
+            };
+          });
+          
+          setMessage({ 
+            type: "success", 
+            text: "Hero image updated successfully" 
+          });
+          setSaving(false);
+          return;
+        } catch (heroUpdateError) {
+          console.error('DEBUG: Hero image update failed:', heroUpdateError);
+          // Continue with normal update as fallback
+        }
+      }
+      
+      // Standard update path for other changes
       // Create request body, omitting parent_category_id if null and including hero_image
       const requestBody: { 
         name: string; 
@@ -485,14 +561,17 @@ export default function ProductCategoryEdit() {
         requestBody.parent_category_id = category.parent_category_id;
       }
       
-      // Include hero_image (could be null to remove it, or we'll set it after upload for new categories)
-      if (isEditing && !needsImageUpload) {
-        requestBody.hero_image = heroImageUrl;
-      }
+      // Always include hero_image in the request body
+      // This ensures that URL changes are sent to the server
+      requestBody.hero_image = heroImageUrl;
       
       if (isEditing) {
         // Update existing category
-        await updateCategory(targetId as string, requestBody);
+        try {
+          await updateCategory(targetId as string, requestBody);
+        } catch (updateError) {
+          console.error('DEBUG: Update category failed with error:', updateError);
+        }
       } else {
         // Create new category (without hero image)
         const newCategory = await createCategory(requestBody);
@@ -776,74 +855,50 @@ export default function ProductCategoryEdit() {
                       Hero Image
                     </label>
                     
-                    {/* Image Preview */}
-                    {(imagePreview || category.hero_image) && (
-                      <div className="relative mb-4">
-                        <img 
-                          src={imagePreview || category.hero_image || ''} 
-                          alt="Category hero" 
-                          className="w-full aspect-[16/5] object-cover rounded-md"
-                        />
-                        <button
-                          type="button"
-                          onClick={confirmRemoveHeroImage}
-                          className="absolute top-2 right-2 p-1 bg-red-600 text-white rounded-full hover:bg-red-700 focus:outline-none"
-                          title="Remove image"
-                        >
-                          <XIcon className="h-4 w-4" />
-                        </button>
-                      </div>
-                    )}
-                    
-                    {/* File Upload Input */}
-                    {!imagePreview && !category.hero_image && (
-                      <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 dark:border-gray-600 border-dashed rounded-md">
-                        <div className="space-y-1 text-center">
-                          <ImageIcon className="mx-auto h-12 w-12 text-gray-400" />
-                          <div className="flex text-sm text-gray-600 dark:text-gray-400">
-                            <label
-                              htmlFor="hero-image-upload"
-                              className="relative cursor-pointer bg-white dark:bg-gray-700 rounded-md font-medium text-green-600 dark:text-green-400 hover:text-green-500 dark:hover:text-green-300 focus-within:outline-none"
-                            >
-                              <span>Upload an image</span>
-                              <input
-                                id="hero-image-upload"
-                                name="hero-image-upload"
-                                type="file"
-                                accept="image/*"
-                                onChange={handleImageChange}
-                                className="sr-only"
-                              />
-                            </label>
-                            <p className="pl-1">or drag and drop</p>
-                          </div>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">
-                            PNG, JPG, GIF up to <span className="font-semibold">2MB</span>
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Change Image Button (if image already exists) */}
-                    {(imagePreview || category.hero_image) && (
-                      <div className="mt-2">
-                        <label
-                          htmlFor="hero-image-change"
-                          className="cursor-pointer inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 shadow-sm text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none"
-                        >
-                          <ImageIcon className="h-4 w-4 mr-2" />
-                          Change Image <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">(max 2MB)</span>
-                          <input
-                            id="hero-image-change"
-                            name="hero-image-change"
-                            type="file"
-                            accept="image/*"
-                            onChange={handleImageChange}
-                            className="sr-only"
-                          />
-                        </label>
-                      </div>
-                    )}
+                    <ImageUpload
+                      initialImage={category.hero_image || ''}
+                      onImageChange={({ file, url }) => {
+                        if (file) {
+                          // Handle file upload logic
+                          const fileList = new DataTransfer();
+                          fileList.items.add(file);
+                          const mockEvent = {
+                            target: { 
+                              files: fileList.files,
+                              value: '',
+                              name: 'hero-image-upload'
+                            },
+                            preventDefault: () => {},
+                            currentTarget: { files: fileList.files }
+                          } as unknown as ChangeEvent<HTMLInputElement>;
+                          handleImageChange(mockEvent);
+                        } else if (url !== undefined) { // Handle empty string case too
+                          // Set the image URL directly in your category state
+                          // And make sure we're not setting the same URL again
+                          console.log('DEBUG: onImageChange url received:', url);
+                          console.log('DEBUG: Current category.hero_image:', category.hero_image);
+                          
+                          // Normalize URLs for comparison (trim whitespace, ensure null vs empty string consistency)
+                          const normalizedNewUrl = url ? url.trim() : null;
+                          const normalizedCurrentUrl = category.hero_image ? category.hero_image.trim() : null;
+                          
+                          console.log('DEBUG: Normalized new URL:', normalizedNewUrl);
+                          console.log('DEBUG: Normalized current URL:', normalizedCurrentUrl);
+                          
+                          if (normalizedNewUrl !== normalizedCurrentUrl) {
+                            console.log('DEBUG: Setting new URL in category state');
+                            setCategory((prev) => ({ ...prev, hero_image: normalizedNewUrl }));
+                            // Reset imageJustUploaded flag to ensure hasChanges works
+                            setImageJustUploaded(false);
+                          } else {
+                            console.log('DEBUG: URL unchanged, not updating state');
+                          }
+                        }
+                      }}
+                      id="hero-image"
+                      maxSizeMB={2}
+                      label="Upload hero image"
+                    />
                   </div>
                 )}
                 

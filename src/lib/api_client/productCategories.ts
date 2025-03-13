@@ -227,13 +227,13 @@ export async function updateCategory(
       description: category.description || "",
     };
     
+    // Include parent_category_id if provided
     if (category.parent_category_id !== null && category.parent_category_id !== undefined) {
       requestBody.parent_category_id = category.parent_category_id;
     }
     
-    if (category.hero_image !== undefined) {
-      requestBody.hero_image = category.hero_image;
-    }
+    // Always include hero_image field, even if null or empty string
+    requestBody.hero_image = category.hero_image;
     
     const response = await fetch(
       `${import.meta.env.VITE_API_URL}/v1/product_categories/${categoryId}`,
@@ -272,6 +272,30 @@ export async function updateCategoryHeroImage(
     // First fetch the current category data to get the name
     const currentCategory = await fetchCategoryById(categoryId.toString());
     
+    const requestBody = { 
+      name: currentCategory.name,
+      hero_image: heroImageUrl 
+    };
+    
+    // Try fetching schema information if available
+    try {
+      const schemaResponse = await fetch(
+        `${import.meta.env.VITE_API_URL}/v1/schema/product_categories`,
+        {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          }
+        }
+      );
+      
+      if (schemaResponse.ok) {
+        const schemaData = await schemaResponse.json();
+      } else {
+      }
+    } catch (schemaError) {
+    }
+    
     const response = await fetch(
       `${import.meta.env.VITE_API_URL}/v1/product_categories/${categoryId}`,
       {
@@ -280,17 +304,25 @@ export async function updateCategoryHeroImage(
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        // Include the name field to satisfy validation requirements
-        body: JSON.stringify({ 
-          name: currentCategory.name,
-          hero_image: heroImageUrl 
-        })
+        body: JSON.stringify(requestBody)
       }
     );
     
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(errorData.error || "Failed to update category hero image");
+    }
+    
+    // Verify if the update actually worked by fetching the category again
+    try {
+      await new Promise(resolve => setTimeout(resolve, 500)); // Small delay to allow database update
+      
+      const updatedCategory = await fetchCategoryById(categoryId.toString());
+      
+      if (updatedCategory.hero_image === heroImageUrl) {
+      } else {
+      }
+    } catch (verifyError) {
     }
   } catch (error: any) {
     console.error("Error updating category hero image:", error);

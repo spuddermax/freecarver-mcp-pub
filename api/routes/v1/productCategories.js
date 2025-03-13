@@ -133,6 +133,7 @@ router.get(
  * @param {string} req.body.name - The name of the category (required).
  * @param {string} [req.body.description] - The updated description.
  * @param {number} [req.body.parent_category_id] - The updated parent category ID.
+ * @param {string} [req.body.hero_image] - The updated hero image URL.
  * @returns {Response} 200 - JSON object containing the updated product category.
  * @returns {Response} 400 - Bad request if 'name' is missing.
  * @returns {Response} 404 - Not found if the product category does not exist.
@@ -145,20 +146,23 @@ router.put(
 	async (req, res) => {
 		try {
 			const { id } = req.params;
-			const { name, description, parent_category_id } = req.body;
+			const { name, description, parent_category_id, hero_image } = req.body;
+			
 			const query = `
       UPDATE product_categories
       SET name = $1,
           description = $2,
           parent_category_id = $3,
+          hero_image = $4,
           updated_at = NOW()
-      WHERE id = $4
+      WHERE id = $5
       RETURNING *;
     `;
 			const values = [
 				name,
 				description || null,
 				parent_category_id || null,
+				hero_image,
 				id,
 			];
 			const result = await pool.query(query, values);
