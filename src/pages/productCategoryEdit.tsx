@@ -913,7 +913,7 @@ export default function ProductCategoryEdit() {
               )}
 
               {/* Action Buttons - Moved to bottom of form */}
-              <div className="flex justify-end space-x-2 pt-4 mt-4 border-t border-gray-200 dark:border-gray-700">
+              <div className="flex flex-wrap justify-end gap-2 pt-4 mt-4 border-t border-gray-200 dark:border-gray-700">
                 <button
                   type="button"
                   onClick={() => navigate('/productCategories')}
