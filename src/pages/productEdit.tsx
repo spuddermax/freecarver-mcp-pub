@@ -16,6 +16,7 @@ import { ProductPricing } from "../components/ProductPricing";
 import { ProductMedia, ProductMediaItem } from "../components/ProductMedia";
 import Footer from "../components/Footer";
 import ProductOptions, { Option } from "../components/ProductOptions";
+import { ProductCategories } from "../components/ProductCategories";
 import { Product, ProductOption } from "../types/Interfaces";
 import { LoadingModal } from "../components/LoadingModal";
 
@@ -257,11 +258,15 @@ export default function ProductEdit() {
 											product={productData}
 											onChange={handleOptionsChange}
 										/>
+										<ProductCategories
+											product={productData}
+										/>
 										<ProductMedia
 											product={productData}
 											mediaItems={mediaItems}
 											setMediaItems={setMediaItems}
 										/>
+										
 										<div className="flex justify-end space-x-4">
 											<button
 												type="button"
