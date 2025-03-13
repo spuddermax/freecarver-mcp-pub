@@ -1,6 +1,6 @@
 import { useState, useEffect, ChangeEvent, FormEvent, useMemo, useRef } from "react";
 import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
-import { Folder as FolderIcon, Save as SaveIcon, Trash as TrashIcon, ArrowLeft as ArrowLeftIcon, Plus as PlusIcon, ChevronRight, Image as ImageIcon, X as XIcon, AlertCircle as AlertCircleIcon, RotateCcw as RotateCcwIcon } from "lucide-react";
+import { Folder as FolderIcon, Save as SaveIcon, Trash as TrashIcon, Plus as PlusIcon, ChevronRight, Image as ImageIcon, X as XIcon, AlertCircle as AlertCircleIcon, RotateCcw as RotateCcwIcon } from "lucide-react";
 import Layout from "../components/Layout";
 import { Toast } from "../components/Toast";
 import { LoadingModal } from "../components/LoadingModal";
@@ -914,20 +914,12 @@ export default function ProductCategoryEdit() {
 
               {/* Action Buttons - Moved to bottom of form */}
               <div className="flex flex-wrap justify-end gap-2 pt-4 mt-4 border-t border-gray-200 dark:border-gray-700">
-                <button
-                  type="button"
-                  onClick={() => navigate('/productCategories')}
-                  className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                >
-                  <ArrowLeftIcon className="h-4 w-4 mr-2" />
-                  Back to Categories
-                </button>
                 
                 {isEditing && (
                   <button
                     type="button"
                     onClick={handleAddSubCategory}
-                    className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                    className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-700 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                   >
                     <PlusIcon className="h-4 w-4 mr-2" />
                     Add Sub-Category
