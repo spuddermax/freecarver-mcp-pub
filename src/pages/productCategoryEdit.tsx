@@ -193,6 +193,9 @@ export default function ProductCategoryEdit() {
   async function loadCategoryData() {
     setLoading(true);
     try {
+      // Reset the category lineage to avoid showing stale data during navigation
+      setCategoryLineage([]);
+      
       const loadedCategory = await fetchCategoryById(targetId as string);
       
       // Store both current and original state
@@ -222,8 +225,19 @@ export default function ProductCategoryEdit() {
         const lineage: ProductCategory[] = [];
         let currentParentId: number | null = parentId;
         
+        // Keep track of categories we've already processed to avoid circular references
+        const processedIds = new Set<number>();
+        
         // Loop until we reach a top-level category
         while (currentParentId !== null) {
+          // Check for circular reference
+          if (processedIds.has(currentParentId)) {
+            console.error("Circular reference detected in category lineage");
+            break;
+          }
+          
+          processedIds.add(currentParentId);
+          
           const parentCategory = availableParentCategories.find(cat => cat.id === currentParentId);
           if (!parentCategory) break;
           
@@ -237,7 +251,18 @@ export default function ProductCategoryEdit() {
         const lineage: ProductCategory[] = [];
         let currentParentId: number | null = parentId;
         
+        // Keep track of categories we've already processed to avoid circular references
+        const processedIds = new Set<number>();
+        
         while (currentParentId !== null) {
+          // Check for circular reference
+          if (processedIds.has(currentParentId)) {
+            console.error("Circular reference detected in category lineage");
+            break;
+          }
+          
+          processedIds.add(currentParentId);
+          
           try {
             const parentCategory = await fetchParentCategory(currentParentId);
             lineage.unshift(parentCategory);
