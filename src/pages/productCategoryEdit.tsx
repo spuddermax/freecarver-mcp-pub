@@ -7,7 +7,17 @@ import { LoadingModal } from "../components/LoadingModal";
 import { Modal } from "../components/Modal";
 import { formatProductCategory } from "../utils/formatters";
 import { ProductCategory } from "../types/Interfaces";
-import { uploadCategoryHeroToCloudflare, deleteImageFromCloudflare } from "../lib/api";
+import {
+  fetchAllCategories,
+  fetchCategoryById,
+  fetchParentCategory,
+  uploadCategoryHeroImage,
+  removeCategoryHeroImage,
+  createCategory,
+  updateCategory,
+  updateCategoryHeroImage,
+  deleteCategory
+} from "../lib/api_client/productCategories";
 
 // Add CSS for pulse animation and tooltip
 const pulseAnimation = `
@@ -198,10 +208,10 @@ export default function ProductCategoryEdit() {
 
   useEffect(() => {
     // Always fetch all categories to populate the parent category dropdown
-    fetchAllCategories();
+    fetchAllCategoriesData();
     
     if (isEditing) {
-      loadCategory();
+      loadCategoryData();
     } else {
       // Check if the URL has a parentId query parameter
       const searchParams = new URLSearchParams(location.search);
@@ -218,28 +228,10 @@ export default function ProductCategoryEdit() {
     }
   }, [targetId, location.search]);
 
-  async function fetchAllCategories() {
+  // Update function to use API client
+  async function fetchAllCategoriesData() {
     try {
-      const token = localStorage.getItem("jwtToken");
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/v1/product_categories?limit=1000`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to fetch parent categories");
-      }
-      const data = await response.json();
-      
-      // Map the categories using the formatter
-      const formattedCategories = data.data.categories.map((category: any) =>
-        formatProductCategory(category)
-      );
-      
+      const formattedCategories = await fetchAllCategories();
       setAvailableParentCategories(formattedCategories);
     } catch (error: any) {
       console.error("Error fetching parent categories:", error);
@@ -247,24 +239,11 @@ export default function ProductCategoryEdit() {
     }
   }
 
-  async function loadCategory() {
+  // Update function to use API client
+  async function loadCategoryData() {
     setLoading(true);
     try {
-      const token = localStorage.getItem("jwtToken");
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/v1/product_categories/${targetId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to fetch product category");
-      }
-      const data = await response.json();
-      const loadedCategory = formatProductCategory(data.data.category);
+      const loadedCategory = await fetchCategoryById(targetId as string);
       
       // Store both current and original state
       setCategory(loadedCategory);
@@ -282,7 +261,7 @@ export default function ProductCategoryEdit() {
     }
   }
 
-  // Function to build the category lineage
+  // Update function to use API client
   const buildCategoryLineage = async (parentId: number) => {
     try {
       // First check if we already have all categories loaded
@@ -302,26 +281,15 @@ export default function ProductCategoryEdit() {
         setCategoryLineage(lineage);
       } else {
         // If categories aren't loaded yet, fetch them one by one
-        const token = localStorage.getItem("jwtToken");
         const lineage: ProductCategory[] = [];
         let currentParentId: number | null = parentId;
         
         while (currentParentId !== null) {
-          const response = await fetch(
-            `${import.meta.env.VITE_API_URL}/v1/product_categories/${currentParentId}`,
-            {
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-            }
-          );
-          
-          if (response.ok) {
-            const data = await response.json();
-            const parentCategory = formatProductCategory(data.data.category);
+          try {
+            const parentCategory = await fetchParentCategory(currentParentId);
             lineage.unshift(parentCategory);
             currentParentId = parentCategory.parent_category_id;
-          } else {
+          } catch (error) {
             break;
           }
         }
@@ -372,7 +340,7 @@ export default function ProductCategoryEdit() {
     setDeleteImageConfirmOpen(true);
   };
 
-  // Remove existing hero image
+  // Update function to use API client
   const removeHeroImage = async () => {
     setDeleteImageConfirmOpen(false);
     
@@ -380,10 +348,9 @@ export default function ProductCategoryEdit() {
     if (category.hero_image && isEditing) {
       try {
         setIsUploading(true);
-        // Delete the image from Cloudflare R2 storage
-        await deleteImageFromCloudflare(
+        // Delete the image using the API client
+        await removeCategoryHeroImage(
           category.hero_image,
-          'category_hero',
           parseInt(targetId as string, 10)
         );
         
@@ -414,7 +381,7 @@ export default function ProductCategoryEdit() {
     clearSelectedImage();
   };
 
-  // Update the upload image function
+  // Update function to use API client
   const uploadImage = async (): Promise<string | null> => {
     if (!imageFile || (!isEditing && !category.id)) return null;
     
@@ -424,14 +391,12 @@ export default function ProductCategoryEdit() {
       // Otherwise, we'll handle this after creating the category
       const categoryId = isEditing ? parseInt(targetId as string, 10) : category.id;
       
-      // Use the Cloudflare R2 upload function
-      const response = await uploadCategoryHeroToCloudflare(
+      // Use the API client function
+      const cloudflareUrl = await uploadCategoryHeroImage(
         imageFile,
         categoryId,
         category.hero_image || undefined
       );
-      
-      const cloudflareUrl = response.data.publicUrl;
       
       // Update both category and originalCategory to reflect this change is already saved
       if (isEditing) {
@@ -464,7 +429,7 @@ export default function ProductCategoryEdit() {
     }
   };
 
-  // Update the submit handler
+  // Update function to use API client
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     
@@ -493,13 +458,6 @@ export default function ProductCategoryEdit() {
         }
       }
       
-      const token = localStorage.getItem("jwtToken");
-      const url = isEditing 
-        ? `${import.meta.env.VITE_API_URL}/v1/product_categories/${targetId}`
-        : `${import.meta.env.VITE_API_URL}/v1/product_categories`;
-      
-      const method = isEditing ? 'PUT' : 'POST';
-      
       // Create request body, omitting parent_category_id if null and including hero_image
       const requestBody: { 
         name: string; 
@@ -521,48 +479,26 @@ export default function ProductCategoryEdit() {
         requestBody.hero_image = heroImageUrl;
       }
       
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(requestBody)
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to save product category");
-      }
-      
-      // For new categories with an image to upload
-      if (!isEditing && needsImageUpload && imageFile) {
-        const data = await response.json();
-        const newId = data.data.category.id;
+      if (isEditing) {
+        // Update existing category
+        await updateCategory(targetId as string, requestBody);
+      } else {
+        // Create new category
+        const newCategory = await createCategory(requestBody);
         
-        // Now that we have the new category ID, upload the image
-        const uploadedImageUrl = await uploadCategoryHeroToCloudflare(
-          imageFile,
-          newId,
-          undefined
-        );
-        
-        if (uploadedImageUrl && uploadedImageUrl.data.publicUrl) {
-          // Update the category with the new image URL
-          const updateResponse = await fetch(
-            `${import.meta.env.VITE_API_URL}/v1/product_categories/${newId}`,
-            {
-              method: 'PUT',
-              headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({ hero_image: uploadedImageUrl.data.publicUrl })
-            }
+        // For new categories with an image to upload
+        if (needsImageUpload && imageFile) {
+          // Now that we have the new category ID, upload the image
+          const uploadedImageUrl = await uploadCategoryHeroImage(
+            imageFile,
+            newCategory.id,
+            undefined
           );
           
-          if (updateResponse.ok) {
-            heroImageUrl = uploadedImageUrl.data.publicUrl;
+          if (uploadedImageUrl) {
+            // Update the category with the new image URL
+            await updateCategoryHeroImage(newCategory.id, uploadedImageUrl);
+            heroImageUrl = uploadedImageUrl;
           }
         }
       }
@@ -599,27 +535,14 @@ export default function ProductCategoryEdit() {
     }
   };
 
+  // Update function to use API client
   const handleDelete = async () => {
     if (!isEditing || !targetId) return;
     
     setSaving(true);
     
     try {
-      const token = localStorage.getItem("jwtToken");
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/v1/product_categories/${targetId}`,
-        {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        }
-      );
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to delete product category");
-      }
+      await deleteCategory(targetId);
       
       setMessage({ type: "success", text: "Category deleted successfully" });
       
