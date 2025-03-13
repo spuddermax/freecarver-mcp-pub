@@ -26,6 +26,7 @@ export default function ProductCategoryEdit() {
   const isEditing = !!targetId;
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleteImageConfirmOpen, setDeleteImageConfirmOpen] = useState(false);
@@ -485,12 +486,33 @@ export default function ProductCategoryEdit() {
   const handleDelete = async () => {
     if (!isEditing || !targetId) return;
     
-    setSaving(true);
+    setDeleting(true);
     
     try {
+      // First check if the category has a hero image and delete it if it exists
+      if (category.hero_image) {
+        try {
+          // Delete the hero image from Cloudflare
+          await removeCategoryHeroImage(
+            category.hero_image,
+            parseInt(targetId as string, 10)
+          );
+          console.log("Hero image deleted from Cloudflare");
+        } catch (imageError: any) {
+          console.error("Error deleting hero image:", imageError);
+          // Continue with category deletion even if image deletion fails
+        }
+      }
+      
+      // Now delete the category
       await deleteCategory(targetId);
       
-      setMessage({ type: "success", text: "Category deleted successfully" });
+      setMessage({ 
+        type: "success", 
+        text: category.hero_image 
+          ? "Category and its hero image deleted successfully" 
+          : "Category deleted successfully" 
+      });
       
       // Navigate back to categories list
       setTimeout(() => {
@@ -500,7 +522,7 @@ export default function ProductCategoryEdit() {
       console.error("Error deleting product category:", error);
       setMessage({ type: "error", text: error.message });
     } finally {
-      setSaving(false);
+      setDeleting(false);
       setDeleteConfirmOpen(false);
     }
   };
@@ -573,6 +595,7 @@ export default function ProductCategoryEdit() {
       
       <LoadingModal isOpen={loading} message="Loading category..." />
       <LoadingModal isOpen={saving} message={isEditing ? "Saving category..." : "Creating category..."} />
+      <LoadingModal isOpen={deleting} message={category.hero_image ? "Deleting hero image and category..." : "Deleting category..."} />
       
       <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
