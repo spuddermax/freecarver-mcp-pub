@@ -18,75 +18,7 @@ import {
   updateCategoryHeroImage,
   deleteCategory
 } from "../lib/api_client/productCategories";
-
-// Add CSS for pulse animation and tooltip
-const pulseAnimation = `
-  @keyframes pulse-animation {
-    0% {
-      box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
-    }
-    70% {
-      box-shadow: 0 0 0 8px rgba(34, 197, 94, 0);
-    }
-    100% {
-      box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
-    }
-  }
-  .pulse-button {
-    animation: pulse-animation 2s infinite;
-    position: relative;
-  }
-  
-  .changes-tooltip {
-    position: absolute;
-    bottom: calc(100% + 10px);
-    right: 0;
-    background-color: #1f2937;
-    color: white;
-    padding: 12px;
-    border-radius: 6px;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-    width: 280px;
-    z-index: 50;
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.2s, visibility 0.2s;
-  }
-  
-  .changes-tooltip:after {
-    content: '';
-    position: absolute;
-    top: 100%;
-    right: 20px;
-    border-width: 8px;
-    border-style: solid;
-    border-color: #1f2937 transparent transparent transparent;
-  }
-  
-  .tooltip-container:hover .changes-tooltip {
-    opacity: 1;
-    visibility: visible;
-  }
-  
-  .revert-button {
-    background-color: #2563eb;
-    color: white;
-    border-radius: 4px;
-    padding: 6px 12px;
-    font-size: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 4px;
-    margin-top: 10px;
-    transition: background-color 0.2s;
-    width: 100%;
-  }
-  
-  .revert-button:hover {
-    background-color: #1d4ed8;
-  }
-`;
+import PulseUpdateButton, { pulseAnimationCSS } from "../components/PulseUpdateButton";
 
 export default function ProductCategoryEdit() {
   const { targetId } = useParams<{ targetId: string }>();
@@ -121,10 +53,6 @@ export default function ProductCategoryEdit() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-
-  // Add state to track tooltip visibility
-  const [showChangesTooltip, setShowChangesTooltip] = useState(false);
-  const tooltipTimeout = useRef<NodeJS.Timeout | null>(null);
   
   // Calculate if there are any changes compared to original data
   const hasChanges = useMemo(() => {
@@ -570,24 +498,6 @@ export default function ProductCategoryEdit() {
     navigate(`/productCategoryEdit?parentId=${targetId}`);
   };
 
-  // Handle tooltip display
-  const handleTooltipMouseEnter = () => {
-    if (tooltipTimeout.current) {
-      clearTimeout(tooltipTimeout.current);
-      tooltipTimeout.current = null;
-    }
-    setShowChangesTooltip(true);
-  };
-
-  const handleTooltipMouseLeave = () => {
-    if (tooltipTimeout.current) {
-      clearTimeout(tooltipTimeout.current);
-    }
-    tooltipTimeout.current = setTimeout(() => {
-      setShowChangesTooltip(false);
-    }, 300);
-  };
-
   // Add function to revert changes
   const handleRevertChanges = () => {
     if (!originalCategory) return;
@@ -608,9 +518,6 @@ export default function ProductCategoryEdit() {
       type: "success",
       text: "All changes have been reverted"
     });
-    
-    // Close the tooltip
-    setShowChangesTooltip(false);
   };
 
   return (
@@ -627,7 +534,7 @@ export default function ProductCategoryEdit() {
       ]}
     >
       {/* Add the CSS animation to the head */}
-      <style>{pulseAnimation}</style>
+      <style>{pulseAnimationCSS}</style>
       
       {message && (
         <Toast
@@ -701,49 +608,17 @@ export default function ProductCategoryEdit() {
                   </button>
                 )}
                 
-                {/* Update/Create button with tooltip */}
-                <div className={`relative tooltip-container ${shouldPulse ? 'group' : ''}`}
-                  onMouseEnter={handleTooltipMouseEnter}
-                  onMouseLeave={handleTooltipMouseLeave}>
-                  {shouldPulse && showChangesTooltip && getChangesDescription.length > 0 && (
-                    <div className="changes-tooltip">
-                      <div className="font-medium text-sm mb-1 text-green-300 flex items-center">
-                        <AlertCircleIcon className="h-4 w-4 mr-1" />
-                        <span>Unsaved Changes:</span>
-                      </div>
-                      <ul className="text-xs space-y-1 max-h-60 overflow-auto mb-3">
-                        {getChangesDescription.map((change, index) => (
-                          <li key={index} className="flex items-start pb-1 border-b border-gray-700 last:border-0">
-                            <span>• {change}</span>
-                          </li>
-                        ))}
-                      </ul>
-                      
-                      {/* Add Revert button */}
-                      <button 
-                        onClick={handleRevertChanges}
-                        className="revert-button"
-                        type="button"
-                      >
-                        <RotateCcwIcon className="h-3 w-3" />
-                        <span>Revert All Changes</span>
-                      </button>
-                    </div>
-                  )}
-                  
-                  <button
-                    onClick={handleSubmit}
-                    disabled={saving || loading || (isEditing && !hasChanges) || isUploading}
-                    className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium ${
-                      isEditing && !hasChanges || isUploading
-                        ? 'bg-green-900 cursor-not-allowed text-gray-500' 
-                        : `bg-green-800 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 text-white ${shouldPulse ? 'pulse-button' : ''}`
-                    }`}
-                  >
-                    <SaveIcon className="h-4 w-4 mr-2" />
-                    {isEditing ? "Update Category" : "Create Category"}
-                  </button>
-                </div>
+                {/* Replace the custom button with PulseUpdateButton */}
+                <PulseUpdateButton
+                  onClick={handleSubmit}
+                  disabled={saving || loading || (isEditing && !hasChanges) || isUploading}
+                  showPulse={shouldPulse}
+                  label={isEditing ? "Update Category" : "Create Category"}
+                  icon={<SaveIcon className="h-4 w-4" />}
+                  changes={getChangesDescription}
+                  onRevert={isEditing ? handleRevertChanges : undefined}
+                  isLoading={saving}
+                />
                 
                 {isEditing && (
                   <button
