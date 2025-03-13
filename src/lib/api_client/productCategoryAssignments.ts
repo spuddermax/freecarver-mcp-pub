@@ -9,8 +9,20 @@ import { formatProductCategory } from "../../utils/formatters";
 export async function fetchProductCategories(productId: string | number): Promise<ProductCategory[]> {
   try {
     const token = localStorage.getItem("jwtToken");
+    
+    // Ensure API URL has the correct format
+    const baseUrl = import.meta.env.VITE_API_URL;
+    if (!baseUrl) {
+      console.error("VITE_API_URL environment variable is not defined");
+      throw new Error("API URL configuration error");
+    }
+    
+    // Make sure the URL contains the required /v1/products prefix
+    const apiUrl = `${baseUrl}/v1/products/${productId}/categories`;
+    console.log("Making request to:", apiUrl);
+    
     const response = await fetch(
-      `${import.meta.env.VITE_API_URL}/v1/products/${productId}/categories`,
+      apiUrl,
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -18,9 +30,13 @@ export async function fetchProductCategories(productId: string | number): Promis
       }
     );
     
+    // Log response status for debugging
+    console.log(`Category fetch response status: ${response.status}`);
+    
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.error || "Failed to fetch product categories");
+      console.error("Error response data:", errorData);
+      throw new Error(errorData.error || errorData.message || "Failed to fetch product categories");
     }
     
     const data = await response.json();
@@ -50,8 +66,19 @@ export async function assignCategoriesToProduct(
   try {
     const token = localStorage.getItem("jwtToken");
     
+    // Ensure API URL has the correct format
+    const baseUrl = import.meta.env.VITE_API_URL;
+    if (!baseUrl) {
+      console.error("VITE_API_URL environment variable is not defined");
+      throw new Error("API URL configuration error");
+    }
+    
+    // Make sure the URL contains the required /v1/products prefix
+    const apiUrl = `${baseUrl}/v1/products/${productId}/categories`;
+    console.log("Making request to:", apiUrl);
+    
     const response = await fetch(
-      `${import.meta.env.VITE_API_URL}/v1/products/${productId}/categories`,
+      apiUrl,
       {
         method: 'POST',
         headers: {
@@ -62,9 +89,13 @@ export async function assignCategoriesToProduct(
       }
     );
     
+    // Log response status for debugging
+    console.log(`Category assignment response status: ${response.status}`);
+    
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.error || "Failed to assign categories to product");
+      console.error("Error response data:", errorData);
+      throw new Error(errorData.error || errorData.message || "Failed to assign categories to product");
     }
   } catch (error: any) {
     console.error("Error assigning categories to product:", error);
@@ -85,8 +116,19 @@ export async function updateProductCategories(
   try {
     const token = localStorage.getItem("jwtToken");
     
+    // Ensure API URL has the correct format
+    const baseUrl = import.meta.env.VITE_API_URL;
+    if (!baseUrl) {
+      console.error("VITE_API_URL environment variable is not defined");
+      throw new Error("API URL configuration error");
+    }
+    
+    // Make sure the URL contains the required /v1/products prefix
+    const apiUrl = `${baseUrl}/v1/products/${productId}/categories`;
+    console.log("Making request to:", apiUrl);
+    
     const response = await fetch(
-      `${import.meta.env.VITE_API_URL}/v1/products/${productId}/categories`,
+      apiUrl,
       {
         method: 'PUT',
         headers: {
@@ -97,9 +139,13 @@ export async function updateProductCategories(
       }
     );
     
+    // Log response status for debugging
+    console.log(`Category update response status: ${response.status}`);
+    
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.error || "Failed to update product categories");
+      console.error("Error response data:", errorData);
+      throw new Error(errorData.error || errorData.message || "Failed to update product categories");
     }
   } catch (error: any) {
     console.error("Error updating product categories:", error);
@@ -120,8 +166,19 @@ export async function removeCategoryFromProduct(
   try {
     const token = localStorage.getItem("jwtToken");
     
+    // Ensure API URL has the correct format
+    const baseUrl = import.meta.env.VITE_API_URL;
+    if (!baseUrl) {
+      console.error("VITE_API_URL environment variable is not defined");
+      throw new Error("API URL configuration error");
+    }
+    
+    // Make sure the URL contains the required /v1/products prefix
+    const apiUrl = `${baseUrl}/v1/products/${productId}/categories/${categoryId}`;
+    console.log("Making request to:", apiUrl);
+    
     const response = await fetch(
-      `${import.meta.env.VITE_API_URL}/v1/products/${productId}/categories/${categoryId}`,
+      apiUrl,
       {
         method: 'DELETE',
         headers: {
@@ -130,9 +187,13 @@ export async function removeCategoryFromProduct(
       }
     );
     
+    // Log response status for debugging
+    console.log(`Category removal response status: ${response.status}`);
+    
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.error || "Failed to remove category from product");
+      console.error("Error response data:", errorData);
+      throw new Error(errorData.error || errorData.message || "Failed to remove category from product");
     }
   } catch (error: any) {
     console.error("Error removing category from product:", error);
