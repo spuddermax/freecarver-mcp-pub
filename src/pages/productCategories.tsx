@@ -260,9 +260,19 @@ export default function ProductCategories() {
 						</div>
 					</td>
 					<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-						{node.parent_category_id 
-							? categories.find(c => c.id === node.parent_category_id)?.name || "Unknown"
-							: "None"}
+						{node.hero_image ? (
+							<div className="flex items-center">
+								<div className="h-12 w-20 overflow-hidden rounded">
+									<img 
+										src={node.hero_image} 
+										alt={`${node.name} hero`}
+										className="h-full w-full object-cover"
+									/>
+								</div>
+							</div>
+						) : (
+							<span className="text-gray-400 dark:text-gray-500 italic text-xs">No hero image</span>
+						)}
 					</td>
 					<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
 						{format(
@@ -389,7 +399,7 @@ export default function ProductCategories() {
 											Category
 										</th>
 										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-											Parent Category
+											Hero Image
 										</th>
 										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 											Created

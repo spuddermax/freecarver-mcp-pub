@@ -1,6 +1,6 @@
-import { useState, useEffect, ChangeEvent, FormEvent } from "react";
+import { useState, useEffect, ChangeEvent, FormEvent, useMemo, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { Folder as FolderIcon, Save as SaveIcon, Trash as TrashIcon, ArrowLeft as ArrowLeftIcon, Plus as PlusIcon, ChevronRight, Image as ImageIcon, X as XIcon } from "lucide-react";
+import { Folder as FolderIcon, Save as SaveIcon, Trash as TrashIcon, ArrowLeft as ArrowLeftIcon, Plus as PlusIcon, ChevronRight, Image as ImageIcon, X as XIcon, AlertCircle as AlertCircleIcon, RotateCcw as RotateCcwIcon } from "lucide-react";
 import Layout from "../components/Layout";
 import { Toast } from "../components/Toast";
 import { LoadingModal } from "../components/LoadingModal";
@@ -8,6 +8,75 @@ import { Modal } from "../components/Modal";
 import { formatProductCategory } from "../utils/formatters";
 import { ProductCategory } from "../types/Interfaces";
 import { uploadCategoryHeroToCloudflare, deleteImageFromCloudflare } from "../lib/api";
+
+// Add CSS for pulse animation and tooltip
+const pulseAnimation = `
+  @keyframes pulse-animation {
+    0% {
+      box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+    }
+    70% {
+      box-shadow: 0 0 0 8px rgba(34, 197, 94, 0);
+    }
+    100% {
+      box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+    }
+  }
+  .pulse-button {
+    animation: pulse-animation 2s infinite;
+    position: relative;
+  }
+  
+  .changes-tooltip {
+    position: absolute;
+    bottom: calc(100% + 10px);
+    right: 0;
+    background-color: #1f2937;
+    color: white;
+    padding: 12px;
+    border-radius: 6px;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    width: 280px;
+    z-index: 50;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s, visibility 0.2s;
+  }
+  
+  .changes-tooltip:after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    right: 20px;
+    border-width: 8px;
+    border-style: solid;
+    border-color: #1f2937 transparent transparent transparent;
+  }
+  
+  .tooltip-container:hover .changes-tooltip {
+    opacity: 1;
+    visibility: visible;
+  }
+  
+  .revert-button {
+    background-color: #2563eb;
+    color: white;
+    border-radius: 4px;
+    padding: 6px 12px;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    margin-top: 10px;
+    transition: background-color 0.2s;
+    width: 100%;
+  }
+  
+  .revert-button:hover {
+    background-color: #1d4ed8;
+  }
+`;
 
 export default function ProductCategoryEdit() {
   const { targetId } = useParams<{ targetId: string }>();
@@ -21,6 +90,12 @@ export default function ProductCategoryEdit() {
   const [deleteImageConfirmOpen, setDeleteImageConfirmOpen] = useState(false);
   const [availableParentCategories, setAvailableParentCategories] = useState<ProductCategory[]>([]);
   const [categoryLineage, setCategoryLineage] = useState<ProductCategory[]>([]);
+  
+  // Add state to track original category data for comparison
+  const [originalCategory, setOriginalCategory] = useState<ProductCategory | null>(null);
+  
+  // Add state to track if image was recently uploaded
+  const [imageJustUploaded, setImageJustUploaded] = useState(false);
   
   const [category, setCategory] = useState<ProductCategory>({
     id: 0,
@@ -36,6 +111,90 @@ export default function ProductCategoryEdit() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+
+  // Add state to track tooltip visibility
+  const [showChangesTooltip, setShowChangesTooltip] = useState(false);
+  const tooltipTimeout = useRef<NodeJS.Timeout | null>(null);
+  
+  // Calculate if there are any changes compared to original data
+  const hasChanges = useMemo(() => {
+    if (!isEditing || !originalCategory) return true; // For new categories or while loading, allow submission
+    
+    // Compare basic fields
+    if (category.name !== originalCategory.name) return true;
+    if (category.description !== originalCategory.description) return true;
+    if (category.parent_category_id !== originalCategory.parent_category_id) return true;
+    
+    // Check if image file is selected but not yet uploaded
+    if (imageFile && !imageJustUploaded) return true;
+    
+    // If we just uploaded an image and there are no other changes, don't consider it a change
+    if (imageJustUploaded && 
+        category.name === originalCategory.name && 
+        category.description === originalCategory.description && 
+        category.parent_category_id === originalCategory.parent_category_id) {
+      return false;
+    }
+    
+    // Check if hero_image field has changed (for cases where it was removed)
+    if (category.hero_image !== originalCategory.hero_image) return true;
+    
+    return false;
+  }, [category, originalCategory, imageFile, isEditing, imageJustUploaded]);
+  
+  // Function to generate list of changes
+  const getChangesDescription = useMemo(() => {
+    if (!isEditing || !originalCategory) return [];
+    
+    const changes: string[] = [];
+    
+    // Check basic fields
+    if (category.name !== originalCategory.name) {
+      changes.push(`Name: "${originalCategory.name}" → "${category.name}"`);
+    }
+    
+    if (category.description !== originalCategory.description) {
+      const oldDesc = originalCategory.description || '(empty)';
+      const newDesc = category.description || '(empty)';
+      if (oldDesc !== newDesc) {
+        changes.push(`Description: changed`);
+      }
+    }
+    
+    // Check parent category
+    if (category.parent_category_id !== originalCategory.parent_category_id) {
+      const oldParentName = originalCategory.parent_category_id ? 
+        availableParentCategories.find(cat => cat.id === originalCategory.parent_category_id)?.name || 'Unknown' : 
+        'None';
+      
+      const newParentName = category.parent_category_id ? 
+        availableParentCategories.find(cat => cat.id === category.parent_category_id)?.name || 'Unknown' : 
+        'None';
+      
+      changes.push(`Parent: "${oldParentName}" → "${newParentName}"`);
+    }
+    
+    // Check hero image
+    if (imageFile && !imageJustUploaded) {
+      changes.push(`Hero Image: new image selected`);
+    } else if (category.hero_image !== originalCategory.hero_image) {
+      if (!category.hero_image) {
+        changes.push(`Hero Image: removed`);
+      } else if (!originalCategory.hero_image) {
+        changes.push(`Hero Image: added`);
+      } else {
+        changes.push(`Hero Image: changed`);
+      }
+    }
+    
+    return changes;
+  }, [category, originalCategory, imageFile, imageJustUploaded, availableParentCategories, isEditing]);
+
+  // Calculate if button should pulse (enabled and has changes)
+  const shouldPulse = useMemo(() => {
+    if (!isEditing) return true; // New category always pulses
+    return hasChanges && !saving && !loading && !isUploading;
+  }, [hasChanges, saving, loading, isUploading, isEditing]);
 
   useEffect(() => {
     // Always fetch all categories to populate the parent category dropdown
@@ -106,7 +265,10 @@ export default function ProductCategoryEdit() {
       }
       const data = await response.json();
       const loadedCategory = formatProductCategory(data.data.category);
+      
+      // Store both current and original state
       setCategory(loadedCategory);
+      setOriginalCategory(loadedCategory);
       
       // Once the category is loaded, build its lineage if it has a parent
       if (loadedCategory.parent_category_id !== null) {
@@ -188,6 +350,7 @@ export default function ProductCategoryEdit() {
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
       setImageFile(file);
+      setImageJustUploaded(false); // Reset the flag when a new image is selected
       
       // Create preview URL
       const previewUrl = URL.createObjectURL(file);
@@ -226,6 +389,7 @@ export default function ProductCategoryEdit() {
         
         // Set message to indicate success
         setMessage({ type: "success", text: "Hero image removed successfully" });
+        setImageJustUploaded(false); // Reset flag when image is removed
       } catch (error: any) {
         console.error("Error deleting hero image:", error);
         setMessage({ type: "error", text: `Failed to delete hero image: ${error.message}` });
@@ -239,6 +403,14 @@ export default function ProductCategoryEdit() {
       ...prev,
       hero_image: null
     }));
+    // Also update originalCategory to reflect this change is already saved
+    setOriginalCategory(prev => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        hero_image: null
+      };
+    });
     clearSelectedImage();
   };
 
@@ -259,24 +431,49 @@ export default function ProductCategoryEdit() {
         category.hero_image || undefined
       );
       
-      // The cloudflare-avatar endpoint will name the file user-{id}.{extension}
-      // We need to use the URL as is, but later we might want to update the API to
-      // handle different image types more directly
       const cloudflareUrl = response.data.publicUrl;
+      
+      // Update both category and originalCategory to reflect this change is already saved
+      if (isEditing) {
+        setCategory(prev => ({
+          ...prev,
+          hero_image: cloudflareUrl
+        }));
+        setOriginalCategory(prev => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            hero_image: cloudflareUrl
+          };
+        });
+        
+        // Set flag to indicate image was just uploaded
+        setImageJustUploaded(true);
+        // Clear the file reference since it's been uploaded
+        clearSelectedImage();
+      }
       
       return cloudflareUrl;
     } catch (error: any) {
       console.error("Error uploading hero image:", error);
       setMessage({ type: "error", text: `Failed to upload hero image: ${error.message}` });
+      setImageJustUploaded(false);
       return null;
     } finally {
       setIsUploading(false);
     }
   };
 
-  // Update the submit handler to handle image upload
+  // Update the submit handler
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    
+    // If we're just uploading an image
+    if (isEditing && imageFile && !hasChanges) {
+      await uploadImage();
+      return;
+    }
+    
     setSaving(true);
     
     try {
@@ -285,7 +482,7 @@ export default function ProductCategoryEdit() {
       
       // For new categories, we need to create the category first, then upload the image
       // For existing categories, we can upload the image first
-      if (isEditing && imageFile) {
+      if (isEditing && imageFile && !imageJustUploaded) {
         heroImageUrl = await uploadImage();
         needsImageUpload = false;
         
@@ -383,18 +580,16 @@ export default function ProductCategoryEdit() {
         text: isEditing ? "Category updated successfully" : "Category created successfully" 
       });
       
-      // Clear the selected file since it's been uploaded
-      clearSelectedImage();
-      
-      // For new categories, navigate to the edit page after creation
-      if (!isEditing) {
-        const data = await response.json();
-        const newId = data.data.category.id;
-        
-        // Wait a moment before redirecting to allow the success message to be seen
-        setTimeout(() => {
-          navigate(`/productCategoryEdit/${newId}`, { replace: true });
-        }, 1500);
+      // For existing categories, update the originalCategory after a successful save
+      if (isEditing) {
+        setOriginalCategory(prev => {
+          if (!prev) return null;
+          return {
+            ...category,
+            hero_image: heroImageUrl || null
+          };
+        });
+        setImageJustUploaded(false); // Reset the flag after save
       }
     } catch (error: any) {
       console.error("Error saving product category:", error);
@@ -452,6 +647,49 @@ export default function ProductCategoryEdit() {
     navigate(`/productCategoryEdit?parentId=${targetId}`);
   };
 
+  // Handle tooltip display
+  const handleTooltipMouseEnter = () => {
+    if (tooltipTimeout.current) {
+      clearTimeout(tooltipTimeout.current);
+      tooltipTimeout.current = null;
+    }
+    setShowChangesTooltip(true);
+  };
+
+  const handleTooltipMouseLeave = () => {
+    if (tooltipTimeout.current) {
+      clearTimeout(tooltipTimeout.current);
+    }
+    tooltipTimeout.current = setTimeout(() => {
+      setShowChangesTooltip(false);
+    }, 300);
+  };
+
+  // Add function to revert changes
+  const handleRevertChanges = () => {
+    if (!originalCategory) return;
+    
+    // Revert the category back to its original state
+    setCategory({...originalCategory});
+    
+    // Clear any selected image file
+    if (imagePreview) {
+      URL.revokeObjectURL(imagePreview);
+    }
+    setImageFile(null);
+    setImagePreview(null);
+    setImageJustUploaded(false);
+    
+    // Show a message to confirm changes were reverted
+    setMessage({
+      type: "success",
+      text: "All changes have been reverted"
+    });
+    
+    // Close the tooltip
+    setShowChangesTooltip(false);
+  };
+
   return (
     <Layout
       pageInfo={{
@@ -465,6 +703,9 @@ export default function ProductCategoryEdit() {
         { label: isEditing ? "Edit Category" : "New Category" },
       ]}
     >
+      {/* Add the CSS animation to the head */}
+      <style>{pulseAnimation}</style>
+      
       {message && (
         <Toast
           message={message.text}
@@ -525,19 +766,66 @@ export default function ProductCategoryEdit() {
                   </button>
                 )}
                 
-                <button
-                  onClick={handleSubmit}
-                  disabled={saving || loading}
-                  className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                >
-                  <SaveIcon className="h-4 w-4 mr-2" />
-                  {isEditing ? "Update Category" : "Create Category"}
-                </button>
+                {/* If there's only an image file and no other changes, show Upload Image button */}
+                {isEditing && imageFile && !hasChanges && !imageJustUploaded && (
+                  <button
+                    onClick={uploadImage}
+                    disabled={isUploading}
+                    className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-800 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                  >
+                    <ImageIcon className="h-4 w-4 mr-2" />
+                    {isUploading ? "Uploading..." : "Upload Image"}
+                  </button>
+                )}
+                
+                {/* Update/Create button with tooltip */}
+                <div className={`relative tooltip-container ${shouldPulse ? 'group' : ''}`}
+                  onMouseEnter={handleTooltipMouseEnter}
+                  onMouseLeave={handleTooltipMouseLeave}>
+                  {shouldPulse && showChangesTooltip && getChangesDescription.length > 0 && (
+                    <div className="changes-tooltip">
+                      <div className="font-medium text-sm mb-1 text-green-300 flex items-center">
+                        <AlertCircleIcon className="h-4 w-4 mr-1" />
+                        <span>Unsaved Changes:</span>
+                      </div>
+                      <ul className="text-xs space-y-1 max-h-60 overflow-auto mb-3">
+                        {getChangesDescription.map((change, index) => (
+                          <li key={index} className="flex items-start pb-1 border-b border-gray-700 last:border-0">
+                            <span>• {change}</span>
+                          </li>
+                        ))}
+                      </ul>
+                      
+                      {/* Add Revert button */}
+                      <button 
+                        onClick={handleRevertChanges}
+                        className="revert-button"
+                        type="button"
+                      >
+                        <RotateCcwIcon className="h-3 w-3" />
+                        <span>Revert All Changes</span>
+                      </button>
+                    </div>
+                  )}
+                  
+                  <button
+                    onClick={handleSubmit}
+                    disabled={saving || loading || (isEditing && !hasChanges) || isUploading}
+                    className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium ${
+                      isEditing && !hasChanges || isUploading
+                        ? 'bg-green-900 cursor-not-allowed text-gray-500' 
+                        : `bg-green-800 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 text-white ${shouldPulse ? 'pulse-button' : ''}`
+                    }`}
+                  >
+                    <SaveIcon className="h-4 w-4 mr-2" />
+                    {isEditing ? "Update Category" : "Create Category"}
+                  </button>
+                </div>
                 
                 {isEditing && (
                   <button
                     onClick={() => setDeleteConfirmOpen(true)}
-                    className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                    className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-700 hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
                   >
                     <TrashIcon className="h-4 w-4 mr-2" />
                     Delete
