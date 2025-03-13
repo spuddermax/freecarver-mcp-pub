@@ -362,3 +362,59 @@ export async function deleteImageFromCloudflare(
 	
 	return response.json();
 }
+
+/**
+ * Uploads a product media file to Cloudflare
+ * @param file - The file to be uploaded
+ * @param productId - The ID of the product for which the media is being uploaded
+ * @param mediaId - The ID of the media item (to use in filename)
+ * @param currentUrl - The current url of the media, if exists
+ * @returns The response with the public URL of the uploaded image
+ */
+export async function uploadProductMediaToCloudflare(
+	file: File,
+	productId: number,
+	mediaId: string,
+	currentUrl?: string
+): Promise<{ status: string; message: string; data: { publicUrl: string } }> {
+	const formData = new FormData();
+	// Use "avatar" field name as that's what the endpoint expects
+	formData.append("avatar", file);
+	
+	if (currentUrl) {
+		formData.append("oldAvatarUrl", currentUrl);
+	}
+
+	// Include productId in the request (use userId parameter of the existing endpoint)
+	// This will be used in the filename on the server
+	formData.append("userId", productId.toString());
+	
+	// Include mediaId to ensure unique filenames within a product
+	formData.append("mediaId", mediaId);
+	
+	// Add a field to indicate we want to use Cloudflare
+	formData.append("storage", "cloudflare");
+	
+	// IMPORTANT: Specify this is a product media image, not a user avatar
+	// This is required for the backend to use the correct naming convention and database update
+	formData.append("imageType", "product_media");
+
+	const response = await fetch(
+		import.meta.env.VITE_API_URL + "/api/admin/cloudflare-avatar",
+		{
+			method: "POST",
+			headers: {
+				Authorization: "Bearer " + localStorage.getItem("jwtToken"),
+			},
+			body: formData,
+		}
+	);
+
+	const data = await response.json();
+
+	if (!response.ok) {
+		throw new Error(data.message || "Failed to upload product media to Cloudflare");
+	}
+
+	return data;
+}

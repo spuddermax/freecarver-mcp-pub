@@ -1,15 +1,16 @@
 // /src/components/ProductMedia.tsx
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import { Trash2, Plus, Code, Save, X } from "lucide-react";
 import { Modal } from "../components/Modal";
 import { ProductMediaItem } from "./ProductMediaItem";
 import { ProductMediaJsonEditor } from "./ProductMediaJsonEditor";
 import { updateProduct } from "../lib/api_client/products";
-import Toast from "../components/Toast";
+import { Toast } from "../components/Toast";
 import { ThumbnailBar } from "./ProductMediaThumbnailBar";
 import { Product } from "../types/Interfaces";
 import { LoadingModal } from "./LoadingModal";
+import PulseUpdateButton, { pulseAnimationCSS } from "../components/PulseUpdateButton";
 
 export interface ProductMediaItem {
 	media_id: string;
@@ -53,7 +54,7 @@ export function ProductMedia({
 	} | null>(null);
 
 	// Ref and state to track visibility of Save Media button
-	const saveButtonRef = useRef<HTMLButtonElement>(null);
+	const saveButtonRef = useRef<HTMLDivElement>(null);
 	const [isSaveButtonVisible, setIsSaveButtonVisible] = useState(true);
 
 	React.useEffect(() => {
@@ -102,11 +103,56 @@ export function ProductMedia({
 
 	// Save just the product_media field using the API client.
 	const handleSaveMedia = async () => {
+		console.log('Saving media items:', JSON.stringify(mediaItems, null, 2));
+		
+		// Check if any ProductMediaItems are still uploading
+		const uploadingItems = document.querySelectorAll('.media-item-uploading');
+		if (uploadingItems.length > 0) {
+			setToast({
+				message: `Please wait for all uploads to complete before saving (${uploadingItems.length} in progress).`,
+				type: "info",
+			});
+			return;
+		}
+		
+		// Filter out any data URLs - they should never be saved to the database
+		const filteredMediaItems = mediaItems.map(item => {
+			if (item.url && typeof item.url === 'string' && item.url.startsWith('data:')) {
+				console.warn(`Found data URL in item ${item.media_id}. This will be removed to prevent saving binary data to the database.`);
+				return { ...item, url: '' }; // Replace data URL with empty string
+			}
+			return item;
+		});
+		
+		// Check for any data URLs that were filtered out
+		const removedItems = mediaItems.filter(item => 
+			item.url && typeof item.url === 'string' && item.url.startsWith('data:')
+		);
+		
+		if (removedItems.length > 0) {
+			console.warn(`WARNING: Found ${removedItems.length} data URLs in media items:`);
+			removedItems.forEach(item => {
+				console.warn(`- Item ${item.media_id} (${item.title || 'Untitled'}): URL starts with "data:"`);
+			});
+			
+			// Show warning toast
+			setToast({
+				message: `Warning: ${removedItems.length} media item(s) with temporary data were not uploaded properly. Please try uploading those images again.`,
+				type: "error",
+			});
+			
+			// Update the UI with filtered items
+			setMediaItems(filteredMediaItems);
+			return; // Don't save to the database yet
+		}
+		
 		setIsLoading(true);
 		try {
-			await updateProduct({ id: productId, product_media: mediaItems });
+			await updateProduct({ id: productId, product_media: filteredMediaItems });
+			console.log('Media items saved successfully');
+			
 			// Update the original media JSON after saving.
-			setOriginalMediaJSON(JSON.stringify(mediaItems));
+			setOriginalMediaJSON(JSON.stringify(filteredMediaItems));
 			// Use the Toast component to display success.
 			setToast({
 				message: "Product media saved successfully.",
@@ -126,8 +172,75 @@ export function ProductMedia({
 	// Check if media has changed by comparing the JSON strings.
 	const isMediaUnchanged = JSON.stringify(mediaItems) === originalMediaJSON;
 
+	// Generate a description of changes for the tooltip
+	const mediaChanges = useMemo(() => {
+		if (isMediaUnchanged) return [];
+
+		const originalItems = JSON.parse(originalMediaJSON || "[]");
+		const changes: string[] = [];
+
+		// Check for added items
+		const addedItems = mediaItems.filter(
+			item => !originalItems.some((original: ProductMediaItem) => original.media_id === item.media_id)
+		);
+		if (addedItems.length > 0) {
+			changes.push(`Added ${addedItems.length} new media item${addedItems.length > 1 ? 's' : ''}`);
+		}
+
+		// Check for removed items
+		const removedItems = originalItems.filter(
+			(original: ProductMediaItem) => !mediaItems.some(item => item.media_id === original.media_id)
+		);
+		if (removedItems.length > 0) {
+			changes.push(`Removed ${removedItems.length} media item${removedItems.length > 1 ? 's' : ''}`);
+		}
+
+		// Check for updated items
+		const existingItemIds = mediaItems
+			.filter(item => 
+				originalItems.some((original: ProductMediaItem) => original.media_id === item.media_id)
+			)
+			.map(item => item.media_id);
+
+		existingItemIds.forEach((id: string) => {
+			const originalItem = originalItems.find((item: ProductMediaItem) => item.media_id === id);
+			const currentItem = mediaItems.find(item => item.media_id === id);
+			
+			if (originalItem && currentItem) {
+				if (originalItem.url !== currentItem.url) {
+					changes.push(`Changed URL for "${currentItem.title || 'Untitled media'}" item`);
+				}
+				if (originalItem.title !== currentItem.title) {
+					changes.push(`Changed title from "${originalItem.title || 'Untitled'}" to "${currentItem.title || 'Untitled'}"`);
+				}
+				if (originalItem.default !== currentItem.default) {
+					if (currentItem.default) {
+						changes.push(`Set "${currentItem.title || 'Untitled media'}" as default`);
+					}
+				}
+			}
+		});
+
+		// Check if order changed
+		const originalIds = originalItems.map((item: ProductMediaItem) => item.media_id);
+		const currentIds = mediaItems.map(item => item.media_id);
+		
+		if (
+			originalIds.length === currentIds.length &&
+			originalIds.every((id: string) => currentIds.includes(id)) &&
+			!originalIds.every((id: string, index: number) => id === currentIds[index])
+		) {
+			changes.push("Changed media display order");
+		}
+
+		return changes;
+	}, [mediaItems, originalMediaJSON, isMediaUnchanged]);
+
 	return (
 		<fieldset className="border rounded-lg p-4 border-cyan-200 dark:border-cyan-700 relative">
+			{/* Add the CSS animation to the head */}
+			<style>{pulseAnimationCSS}</style>
+			
 			<legend className="text-2xl font-medium text-gray-700 dark:text-gray-300 px-2">
 				Product Media
 			</legend>
@@ -155,6 +268,7 @@ export function ProductMedia({
 									updateMediaItem(index, key, value)
 								}
 								onDelete={() => setDeleteIndex(index)}
+								productId={parseInt(productId, 10)}
 							/>
 						))}
 					</div>
@@ -187,20 +301,20 @@ export function ProductMedia({
 						<Code className="h-4 w-4 mr-1" />
 						Edit Media JSON
 					</button>
-					<button
-						type="button"
-						ref={saveButtonRef}
-						onClick={handleSaveMedia}
-						disabled={isMediaUnchanged || isLoading}
-						className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium focus:outline-none focus:ring-2 focus:ring-purple-500 ${
-							isMediaUnchanged || isLoading
-								? "text-gray-500 bg-blue-900 cursor-not-allowed"
-								: "text-white bg-blue-600 hover:bg-blue-700"
-						}`}
-					>
-						<Save className="h-4 w-4 mr-1" />
-						Save Media
-					</button>
+					
+					{/* Replace this button with PulseUpdateButton */}
+					<div ref={saveButtonRef}>
+						<PulseUpdateButton
+							onClick={handleSaveMedia}
+							disabled={isMediaUnchanged || isLoading}
+							showPulse={!isMediaUnchanged && !isLoading}
+							label="Save Media"
+							icon={<Save className="h-4 w-4" />}
+							changes={mediaChanges}
+							isLoading={isLoading}
+							tooltipTitle="Unsaved Media Changes:"
+						/>
+					</div>
 				</div>
 				{/* Delete Confirmation Modal */}
 				<Modal
@@ -258,19 +372,16 @@ export function ProductMedia({
 			{/* Fixed Save Media button if the original is scrolled out of view */}
 			{!isMediaUnchanged && !isSaveButtonVisible && (
 				<div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50">
-					<button
-						type="button"
+					<PulseUpdateButton
 						onClick={handleSaveMedia}
 						disabled={isLoading}
-						className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-purple-500 ${
-							isLoading
-								? "bg-purple-300 cursor-not-allowed"
-								: "bg-blue-700 hover:bg-blue-600"
-						}`}
-					>
-						<Save className="h-4 w-4 mr-1" />
-						Save Media
-					</button>
+						showPulse={true}
+						label="Save Media"
+						icon={<Save className="h-4 w-4" />}
+						changes={mediaChanges}
+						isLoading={isLoading}
+						tooltipTitle="Unsaved Media Changes:"
+					/>
 				</div>
 			)}
 			{toast && (

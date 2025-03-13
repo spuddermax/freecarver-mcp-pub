@@ -114,6 +114,11 @@ router.post(
 				case 'category_hero':
 					filename = `cat-hero-${effectiveEntityId}.${req.file.mimetype.split("/")[1]}`;
 					break;
+				case 'product_media':
+					// For product media, include both product ID and media ID for uniqueness
+					const mediaId = req.body.mediaId || Date.now().toString();
+					filename = `prod-media-${effectiveEntityId}-${mediaId}.${req.file.mimetype.split("/")[1]}`;
+					break;
 				case 'avatar':
 				default:
 					filename = `user-${effectiveEntityId}.${req.file.mimetype.split("/")[1]}`;
@@ -137,6 +142,10 @@ router.post(
 						[result.publicUrl, effectiveEntityId]
 					);
 					req.log("info", `Updated hero_image URL for product category ID ${effectiveEntityId}`);
+				} else if (imageType === 'product_media') {
+					// For product media, we don't update the database directly
+					// The product media is updated through the products PUT endpoint with the complete media array
+					req.log("info", `Generated product media URL for product ID ${effectiveEntityId}, media will be saved when the product is updated`);
 				} else {
 					// Default behavior: update admin_users table for avatars
 					await pool.query(
@@ -228,6 +237,10 @@ router.delete(
 							[effectiveEntityId]
 						);
 						req.log("info", `Cleared hero_image for product category ID ${effectiveEntityId}`);
+					} else if (imageType === 'product_media') {
+						// For product media, we don't update the database directly
+						// The product media is updated through the products PUT endpoint with the complete media array
+						req.log("info", `Deleted product media image for product ID ${effectiveEntityId}, media will be updated when the product is saved`);
 					} else if (imageType === 'avatar') {
 						// Update admin_users table for avatars
 						await pool.query(

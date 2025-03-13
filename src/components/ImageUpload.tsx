@@ -46,6 +46,8 @@ export const ImageUpload = ({
     const file = e.target.files?.[0];
     if (!file) return;
     
+    console.log('ImageUpload: File selected:', file.name, file.type, file.size);
+    
     // Check file size
     if (file.size > maxSizeMB * 1024 * 1024) {
       alert(`File size exceeds ${maxSizeMB}MB limit`);
@@ -59,8 +61,11 @@ export const ImageUpload = ({
     reader.onloadend = () => {
       const result = reader.result as string;
       setImagePreview(result);
+      console.log('ImageUpload: Created data URL for preview (first 50 chars):', result.substring(0, 50) + '...');
+      
       // We're just going to pass the file to the parent component
       // and let it set the URL when the Cloudflare URL is available
+      console.log('ImageUpload: Calling onImageChange with file object');
       onImageChange({ file, url: '' });
     };
     reader.readAsDataURL(file);

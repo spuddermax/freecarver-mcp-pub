@@ -1,4 +1,6 @@
 // /src/lib/api_client/products.ts
+import { deleteImageFromCloudflare, uploadProductMediaToCloudflare } from "../api";
+
 /**
  * Fetch all products.
  * @returns A promise that resolves to an array of products.
@@ -136,4 +138,54 @@ export async function deleteProduct(id: string): Promise<any> {
 	}
 	const responseData = await response.json();
 	return responseData.data;
+}
+
+/**
+ * Uploads an image for product media to Cloudflare
+ * @param file The image file to upload
+ * @param productId The ID of the product
+ * @param mediaId The ID of the media item
+ * @param currentImageUrl Optional current image URL to replace
+ * @returns The URL of the uploaded image
+ */
+export async function uploadProductMediaImage(
+	file: File,
+	productId: number,
+	mediaId: string,
+	currentImageUrl?: string
+): Promise<string> {
+	try {
+		const response = await uploadProductMediaToCloudflare(
+			file,
+			productId,
+			mediaId,
+			currentImageUrl
+		);
+		
+		return response.data.publicUrl;
+	} catch (error: any) {
+		console.error("Error uploading product media image:", error);
+		throw error;
+	}
+}
+
+/**
+ * Remove a media image from a product
+ * @param imageUrl The URL of the image to delete
+ * @param productId The ID of the product
+ */
+export async function removeProductMediaImage(
+	imageUrl: string,
+	productId: number
+): Promise<void> {
+	try {
+		await deleteImageFromCloudflare(
+			imageUrl,
+			'product_media',
+			productId
+		);
+	} catch (error: any) {
+		console.error("Error deleting product media image:", error);
+		throw error;
+	}
 }
