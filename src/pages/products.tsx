@@ -198,10 +198,13 @@ export default function Products() {
 								</thead>
 								<tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
 									{loading ? (
-										<LoadingModal
-											isOpen={loading}
-											message="Loading products..."
-										/>
+										<tr>
+											<td colSpan={7} className="px-6 py-16 text-center">
+												<div className="flex justify-center">
+													<Loader2Icon className="h-8 w-8 text-blue-500 animate-spin" />
+												</div>
+											</td>
+										</tr>
 									) : filteredProducts.length === 0 ? (
 										<tr>
 											<td
@@ -278,6 +281,10 @@ export default function Products() {
 					</div>
 				</div>
 			</div>
+			<LoadingModal
+				isOpen={loading && false} /* disabled - using inline loading state */
+				message="Loading products..."
+			/>
 		</Layout>
 	);
 }
