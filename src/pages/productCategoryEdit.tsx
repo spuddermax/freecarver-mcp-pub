@@ -42,6 +42,9 @@ export default function ProductCategoryEdit() {
   // Add state to track if we just navigated from category creation
   const [justCreated, setJustCreated] = useState(false);
   
+  // Add state to track if category has children
+  const [hasChildren, setHasChildren] = useState(false);
+  
   const [category, setCategory] = useState<ProductCategory>({
     id: 0,
     name: "",
@@ -193,6 +196,9 @@ export default function ProductCategoryEdit() {
       if (loadedCategory.parent_category_id !== null) {
         await buildCategoryLineage(loadedCategory.parent_category_id);
       }
+      
+      // Check if the category has any children
+      await checkHasChildren(parseInt(targetId as string, 10));
     } catch (error: any) {
       console.error("Error loading product category:", error);
       setMessage({ type: "error", text: error.message });
@@ -596,6 +602,25 @@ export default function ProductCategoryEdit() {
     }
   }, [isEditing]);
 
+  // Function to check if the category has any children
+  const checkHasChildren = async (categoryId: number) => {
+    try {
+      // Fetch all categories
+      const allCategories = await fetchAllCategories();
+      
+      // Check if any category has this category as parent
+      const childrenCount = allCategories.filter(
+        cat => cat.parent_category_id === categoryId
+      ).length;
+      
+      setHasChildren(childrenCount > 0);
+    } catch (error) {
+      console.error("Error checking for category children:", error);
+      // Default to false if check fails
+      setHasChildren(false);
+    }
+  };
+
   return (
     <Layout
       pageInfo={{
@@ -653,62 +678,6 @@ export default function ProductCategoryEdit() {
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
                 {isEditing ? `Edit Category: ${category.name}` : "Create New Category"}
               </h2>
-              
-              <div className="flex space-x-2">
-                <button
-                  onClick={() => navigate('/productCategories')}
-                  className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                >
-                  <ArrowLeftIcon className="h-4 w-4 mr-2" />
-                  Back to Categories
-                </button>
-                
-                {isEditing && (
-                  <button
-                    onClick={handleAddSubCategory}
-                    className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                  >
-                    <PlusIcon className="h-4 w-4 mr-2" />
-                    Add Sub-Category
-                  </button>
-                )}
-                
-                {/* If there's only an image file and no other changes, show Upload Image button */}
-                {isEditing && imageFile && !hasChanges && !imageJustUploaded && (
-                  <button
-                    onClick={uploadImage}
-                    disabled={isUploading}
-                    className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-800 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                  >
-                    <ImageIcon className="h-4 w-4 mr-2" />
-                    {isUploading ? "Uploading..." : "Upload Image"}
-                  </button>
-                )}
-                
-                {/* Replace the custom button with PulseUpdateButton */}
-                <PulseUpdateButton
-                  onClick={handleSubmit}
-                  disabled={saving || loading || (isEditing && !hasChanges) || isUploading || (!isEditing && category.name.trim() === '')}
-                  showPulse={shouldPulse}
-                  label={isEditing ? "Update Category" : "Create Category"}
-                  icon={<SaveIcon className="h-4 w-4" />}
-                  changes={getChangesDescription}
-                  onRevert={isEditing ? handleRevertChanges : undefined}
-                  isLoading={saving}
-                  tooltipTitle={isEditing ? "Unsaved Changes:" : "Create a category first:"}
-                  revertButtonLabel={isEditing ? "Revert All Changes" : ""}
-                />
-                
-                {isEditing && (
-                  <button
-                    onClick={() => setDeleteConfirmOpen(true)}
-                    className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-700 hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                  >
-                    <TrashIcon className="h-4 w-4 mr-2" />
-                    Delete
-                  </button>
-                )}
-              </div>
             </div>
             
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -857,6 +826,71 @@ export default function ProductCategoryEdit() {
                     ))}
                   </select>
                 </div>
+              </div>
+              
+              {/* Action Buttons - Moved to bottom of form */}
+              <div className="flex justify-end space-x-2 pt-4 mt-4 border-t border-gray-200 dark:border-gray-700">
+                <button
+                  type="button"
+                  onClick={() => navigate('/productCategories')}
+                  className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                >
+                  <ArrowLeftIcon className="h-4 w-4 mr-2" />
+                  Back to Categories
+                </button>
+                
+                {isEditing && (
+                  <button
+                    type="button"
+                    onClick={handleAddSubCategory}
+                    className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                  >
+                    <PlusIcon className="h-4 w-4 mr-2" />
+                    Add Sub-Category
+                  </button>
+                )}
+                
+                {/* If there's only an image file and no other changes, show Upload Image button */}
+                {isEditing && imageFile && !hasChanges && !imageJustUploaded && (
+                  <button
+                    type="button"
+                    onClick={uploadImage}
+                    disabled={isUploading}
+                    className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-800 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                  >
+                    <ImageIcon className="h-4 w-4 mr-2" />
+                    {isUploading ? "Uploading..." : "Upload Image"}
+                  </button>
+                )}
+                
+                {/* Replace the custom button with PulseUpdateButton */}
+                <PulseUpdateButton
+                  onClick={handleSubmit}
+                  disabled={saving || loading || (isEditing && !hasChanges) || isUploading || (!isEditing && category.name.trim() === '')}
+                  showPulse={shouldPulse}
+                  label={isEditing ? "Update Category" : "Create Category"}
+                  icon={<SaveIcon className="h-4 w-4" />}
+                  changes={getChangesDescription}
+                  onRevert={isEditing ? handleRevertChanges : undefined}
+                  isLoading={saving}
+                  tooltipTitle={isEditing ? "Unsaved Changes:" : "Create a category first:"}
+                  revertButtonLabel={isEditing ? "Revert All Changes" : ""}
+                />
+                
+                {isEditing && (
+                  <button
+                    type="button"
+                    onClick={() => setDeleteConfirmOpen(true)}
+                    disabled={hasChildren}
+                    className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium ${
+                      hasChildren ? 'bg-red-900 cursor-not-allowed text-gray-500' : 'text-white bg-red-700 hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500'
+                    }`}
+                    title={hasChildren ? "Cannot delete a category that has sub-categories" : "Delete this category"}
+                  >
+                    <TrashIcon className="h-4 w-4 mr-2" />
+                    Delete
+                  </button>
+                )}
               </div>
             </form>
             
