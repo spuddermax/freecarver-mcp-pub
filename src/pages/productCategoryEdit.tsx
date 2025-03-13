@@ -5,7 +5,6 @@ import Layout from "../components/Layout";
 import { Toast } from "../components/Toast";
 import { LoadingModal } from "../components/LoadingModal";
 import { Modal } from "../components/Modal";
-import { formatProductCategory } from "../utils/formatters";
 import { ProductCategory } from "../types/Interfaces";
 import {
   fetchAllCategories,
@@ -39,6 +38,9 @@ export default function ProductCategoryEdit() {
   // Add state to track if image was recently uploaded
   const [imageJustUploaded, setImageJustUploaded] = useState(false);
   
+  // Add state to track if we just navigated from category creation
+  const [justCreated, setJustCreated] = useState(false);
+  
   const [category, setCategory] = useState<ProductCategory>({
     id: 0,
     name: "",
@@ -56,6 +58,9 @@ export default function ProductCategoryEdit() {
   
   // Calculate if there are any changes compared to original data
   const hasChanges = useMemo(() => {
+    // If we just created and navigated to this page, don't show changes
+    if (justCreated) return false;
+    
     if (!isEditing || !originalCategory) return true; // For new categories or while loading, allow submission
     
     // Compare basic fields
@@ -78,7 +83,7 @@ export default function ProductCategoryEdit() {
     if (category.hero_image !== originalCategory.hero_image) return true;
     
     return false;
-  }, [category, originalCategory, imageFile, isEditing, imageJustUploaded]);
+  }, [category, originalCategory, imageFile, isEditing, imageJustUploaded, justCreated]);
   
   // Function to generate list of changes
   const getChangesDescription = useMemo(() => {
@@ -130,12 +135,15 @@ export default function ProductCategoryEdit() {
 
   // Calculate if button should pulse (enabled and has changes)
   const shouldPulse = useMemo(() => {
+    // Never pulse if we just created the category
+    if (justCreated) return false;
+    
     // For new categories, only pulse if a name is provided
     if (!isEditing) return category.name.trim() !== '';
     
     // For existing categories, pulse if there are changes and not in a loading state
     return hasChanges && !saving && !loading && !isUploading;
-  }, [hasChanges, saving, loading, isUploading, isEditing, category.name]);
+  }, [hasChanges, saving, loading, isUploading, isEditing, category.name, justCreated]);
 
   useEffect(() => {
     // Always fetch all categories to populate the parent category dropdown
@@ -234,6 +242,9 @@ export default function ProductCategoryEdit() {
   };
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    // Clear the "just created" state when user makes changes
+    setJustCreated(false);
+    
     const { name, value } = e.target;
     
     setCategory(prev => ({
@@ -246,6 +257,9 @@ export default function ProductCategoryEdit() {
 
   // Handle image file selection
   const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
+    // Clear the "just created" state when user selects an image
+    setJustCreated(false);
+    
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
       setImageFile(file);
@@ -374,7 +388,7 @@ export default function ProductCategoryEdit() {
     
     try {
       let heroImageUrl = category.hero_image;
-      let needsImageUpload = !!imageFile;
+      let needsImageUpload = isEditing && !!imageFile;
       
       // For new categories, we need to create the category first, then upload the image
       // For existing categories, we can upload the image first
@@ -406,7 +420,7 @@ export default function ProductCategoryEdit() {
       }
       
       // Include hero_image (could be null to remove it, or we'll set it after upload for new categories)
-      if (!needsImageUpload) {
+      if (isEditing && !needsImageUpload) {
         requestBody.hero_image = heroImageUrl;
       }
       
@@ -414,24 +428,25 @@ export default function ProductCategoryEdit() {
         // Update existing category
         await updateCategory(targetId as string, requestBody);
       } else {
-        // Create new category
+        // Create new category (without hero image)
         const newCategory = await createCategory(requestBody);
         
-        // For new categories with an image to upload
-        if (needsImageUpload && imageFile) {
-          // Now that we have the new category ID, upload the image
-          const uploadedImageUrl = await uploadCategoryHeroImage(
-            imageFile,
-            newCategory.id,
-            undefined
-          );
-          
-          if (uploadedImageUrl) {
-            // Update the category with the new image URL
-            await updateCategoryHeroImage(newCategory.id, uploadedImageUrl);
-            heroImageUrl = uploadedImageUrl;
-          }
-        }
+        // Set a flag in sessionStorage to indicate we're coming from creation
+        sessionStorage.setItem("categoryJustCreated", "true");
+        
+        // Navigate to the edit page for the newly created category
+        setMessage({ 
+          type: "success", 
+          text: "Category created successfully" 
+        });
+        
+        // Use setTimeout to ensure the message is shown before redirecting
+        setTimeout(() => {
+          navigate(`/productCategoryEdit/${newCategory.id}`);
+        }, 500);
+        
+        setSaving(false);
+        return; // Exit early as we're navigating away
       }
       
       // Update local state with the new image URL if it was uploaded
@@ -522,6 +537,15 @@ export default function ProductCategoryEdit() {
       text: "All changes have been reverted"
     });
   };
+
+  // Check sessionStorage on load to see if we're coming from a creation
+  useEffect(() => {
+    if (isEditing && sessionStorage.getItem("categoryJustCreated") === "true") {
+      setJustCreated(true);
+      // Remove the flag from sessionStorage so it doesn't affect future loads
+      sessionStorage.removeItem("categoryJustCreated");
+    }
+  }, [isEditing]);
 
   return (
     <Layout
@@ -621,6 +645,8 @@ export default function ProductCategoryEdit() {
                   changes={getChangesDescription}
                   onRevert={isEditing ? handleRevertChanges : undefined}
                   isLoading={saving}
+                  tooltipTitle={isEditing ? "Unsaved Changes:" : "Create a category first:"}
+                  revertButtonLabel={isEditing ? "Revert All Changes" : ""}
                 />
                 
                 {isEditing && (
@@ -668,81 +694,99 @@ export default function ProductCategoryEdit() {
                   />
                 </div>
                 
-                {/* Hero Image Section */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Hero Image
-                  </label>
-                  
-                  {/* Image Preview */}
-                  {(imagePreview || category.hero_image) && (
-                    <div className="relative mb-4">
-                      <img 
-                        src={imagePreview || category.hero_image || ''} 
-                        alt="Category hero" 
-                        className="w-full h-48 object-cover rounded-md"
-                      />
-                      <button
-                        type="button"
-                        onClick={confirmRemoveHeroImage}
-                        className="absolute top-2 right-2 p-1 bg-red-600 text-white rounded-full hover:bg-red-700 focus:outline-none"
-                        title="Remove image"
-                      >
-                        <XIcon className="h-4 w-4" />
-                      </button>
-                    </div>
-                  )}
-                  
-                  {/* File Upload Input */}
-                  {!imagePreview && !category.hero_image && (
-                    <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 dark:border-gray-600 border-dashed rounded-md">
-                      <div className="space-y-1 text-center">
-                        <ImageIcon className="mx-auto h-12 w-12 text-gray-400" />
-                        <div className="flex text-sm text-gray-600 dark:text-gray-400">
-                          <label
-                            htmlFor="hero-image-upload"
-                            className="relative cursor-pointer bg-white dark:bg-gray-700 rounded-md font-medium text-green-600 dark:text-green-400 hover:text-green-500 dark:hover:text-green-300 focus-within:outline-none"
-                          >
-                            <span>Upload an image</span>
-                            <input
-                              id="hero-image-upload"
-                              name="hero-image-upload"
-                              type="file"
-                              accept="image/*"
-                              onChange={handleImageChange}
-                              className="sr-only"
-                            />
-                          </label>
-                          <p className="pl-1">or drag and drop</p>
+                {/* Hero Image Section - Only show when editing */}
+                {isEditing && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Hero Image
+                    </label>
+                    
+                    {/* Image Preview */}
+                    {(imagePreview || category.hero_image) && (
+                      <div className="relative mb-4">
+                        <img 
+                          src={imagePreview || category.hero_image || ''} 
+                          alt="Category hero" 
+                          className="w-full h-48 object-cover rounded-md"
+                        />
+                        <button
+                          type="button"
+                          onClick={confirmRemoveHeroImage}
+                          className="absolute top-2 right-2 p-1 bg-red-600 text-white rounded-full hover:bg-red-700 focus:outline-none"
+                          title="Remove image"
+                        >
+                          <XIcon className="h-4 w-4" />
+                        </button>
+                      </div>
+                    )}
+                    
+                    {/* File Upload Input */}
+                    {!imagePreview && !category.hero_image && (
+                      <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 dark:border-gray-600 border-dashed rounded-md">
+                        <div className="space-y-1 text-center">
+                          <ImageIcon className="mx-auto h-12 w-12 text-gray-400" />
+                          <div className="flex text-sm text-gray-600 dark:text-gray-400">
+                            <label
+                              htmlFor="hero-image-upload"
+                              className="relative cursor-pointer bg-white dark:bg-gray-700 rounded-md font-medium text-green-600 dark:text-green-400 hover:text-green-500 dark:hover:text-green-300 focus-within:outline-none"
+                            >
+                              <span>Upload an image</span>
+                              <input
+                                id="hero-image-upload"
+                                name="hero-image-upload"
+                                type="file"
+                                accept="image/*"
+                                onChange={handleImageChange}
+                                className="sr-only"
+                              />
+                            </label>
+                            <p className="pl-1">or drag and drop</p>
+                          </div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            PNG, JPG, GIF up to 10MB
+                          </p>
                         </div>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          PNG, JPG, GIF up to 10MB
+                      </div>
+                    )}
+                    
+                    {/* Change Image Button (if image already exists) */}
+                    {(imagePreview || category.hero_image) && (
+                      <div className="mt-2">
+                        <label
+                          htmlFor="hero-image-change"
+                          className="cursor-pointer inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 shadow-sm text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none"
+                        >
+                          <ImageIcon className="h-4 w-4 mr-2" />
+                          Change Image
+                          <input
+                            id="hero-image-change"
+                            name="hero-image-change"
+                            type="file"
+                            accept="image/*"
+                            onChange={handleImageChange}
+                            className="sr-only"
+                          />
+                        </label>
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                {/* Information about hero images for new categories */}
+                {!isEditing && (
+                  <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-md">
+                    <div className="flex items-start">
+                      <AlertCircleIcon className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <h4 className="font-medium text-sm">About Hero Images</h4>
+                        <p className="text-sm mt-1">
+                          You'll be able to add a hero image to this category after it's created. 
+                          Please create the category first, then you can upload an image.
                         </p>
                       </div>
                     </div>
-                  )}
-                  
-                  {/* Change Image Button (if image already exists) */}
-                  {(imagePreview || category.hero_image) && (
-                    <div className="mt-2">
-                      <label
-                        htmlFor="hero-image-change"
-                        className="cursor-pointer inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 shadow-sm text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none"
-                      >
-                        <ImageIcon className="h-4 w-4 mr-2" />
-                        Change Image
-                        <input
-                          id="hero-image-change"
-                          name="hero-image-change"
-                          type="file"
-                          accept="image/*"
-                          onChange={handleImageChange}
-                          className="sr-only"
-                        />
-                      </label>
-                    </div>
-                  )}
-                </div>
+                  </div>
+                )}
                 
                 <div>
                   <label htmlFor="parent_category_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
