@@ -1,5 +1,5 @@
 import { useState, useEffect, ChangeEvent, FormEvent, useMemo, useRef } from "react";
-import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import { Folder as FolderIcon, Save as SaveIcon, Trash as TrashIcon, ArrowLeft as ArrowLeftIcon, Plus as PlusIcon, ChevronRight, Image as ImageIcon, X as XIcon, AlertCircle as AlertCircleIcon, RotateCcw as RotateCcwIcon } from "lucide-react";
 import Layout from "../components/Layout";
 import { Toast } from "../components/Toast";
@@ -44,6 +44,13 @@ export default function ProductCategoryEdit() {
   
   // Add state to track if category has children
   const [hasChildren, setHasChildren] = useState(false);
+  
+  // Add state to track the children categories
+  const [childrenCategories, setChildrenCategories] = useState<ProductCategory[]>([]);
+  
+  // Add state and ref to track if the update button is visible
+  const updateButtonRef = useRef<HTMLDivElement>(null);
+  const [isUpdateButtonVisible, setIsUpdateButtonVisible] = useState(true);
   
   const [category, setCategory] = useState<ProductCategory>({
     id: 0,
@@ -602,24 +609,48 @@ export default function ProductCategoryEdit() {
     }
   }, [isEditing]);
 
-  // Function to check if the category has any children
+  // Update the function to both check for children and store them
   const checkHasChildren = async (categoryId: number) => {
     try {
       // Fetch all categories
       const allCategories = await fetchAllCategories();
       
-      // Check if any category has this category as parent
-      const childrenCount = allCategories.filter(
+      // Filter categories that have this category as parent
+      const children = allCategories.filter(
         cat => cat.parent_category_id === categoryId
-      ).length;
+      );
       
-      setHasChildren(childrenCount > 0);
+      setHasChildren(children.length > 0);
+      setChildrenCategories(children);
     } catch (error) {
       console.error("Error checking for category children:", error);
-      // Default to false if check fails
+      // Default to false and empty array if check fails
       setHasChildren(false);
+      setChildrenCategories([]);
     }
   };
+
+  // Set up observer for update button visibility
+  useEffect(() => {
+    if (!updateButtonRef.current) return;
+    
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          setIsUpdateButtonVisible(entry.isIntersecting);
+        });
+      },
+      { root: null, threshold: 0.1 }
+    );
+    
+    observer.observe(updateButtonRef.current);
+    
+    return () => {
+      if (updateButtonRef.current) {
+        observer.unobserve(updateButtonRef.current);
+      }
+    };
+  }, []);
 
   return (
     <Layout
@@ -726,7 +757,7 @@ export default function ProductCategoryEdit() {
                         <img 
                           src={imagePreview || category.hero_image || ''} 
                           alt="Category hero" 
-                          className="w-full h-48 object-cover rounded-md"
+                          className="w-full aspect-[16/5] object-cover rounded-md"
                         />
                         <button
                           type="button"
@@ -827,7 +858,35 @@ export default function ProductCategoryEdit() {
                   </select>
                 </div>
               </div>
-              
+
+              {/* Add a div to show the children categories with links to edit them */}
+              {hasChildren && (
+                <div className="mt-4 p-4 bg-yellow-50 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 rounded-md">
+                  <div className="flex items-start">
+                    <AlertCircleIcon className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <h4 className="font-medium text-sm">Cannot Delete - Has Sub-Categories</h4>
+                      <p className="text-sm mt-1">
+                        This category has the following sub-categories and cannot be deleted. 
+                        You must first delete all sub-categories or reassign them to another parent.
+                      </p>
+                      <ul className="list-disc pl-5 mt-2">
+                        {childrenCategories.map(child => (
+                          <li key={child.id} className="mt-1">
+                            <Link 
+                              to={`/productCategoryEdit/${child.id}`} 
+                              className="hover:text-green-600 dark:hover:text-green-400 hover:underline font-medium"
+                            >
+                              {child.name}
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Action Buttons - Moved to bottom of form */}
               <div className="flex justify-end space-x-2 pt-4 mt-4 border-t border-gray-200 dark:border-gray-700">
                 <button
@@ -864,18 +923,20 @@ export default function ProductCategoryEdit() {
                 )}
                 
                 {/* Replace the custom button with PulseUpdateButton */}
-                <PulseUpdateButton
-                  onClick={handleSubmit}
-                  disabled={saving || loading || (isEditing && !hasChanges) || isUploading || (!isEditing && category.name.trim() === '')}
-                  showPulse={shouldPulse}
-                  label={isEditing ? "Update Category" : "Create Category"}
-                  icon={<SaveIcon className="h-4 w-4" />}
-                  changes={getChangesDescription}
-                  onRevert={isEditing ? handleRevertChanges : undefined}
-                  isLoading={saving}
-                  tooltipTitle={isEditing ? "Unsaved Changes:" : "Create a category first:"}
-                  revertButtonLabel={isEditing ? "Revert All Changes" : ""}
-                />
+                <div ref={updateButtonRef}>
+                  <PulseUpdateButton
+                    onClick={handleSubmit}
+                    disabled={saving || loading || (isEditing && !hasChanges) || isUploading || (!isEditing && category.name.trim() === '')}
+                    showPulse={shouldPulse}
+                    label={isEditing ? "Update Category" : "Create Category"}
+                    icon={<SaveIcon className="h-4 w-4" />}
+                    changes={getChangesDescription}
+                    onRevert={isEditing ? handleRevertChanges : undefined}
+                    isLoading={saving}
+                    tooltipTitle={isEditing ? "Unsaved Changes:" : "Create a category first:"}
+                    revertButtonLabel={isEditing ? "Revert All Changes" : ""}
+                  />
+                </div>
                 
                 {isEditing && (
                   <button
@@ -946,6 +1007,24 @@ export default function ProductCategoryEdit() {
                 </div>
               </div>
             </Modal>
+            
+            {/* Fixed Update button when original is scrolled out of view */}
+            {shouldPulse && !isUpdateButtonVisible && (
+              <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50">
+                <PulseUpdateButton
+                  onClick={handleSubmit}
+                  disabled={saving || loading || isUploading}
+                  showPulse={true}
+                  label={isEditing ? "Update Category" : "Create Category"}
+                  icon={<SaveIcon className="h-4 w-4" />}
+                  changes={getChangesDescription}
+                  onRevert={isEditing ? handleRevertChanges : undefined}
+                  isLoading={saving}
+                  tooltipTitle={isEditing ? "Unsaved Changes:" : "Create a category first:"}
+                  revertButtonLabel={isEditing ? "Revert All Changes" : ""}
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>
