@@ -1,6 +1,6 @@
 # FreeCARVER MCP
 
-FreeCARVER MCP (Master Control Program) is a modern full-stack e-commerce management system built with React, TypeScript, and Node.js. This project serves as a personal portfolio piece, designed to explore and implement the latest AI development tools while mastering modern best practices in React, Node.js, PostgreSQL, and full-stack development.
+FreeCARVER MCP (Master Control Program) is a modern full-stack e-commerce management system built with React, TypeScript, and Node.js. This project serves as a personal portfolio piece, designed by the author to explore and implement the latest AI development tools while mastering modern best practices in React, Node.js, PostgreSQL, and full-stack development, soley for his personal continuing education.
 
 ### It is a development tool in continuing development. Please note that it may be broken at any given moment.
 
@@ -71,9 +71,8 @@ This project was created as a learning platform to:
 
 ### Backend
 - Node.js with Express
-- Supabase for database and authentication
+- PostgreSQL for data storage and authentication
 - Joi for request validation
-- PostgreSQL for data storage
 - RESTful API architecture
 - JWT for authentication
 
