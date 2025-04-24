@@ -4,6 +4,8 @@ FreeCARVER MCP (Master Control Program) is a modern full-stack e-commerce manage
 
 ### It is a development tool in continuing development. Please note that it may be broken at any given moment.
 
+If you wish to expand on the project feel free to clone or fork it for your own purposes.
+
 ## 🎯 Project Purpose
 
 This project was created as a learning platform to:
