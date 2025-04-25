@@ -17,6 +17,13 @@ This project was created as a learning platform to:
 - Practice modern DevOps and deployment strategies
 - Implement comprehensive testing methodologies
 
+## Screenshots
+![Login dialog](assets/screenshots/login.png)
+
+![Dashboard](assets/screenshots/dashboard.png)
+
+![Dashboard](assets/screenshots/productEditor.png)
+
 ## 🚀 Features
 
 ### User Management
