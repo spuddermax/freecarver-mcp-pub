@@ -22,7 +22,9 @@ This project was created as a learning platform to:
 
 ![Dashboard](assets/screenshots/dashboard.png)
 
-![Dashboard](assets/screenshots/productEditor.png)
+![Product Editor](assets/screenshots/productEditor.png)
+
+![Product Editor Media](assets/screenshots/productEditorMedia.png)
 
 ## 🚀 Features
 
