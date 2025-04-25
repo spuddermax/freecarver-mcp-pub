@@ -49,7 +49,7 @@ The platform uses Cloudflare R2 storage (S3-compatible) for storing user avatar 
 
 ### 4. Configure Environment Variables
 
-Update your `.env` file with the following variables (already added to `.env.example`):
+Update your `.env` file with the following variables (already added to `.env.sample`):
 
 ```
 # Cloudflare Images and R2 Configuration
