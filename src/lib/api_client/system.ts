@@ -1,5 +1,7 @@
 // /lib/api_client/system.ts
 
+console.log('API URL:', import.meta.env.VITE_API_URL);
+
 /**
  * Fetch all system preferences.
  * @returns A promise that resolves to an object containing the preferences.

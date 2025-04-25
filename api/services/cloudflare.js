@@ -120,7 +120,7 @@ export async function uploadToCloudflare(buffer, options) {
 
 		// Generate a public URL for the R2 object using env variable
 		const publicDomain = process.env.CLOUDFLARE_PUBLIC_DOMAIN;
-		const publicUrl = `https://${publicDomain}/${r2Key}`;
+		const publicUrl = `${publicDomain}/${r2Key}`;
 
 		return {
 			publicUrl,

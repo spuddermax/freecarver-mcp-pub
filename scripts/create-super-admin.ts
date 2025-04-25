@@ -18,8 +18,8 @@ const supabase = createClient(
 );
 
 async function createSuperAdmin() {
-  const email = 'yourusername@youremail.xyz';
-  const password = 'abc.123!';
+  const email = 'matthew@1from2.com';
+  const password = 'Abc.123!';
 
   try {
     // Check if user already exists

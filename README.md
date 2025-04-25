@@ -105,13 +105,80 @@ npm install
 3. Set up environment variables:
 ```bash
 # Copy the example env file
-cp .env.example .env
+cp .env.sample .env
 # Do the same for the API
 cd api
 cp .env.test .env
 ```
 
 4. Configure your environment variables in both `.env` files according to your setup.
+
+## 🐘 PostgreSQL Setup
+
+### Local Development Setup
+
+1. Install PostgreSQL on your system:
+```bash
+# Ubuntu/Debian
+sudo apt update
+sudo apt install postgresql postgresql-contrib
+
+# macOS (using Homebrew)
+brew install postgresql@14
+brew services start postgresql@14
+```
+
+2. Create a new PostgreSQL user and database:
+```bash
+# Switch to postgres user
+sudo -i -u postgres
+
+# Create a new user (replace 'your_username' with your desired username)
+createuser --interactive --pwprompt your_username
+
+# Create a new database (replace 'your_database' with your desired database name)
+createdb your_database
+
+# Exit postgres user shell
+exit
+```
+
+3. Update your `.env` file with the database credentials:
+```bash
+DB_USER=your_username
+DB_PASSWORD=your_password
+DB_NAME=your_database
+DB_HOST=localhost
+DB_PORT=5432
+```
+
+4. Run database migrations:
+```bash
+cd api
+npm run migrate
+```
+
+5. Create a super admin user:
+```bash
+# Using tsx to run TypeScript files directly
+npx tsx scripts/create-super-admin.ts
+```
+
+### Troubleshooting
+
+- If you encounter permission errors, ensure your PostgreSQL user has the necessary privileges:
+```bash
+# As postgres user
+sudo -i -u postgres
+psql
+
+# In psql shell
+GRANT ALL PRIVILEGES ON DATABASE your_database TO your_username;
+\q
+exit
+```
+
+- If migrations fail, check that your database user has the correct permissions and that the database exists.
 
 ## 🚀 Running the Application
 
@@ -191,7 +258,29 @@ While this is primarily a learning portfolio project, contributions and suggesti
 
 ## 📄 License
 
-This project is proprietary software. All rights reserved.
+This project is licensed under the MIT License.
+
+MIT License
+
+Copyright (c) 2024
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 
 ## 📫 Support
 
